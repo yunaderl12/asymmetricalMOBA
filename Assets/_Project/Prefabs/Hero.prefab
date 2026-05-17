@@ -104,6 +104,8 @@ GameObject:
   - component: {fileID: 1812897919764439108}
   - component: {fileID: 1350440169202529894}
   - component: {fileID: 1396241511466957033}
+  - component: {fileID: 2915333161001633511}
+  - component: {fileID: 8095684835187384214}
   m_Layer: 0
   m_Name: Hero
   m_TagString: Player
@@ -259,6 +261,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hpPerLevel: 10
+  spPerLevel: 5
 --- !u!114 &1396241511466957033
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -272,6 +275,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   debugExpAmount: 50
+--- !u!114 &2915333161001633511
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7591807908439482892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57804e0dda3674863a8275ac0ef17ce7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxSP: 50
+  currentSP: 50
+--- !u!114 &8095684835187384214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7591807908439482892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d040018c2568f41f7aa82ee82cfc0bae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fallThresholdY: -10
 --- !u!1 &8282447436492061361
 GameObject:
   m_ObjectHideFlags: 0

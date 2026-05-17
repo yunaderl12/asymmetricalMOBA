@@ -82,6 +82,24 @@ namespace Game.Hero
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""DebugWinHero"",
+                    ""type"": ""Button"",
+                    ""id"": ""a2000000-0000-0000-0000-000000000007"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""DebugLoseHero"",
+                    ""type"": ""Button"",
+                    ""id"": ""a2000000-0000-0000-0000-000000000008"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -194,6 +212,28 @@ namespace Game.Hero
                     ""action"": ""DebugAddExp"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a3000000-0000-0000-0000-00000000000a"",
+                    ""path"": ""<Keyboard>/n"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""DebugWinHero"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a3000000-0000-0000-0000-00000000000b"",
+                    ""path"": ""<Keyboard>/b"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""DebugLoseHero"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -208,6 +248,8 @@ namespace Game.Hero
             m_Hero_Pause = m_Hero.FindAction("Pause", throwIfNotFound: true);
             m_Hero_Attack = m_Hero.FindAction("Attack", throwIfNotFound: true);
             m_Hero_DebugAddExp = m_Hero.FindAction("DebugAddExp", throwIfNotFound: true);
+            m_Hero_DebugWinHero = m_Hero.FindAction("DebugWinHero", throwIfNotFound: true);
+            m_Hero_DebugLoseHero = m_Hero.FindAction("DebugLoseHero", throwIfNotFound: true);
         }
 
         ~@HeroInputActions()
@@ -280,6 +322,8 @@ namespace Game.Hero
         private readonly InputAction m_Hero_Pause;
         private readonly InputAction m_Hero_Attack;
         private readonly InputAction m_Hero_DebugAddExp;
+        private readonly InputAction m_Hero_DebugWinHero;
+        private readonly InputAction m_Hero_DebugLoseHero;
         public struct HeroActions
         {
             private @HeroInputActions m_Wrapper;
@@ -290,6 +334,8 @@ namespace Game.Hero
             public InputAction @Pause => m_Wrapper.m_Hero_Pause;
             public InputAction @Attack => m_Wrapper.m_Hero_Attack;
             public InputAction @DebugAddExp => m_Wrapper.m_Hero_DebugAddExp;
+            public InputAction @DebugWinHero => m_Wrapper.m_Hero_DebugWinHero;
+            public InputAction @DebugLoseHero => m_Wrapper.m_Hero_DebugLoseHero;
             public InputActionMap Get() { return m_Wrapper.m_Hero; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
@@ -317,6 +363,12 @@ namespace Game.Hero
                 @DebugAddExp.started += instance.OnDebugAddExp;
                 @DebugAddExp.performed += instance.OnDebugAddExp;
                 @DebugAddExp.canceled += instance.OnDebugAddExp;
+                @DebugWinHero.started += instance.OnDebugWinHero;
+                @DebugWinHero.performed += instance.OnDebugWinHero;
+                @DebugWinHero.canceled += instance.OnDebugWinHero;
+                @DebugLoseHero.started += instance.OnDebugLoseHero;
+                @DebugLoseHero.performed += instance.OnDebugLoseHero;
+                @DebugLoseHero.canceled += instance.OnDebugLoseHero;
             }
 
             private void UnregisterCallbacks(IHeroActions instance)
@@ -339,6 +391,12 @@ namespace Game.Hero
                 @DebugAddExp.started -= instance.OnDebugAddExp;
                 @DebugAddExp.performed -= instance.OnDebugAddExp;
                 @DebugAddExp.canceled -= instance.OnDebugAddExp;
+                @DebugWinHero.started -= instance.OnDebugWinHero;
+                @DebugWinHero.performed -= instance.OnDebugWinHero;
+                @DebugWinHero.canceled -= instance.OnDebugWinHero;
+                @DebugLoseHero.started -= instance.OnDebugLoseHero;
+                @DebugLoseHero.performed -= instance.OnDebugLoseHero;
+                @DebugLoseHero.canceled -= instance.OnDebugLoseHero;
             }
 
             public void RemoveCallbacks(IHeroActions instance)
@@ -364,6 +422,8 @@ namespace Game.Hero
             void OnPause(InputAction.CallbackContext context);
             void OnAttack(InputAction.CallbackContext context);
             void OnDebugAddExp(InputAction.CallbackContext context);
+            void OnDebugWinHero(InputAction.CallbackContext context);
+            void OnDebugLoseHero(InputAction.CallbackContext context);
         }
     }
 }

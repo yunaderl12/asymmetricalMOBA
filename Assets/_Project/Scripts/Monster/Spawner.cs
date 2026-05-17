@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using Game.Combat;
+using Game.Core;
 
 namespace Game.Monster
 {
@@ -148,6 +149,8 @@ namespace Game.Monster
             {
                 yield return new WaitForSeconds(data.spawnInterval);
                 if (!IsFunctional) yield break;
+                // Don't spawn until the match has actually started.
+                if (MatchManager.Instance != null && MatchManager.Instance.CurrentState != MatchManager.MatchState.InMatch) continue;
                 if (inv == null || inv.Count == 0) continue;
 
                 var dataToSpawn = inv[invIndex];

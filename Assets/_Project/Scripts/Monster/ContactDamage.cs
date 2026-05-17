@@ -8,11 +8,20 @@ namespace Game.Monster
     {
         [SerializeField] private int damagePerTick = 5;
         [SerializeField] private float tickInterval = 0.5f;
+        [SerializeField] private string[] targetTags = new string[] { "Player" };
 
         private readonly Dictionary<HealthComponent, float> nextTickTime = new Dictionary<HealthComponent, float>();
 
+        private bool IsTargetTag(string tag)
+        {
+            if (targetTags == null || targetTags.Length == 0) return true;
+            foreach (var t in targetTags) if (t == tag) return true;
+            return false;
+        }
+
         private void OnTriggerStay(Collider other)
         {
+            if (!IsTargetTag(other.tag)) return;
             var hp = other.GetComponentInParent<HealthComponent>();
             if (hp == null || hp.IsDead) return;
 
