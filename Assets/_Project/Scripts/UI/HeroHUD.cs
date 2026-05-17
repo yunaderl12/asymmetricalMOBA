@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Game.Combat;
+using Game.Core;
 
 namespace Game.UI
 {
@@ -9,8 +10,13 @@ namespace Game.UI
         [SerializeField] private string heroTag = "Player";
         [SerializeField] private Image hpFillImage;
         [SerializeField] private Text hpText;
+        [SerializeField] private Image expFillImage;
+        [SerializeField] private Text expText;
+        [SerializeField] private Text lvText;
 
-        private HealthComponent target;
+        private HealthComponent health;
+        private LevelComponent level;
+        private ExpComponent exp;
 
         private void Start()
         {
@@ -20,31 +26,50 @@ namespace Game.UI
                 Debug.LogWarning("[HeroHUD] Hero not found by tag '" + heroTag + "'");
                 return;
             }
-            target = hero.GetComponent<HealthComponent>();
-            if (target != null)
-            {
-                target.OnHPChanged += OnHPChanged;
-                UpdateUI();
-            }
+            health = hero.GetComponent<HealthComponent>();
+            level = hero.GetComponent<LevelComponent>();
+            exp = hero.GetComponent<ExpComponent>();
+            if (health != null) health.OnHPChanged += OnHPChanged;
+            if (level != null) level.OnLevelChanged += OnLevelChanged;
+            if (exp != null) exp.OnExpChanged += OnExpChanged;
+            UpdateAll();
         }
 
         private void OnDestroy()
         {
-            if (target != null) target.OnHPChanged -= OnHPChanged;
+            if (health != null) health.OnHPChanged -= OnHPChanged;
+            if (level != null) level.OnLevelChanged -= OnLevelChanged;
+            if (exp != null) exp.OnExpChanged -= OnExpChanged;
         }
 
-        private void OnHPChanged(int current, int max)
-        {
-            UpdateUI();
-        }
+        private void OnHPChanged(int cur, int max) { UpdateAll(); }
+        private void OnLevelChanged(int lv) { UpdateAll(); }
+        private void OnExpChanged(int cur, int req) { UpdateAll(); }
 
-        private void UpdateUI()
+        private void UpdateAll()
         {
-            if (target == null) return;
-            if (hpFillImage != null)
-                hpFillImage.fillAmount = target.MaxHP > 0 ? (float)target.CurrentHP / target.MaxHP : 0f;
-            if (hpText != null)
-                hpText.text = "HP " + target.CurrentHP + " / " + target.MaxHP;
+            if (health != null)
+            {
+                if (hpFillImage != null)
+                    hpFillImage.fillAmount = health.MaxHP > 0 ? (float)health.CurrentHP / health.MaxHP : 0f;
+                if (hpText != null)
+                    hpText.text = $"HP {health.CurrentHP} / {health.MaxHP}";
+            }
+            if (level != null && lvText != null)
+                lvText.text = $"Lv {level.CurrentLevel} / {level.MaxLevel}";
+            if (exp != null)
+            {
+                int cur = exp.CurrentExp;
+                int req = exp.RequiredExp;
+                bool maxed = level != null && level.IsMaxLevel;
+                if (expFillImage != null)
+                    expFillImage.fillAmount = maxed ? 1f : (req > 0 ? (float)cur / req : 0f);
+                if (expText != null)
+                {
+                    if (maxed) expText.text = "Exp MAX";
+                    else expText.text = $"Exp {cur} / {req}  (next: {Mathf.Max(0, req - cur)})";
+                }
+            }
         }
     }
 }
