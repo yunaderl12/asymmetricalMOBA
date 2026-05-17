@@ -47,5 +47,11 @@ namespace Game.Combat
             IsDead = false;
             OnHPChanged?.Invoke(currentHP, maxHP);
         }
+
+        public void SetMaxHP(int value)
+        {
+            maxHP = Mathf.Max(1, value);
+            ResetHealth();
+        }
     }
 }
