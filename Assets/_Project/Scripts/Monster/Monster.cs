@@ -12,10 +12,14 @@ namespace Game.Monster
         [SerializeField] private string targetTag = "StartTown";
         [SerializeField] private float arriveDistance = 1.0f;
 
+        public MonsterData Data => data;
+        public Spawner SpawnedBy { get; private set; }
+
         private NavMeshAgent agent;
         private HealthComponent health;
         private Transform targetTransform;
         private bool destroyed;
+        private bool initialized;
 
         private void Awake()
         {
@@ -35,6 +39,18 @@ namespace Game.Monster
 
         private void Start()
         {
+            if (!initialized)
+            {
+                if (data != null) Initialize(data, null);
+                else Debug.LogWarning($"[Monster] {name} has no data and Initialize() was never called.");
+            }
+        }
+
+        public void Initialize(MonsterData newData, Spawner spawner)
+        {
+            data = newData;
+            SpawnedBy = spawner;
+            initialized = true;
             ApplyData();
             AcquireTarget();
         }
@@ -62,7 +78,7 @@ namespace Game.Monster
             }
             else
             {
-                Debug.LogWarning($"[Monster] {name} is not on NavMesh; cannot SetDestination.");
+                Debug.LogWarning($"[Monster] {name} not on NavMesh; cannot SetDestination.");
             }
         }
 
@@ -83,6 +99,11 @@ namespace Game.Monster
         {
             destroyed = true;
             Destroy(gameObject);
+        }
+
+        private void OnDestroy()
+        {
+            if (SpawnedBy != null) SpawnedBy.OnSpawnedMonsterDestroyed(this);
         }
     }
 }
