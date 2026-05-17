@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__UnityMCP__manage_packages",
+      "mcp__UnityMCP__manage_scene",
+      "mcp__UnityMCP__manage_asset",
+      "mcp__UnityMCP__create_script",
+      "mcp__UnityMCP__read_console",
+      "mcp__UnityMCP__manage_gameobject",
+      "mcp__UnityMCP__manage_build",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "mcp__UnityMCP__refresh_unity",
+      "Bash(git -c user.email=dev@local -c user.name=Dev commit -m ' *)",
+      "mcp__UnityMCP__execute_code",
+      "mcp__UnityMCP__manage_editor"
+    ]
+  }
+}
