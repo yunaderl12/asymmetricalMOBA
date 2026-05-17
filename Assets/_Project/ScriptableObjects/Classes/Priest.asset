@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14de1df428f124e599d3f0f1f9a9e231, type: 3}
+  m_Name: Priest
+  m_EditorClassIdentifier: 
+  className: Priest
+  initialHP: 100
+  initialSP: 60
+  initialAtk: 8
+  initialMAtk: 10
+  initialDf: 6
+  initialSpd: 5
+  hpGrowthPerLevel: 10
+  spGrowthPerLevel: 6
+  atkGrowthPerLevel: 1
+  mAtkGrowthPerLevel: 2
+  dfGrowthPerLevel: 1
+  spdGrowthPerLevel: 0
+  classSkills:
+  - {fileID: 11400000, guid: eff64c7b56f94404a874b4c35027ae74, type: 2}
+  - {fileID: 11400000, guid: 9f54a1183ca9647d5909e1f75efc6c6f, type: 2}
+  - {fileID: 11400000, guid: f9e63b9a3fd694d4d9d35aad623322db, type: 2}
+  - {fileID: 11400000, guid: cfeac33b2aebb49e5b02a24fdb8a1130, type: 2}

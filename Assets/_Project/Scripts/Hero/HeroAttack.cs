@@ -14,6 +14,9 @@ namespace Game.Hero
         [SerializeField] private int damage = 10;
         [SerializeField] private float attackInterval = 0.3f;
 
+        public int Damage => damage;
+        public void SetDamage(int value) { damage = value; }
+
         private HeroInputActions inputs;
         private float cooldownTimer;
 

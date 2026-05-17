@@ -18,6 +18,9 @@ namespace Game.Hero
         [SerializeField] private float gravity = -20f;
         [SerializeField] private float groundedStickForce = -2f;
 
+        public float MoveSpeed => moveSpeed;
+        public void SetMoveSpeed(float value) { moveSpeed = value; }
+
         private CharacterController controller;
         private HeroInputActions inputs;
 

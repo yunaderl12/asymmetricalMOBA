@@ -8,18 +8,17 @@ namespace Game.Hero
     [RequireComponent(typeof(HealthComponent))]
     public class HeroLevelStatGrowth : MonoBehaviour
     {
-        [SerializeField] private int hpPerLevel = 10;
-        [SerializeField] private int spPerLevel = 5;
-
         private LevelComponent level;
         private HealthComponent health;
         private SkillPointComponent sp;
+        private HeroClassInitializer classInit;
 
         private void Awake()
         {
             level = GetComponent<LevelComponent>();
             health = GetComponent<HealthComponent>();
             sp = GetComponent<SkillPointComponent>();
+            classInit = GetComponent<HeroClassInitializer>();
         }
 
         private void OnEnable()
@@ -34,17 +33,20 @@ namespace Game.Hero
 
         private void OnLevelChanged(int newLevel)
         {
-            if (health != null)
+            if (classInit == null || classInit.ClassData == null)
             {
-                health.SetMaxHP(health.MaxHP + hpPerLevel);
+                Debug.LogWarning("[Hero] LevelGrowth has no classData; skipping growth.");
+                return;
             }
-            if (sp != null)
-            {
-                sp.SetMaxSP(sp.MaxSP + spPerLevel);
-            }
+            var data = classInit.ClassData;
+
+            if (health != null) health.SetMaxHP(health.MaxHP + data.hpGrowthPerLevel);
+            if (sp != null) sp.SetMaxSP(sp.MaxSP + data.spGrowthPerLevel);
+            classInit.ApplyLevelGrowth();
+
             int newHP = health != null ? health.MaxHP : -1;
             int newSP = sp != null ? sp.MaxSP : -1;
-            Debug.Log($"[Hero] Lv {newLevel} stat growth: MaxHP -> {newHP}, MaxSP -> {newSP}");
+            Debug.Log($"[Hero] Lv {newLevel} stat growth: MaxHP={newHP}, MaxSP={newSP}, Atk={classInit.CurrentAtk}, MAtk={classInit.CurrentMAtk}, Df={classInit.CurrentDf}, Spd={classInit.CurrentSpd}");
         }
     }
 }
