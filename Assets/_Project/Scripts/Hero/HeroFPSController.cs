@@ -33,6 +33,7 @@ namespace Game.Hero
 
         private void OnEnable()
         {
+            if (inputs == null) inputs = new HeroInputActions();
             inputs.Hero.Enable();
             inputs.Hero.Pause.performed += OnPause;
             LockCursor(true);
@@ -40,6 +41,7 @@ namespace Game.Hero
 
         private void OnDisable()
         {
+            if (inputs == null) return;
             inputs.Hero.Pause.performed -= OnPause;
             inputs.Hero.Disable();
             LockCursor(false);

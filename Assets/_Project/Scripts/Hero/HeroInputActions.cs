@@ -64,6 +64,15 @@ namespace Game.Hero
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Attack"",
+                    ""type"": ""Button"",
+                    ""id"": ""a2000000-0000-0000-0000-000000000005"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -154,6 +163,17 @@ namespace Game.Hero
                     ""action"": ""Pause"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a3000000-0000-0000-0000-000000000008"",
+                    ""path"": ""<Mouse>/leftButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Attack"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -166,6 +186,7 @@ namespace Game.Hero
             m_Hero_Look = m_Hero.FindAction("Look", throwIfNotFound: true);
             m_Hero_Jump = m_Hero.FindAction("Jump", throwIfNotFound: true);
             m_Hero_Pause = m_Hero.FindAction("Pause", throwIfNotFound: true);
+            m_Hero_Attack = m_Hero.FindAction("Attack", throwIfNotFound: true);
         }
 
         ~@HeroInputActions()
@@ -236,6 +257,7 @@ namespace Game.Hero
         private readonly InputAction m_Hero_Look;
         private readonly InputAction m_Hero_Jump;
         private readonly InputAction m_Hero_Pause;
+        private readonly InputAction m_Hero_Attack;
         public struct HeroActions
         {
             private @HeroInputActions m_Wrapper;
@@ -244,6 +266,7 @@ namespace Game.Hero
             public InputAction @Look => m_Wrapper.m_Hero_Look;
             public InputAction @Jump => m_Wrapper.m_Hero_Jump;
             public InputAction @Pause => m_Wrapper.m_Hero_Pause;
+            public InputAction @Attack => m_Wrapper.m_Hero_Attack;
             public InputActionMap Get() { return m_Wrapper.m_Hero; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
@@ -265,6 +288,9 @@ namespace Game.Hero
                 @Pause.started += instance.OnPause;
                 @Pause.performed += instance.OnPause;
                 @Pause.canceled += instance.OnPause;
+                @Attack.started += instance.OnAttack;
+                @Attack.performed += instance.OnAttack;
+                @Attack.canceled += instance.OnAttack;
             }
 
             private void UnregisterCallbacks(IHeroActions instance)
@@ -281,6 +307,9 @@ namespace Game.Hero
                 @Pause.started -= instance.OnPause;
                 @Pause.performed -= instance.OnPause;
                 @Pause.canceled -= instance.OnPause;
+                @Attack.started -= instance.OnAttack;
+                @Attack.performed -= instance.OnAttack;
+                @Attack.canceled -= instance.OnAttack;
             }
 
             public void RemoveCallbacks(IHeroActions instance)
@@ -304,6 +333,7 @@ namespace Game.Hero
             void OnLook(InputAction.CallbackContext context);
             void OnJump(InputAction.CallbackContext context);
             void OnPause(InputAction.CallbackContext context);
+            void OnAttack(InputAction.CallbackContext context);
         }
     }
 }

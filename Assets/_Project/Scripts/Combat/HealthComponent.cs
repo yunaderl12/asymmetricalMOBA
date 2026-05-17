@@ -1,5 +1,5 @@
+using System;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace Game.Combat
 {
@@ -12,8 +12,8 @@ namespace Game.Combat
         public int CurrentHP => currentHP;
         public bool IsDead { get; private set; }
 
-        public UnityEvent OnDeath;
-        public UnityEvent<int, int> OnHPChanged;
+        public event Action OnDeath;
+        public event Action<int, int> OnHPChanged;
 
         private void Awake()
         {
@@ -25,6 +25,7 @@ namespace Game.Combat
         {
             if (IsDead || amount <= 0) return;
             currentHP = Mathf.Max(0, currentHP - amount);
+            Debug.Log($"[HealthComponent] {name} took {amount} dmg -> HP={currentHP}/{maxHP}");
             OnHPChanged?.Invoke(currentHP, maxHP);
             if (currentHP <= 0)
             {

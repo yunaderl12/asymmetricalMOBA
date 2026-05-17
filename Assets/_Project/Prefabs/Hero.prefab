@@ -98,6 +98,8 @@ GameObject:
   - component: {fileID: 1240913004447072996}
   - component: {fileID: 3399234991426331164}
   - component: {fileID: 2970239005591298882}
+  - component: {fileID: 7225855180580156294}
+  - component: {fileID: 6132277571267996448}
   m_Layer: 0
   m_Name: Hero
   m_TagString: Player
@@ -161,12 +163,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHP: 100
   currentHP: 100
-  OnDeath:
-    m_PersistentCalls:
-      m_Calls: []
-  OnHPChanged:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!114 &2970239005591298882
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -187,6 +183,35 @@ MonoBehaviour:
   jumpPower: 5
   gravity: -20
   groundedStickForce: -2
+--- !u!114 &7225855180580156294
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7591807908439482892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f15c44c3e4c4841de8b1499c5e56ff26, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cameraTransform: {fileID: 4596248169901172145}
+  range: 10
+  damage: 10
+  attackInterval: 0.3
+--- !u!114 &6132277571267996448
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7591807908439482892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2ad03c0c0eb994d8e98b154562ad15fc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  currentDeathCount: 0
 --- !u!1 &8282447436492061361
 GameObject:
   m_ObjectHideFlags: 0
@@ -200,7 +225,7 @@ GameObject:
   - component: {fileID: 5515450910289930092}
   m_Layer: 0
   m_Name: Camera
-  m_TagString: Untagged
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
