@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 916880660298994264}
   - component: {fileID: 2727407346466487282}
   - component: {fileID: 99744345942671443}
+  - component: {fileID: 4551828955005563428}
   m_Layer: 0
   m_Name: Spawner
   m_TagString: Spawner
@@ -52,6 +53,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHP: 300
   currentHP: 300
+  assistWindow: 10
 --- !u!114 &916880660298994264
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -206,6 +208,20 @@ MonoBehaviour:
   currentLevel: 1
   maxLevel: 15
   secondsPerLevel: 10
+  autoLevelUpByTime: 1
+--- !u!114 &4551828955005563428
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1791423612528606676}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 753aedf1d6ca5447da36001aea8c3337, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  exp: 10
 --- !u!1 &5027109844102215754
 GameObject:
   m_ObjectHideFlags: 0

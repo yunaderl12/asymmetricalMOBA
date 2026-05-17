@@ -53,7 +53,7 @@ namespace Game.Hero
             if (Physics.Raycast(origin, dir, out var hit, range))
             {
                 var hp = hit.collider.GetComponentInParent<HealthComponent>();
-                if (hp != null) hp.TakeDamage(damage);
+                if (hp != null) hp.TakeDamage(damage, gameObject);
             }
         }
     }

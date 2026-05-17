@@ -56,6 +56,8 @@ namespace Game.Monster
                 return;
             }
             if (health != null) health.SetMaxHP(data.hp);
+            var expReward = GetComponent<ExpReward>();
+            if (expReward != null) expReward.Exp = data.exp;
 
             if (inv.Count > data.inv)
             {
@@ -114,7 +116,7 @@ namespace Game.Monster
                 var hp = hit.collider.GetComponentInParent<HealthComponent>();
                 if (hp != null && hp.gameObject == target)
                 {
-                    hp.TakeDamage(data.atk);
+                    hp.TakeDamage(data.atk, gameObject);
                 }
             }
 

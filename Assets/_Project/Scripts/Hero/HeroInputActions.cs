@@ -73,6 +73,15 @@ namespace Game.Hero
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""DebugAddExp"",
+                    ""type"": ""Button"",
+                    ""id"": ""a2000000-0000-0000-0000-000000000006"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -174,6 +183,17 @@ namespace Game.Hero
                     ""action"": ""Attack"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a3000000-0000-0000-0000-000000000009"",
+                    ""path"": ""<Keyboard>/x"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""DebugAddExp"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -187,6 +207,7 @@ namespace Game.Hero
             m_Hero_Jump = m_Hero.FindAction("Jump", throwIfNotFound: true);
             m_Hero_Pause = m_Hero.FindAction("Pause", throwIfNotFound: true);
             m_Hero_Attack = m_Hero.FindAction("Attack", throwIfNotFound: true);
+            m_Hero_DebugAddExp = m_Hero.FindAction("DebugAddExp", throwIfNotFound: true);
         }
 
         ~@HeroInputActions()
@@ -258,6 +279,7 @@ namespace Game.Hero
         private readonly InputAction m_Hero_Jump;
         private readonly InputAction m_Hero_Pause;
         private readonly InputAction m_Hero_Attack;
+        private readonly InputAction m_Hero_DebugAddExp;
         public struct HeroActions
         {
             private @HeroInputActions m_Wrapper;
@@ -267,6 +289,7 @@ namespace Game.Hero
             public InputAction @Jump => m_Wrapper.m_Hero_Jump;
             public InputAction @Pause => m_Wrapper.m_Hero_Pause;
             public InputAction @Attack => m_Wrapper.m_Hero_Attack;
+            public InputAction @DebugAddExp => m_Wrapper.m_Hero_DebugAddExp;
             public InputActionMap Get() { return m_Wrapper.m_Hero; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
@@ -291,6 +314,9 @@ namespace Game.Hero
                 @Attack.started += instance.OnAttack;
                 @Attack.performed += instance.OnAttack;
                 @Attack.canceled += instance.OnAttack;
+                @DebugAddExp.started += instance.OnDebugAddExp;
+                @DebugAddExp.performed += instance.OnDebugAddExp;
+                @DebugAddExp.canceled += instance.OnDebugAddExp;
             }
 
             private void UnregisterCallbacks(IHeroActions instance)
@@ -310,6 +336,9 @@ namespace Game.Hero
                 @Attack.started -= instance.OnAttack;
                 @Attack.performed -= instance.OnAttack;
                 @Attack.canceled -= instance.OnAttack;
+                @DebugAddExp.started -= instance.OnDebugAddExp;
+                @DebugAddExp.performed -= instance.OnDebugAddExp;
+                @DebugAddExp.canceled -= instance.OnDebugAddExp;
             }
 
             public void RemoveCallbacks(IHeroActions instance)
@@ -334,6 +363,7 @@ namespace Game.Hero
             void OnJump(InputAction.CallbackContext context);
             void OnPause(InputAction.CallbackContext context);
             void OnAttack(InputAction.CallbackContext context);
+            void OnDebugAddExp(InputAction.CallbackContext context);
         }
     }
 }

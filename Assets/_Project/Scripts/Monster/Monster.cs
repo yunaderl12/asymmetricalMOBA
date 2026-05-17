@@ -11,6 +11,7 @@ namespace Game.Monster
         [SerializeField] private MonsterData data;
         [SerializeField] private string targetTag = "StartTown";
         [SerializeField] private float arriveDistance = 1.0f;
+        [SerializeField] private int arriveDamage = 10;
 
         public MonsterData Data => data;
         public Spawner SpawnedBy { get; private set; }
@@ -74,6 +75,8 @@ namespace Game.Monster
             if (data == null) return;
             ApplySpeed();
             if (health != null) health.SetMaxHP(data.hp);
+            var expReward = GetComponent<ExpReward>();
+            if (expReward != null) expReward.Exp = data.exp;
         }
 
         private void ApplySpeed()
@@ -115,10 +118,22 @@ namespace Game.Monster
             if (!agent.hasPath) return;
             if (agent.remainingDistance < arriveDistance)
             {
-                Debug.Log($"[Monster] {name} reached StartTown");
-                destroyed = true;
-                Destroy(gameObject);
+                OnReachTarget();
             }
+        }
+
+        private void OnReachTarget()
+        {
+            destroyed = true;
+            var target = GameObject.FindWithTag(targetTag);
+            if (target != null)
+            {
+                var coreHC = target.GetComponent<HealthComponent>();
+                if (coreHC == null) coreHC = target.GetComponentInChildren<HealthComponent>();
+                if (coreHC != null) coreHC.TakeDamage(arriveDamage, gameObject);
+            }
+            Debug.Log($"[Monster] {name} reached {targetTag}, dealt {arriveDamage} dmg");
+            Destroy(gameObject);
         }
 
         private void OnDied()

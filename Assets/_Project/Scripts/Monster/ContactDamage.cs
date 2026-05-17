@@ -21,7 +21,8 @@ namespace Game.Monster
                 int dmg = damagePerTick;
                 var monster = GetComponentInParent<Monster>();
                 if (monster != null && monster.CurrentAtk > 0) dmg = monster.CurrentAtk;
-                hp.TakeDamage(dmg);
+                var attacker = monster != null ? monster.gameObject : gameObject;
+                hp.TakeDamage(dmg, attacker);
                 nextTickTime[hp] = Time.time + tickInterval;
             }
         }
