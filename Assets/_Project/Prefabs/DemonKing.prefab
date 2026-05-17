@@ -112,6 +112,9 @@ MonoBehaviour:
   gravity: -20
   groundedStickForce: -2
   lookSensitivity: 0.2
+  pitchTarget: {fileID: 2527277441568802705}
+  pitchMin: -70
+  pitchMax: 70
 --- !u!114 &1328229829529510799
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -197,9 +200,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e320a6fddb353402c8aca291905b5a27, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  debuffMultiplier: 0.5
-  checkInterval: 0.2
-  sourceId: OutsideDebuff
+  mpDrainPerSecond: 5
 --- !u!1 &3447037085168827552
 GameObject:
   m_ObjectHideFlags: 0

@@ -14,6 +14,11 @@ namespace Game.DemonKing
 
         [Header("Look")]
         [SerializeField] private float lookSensitivity = 0.2f;
+        [SerializeField] private Transform pitchTarget;
+        [SerializeField] private float pitchMin = -70f;
+        [SerializeField] private float pitchMax = 70f;
+
+        private float pitch;
 
         private CharacterController controller;
         private StatModifierContainer mods;
@@ -66,7 +71,16 @@ namespace Game.DemonKing
         {
             if (!cursorLocked) return;
             var look = inputs.DemonKing.Look.ReadValue<Vector2>();
+
+            // Yaw: rotate body around world Y
             transform.Rotate(0f, look.x * lookSensitivity, 0f, Space.World);
+
+            // Pitch: rotate pitchTarget (ShoulderTarget) - Cinemachine TPS follows its orientation
+            if (pitchTarget != null)
+            {
+                pitch = Mathf.Clamp(pitch + -look.y * lookSensitivity, pitchMin, pitchMax);
+                pitchTarget.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+            }
         }
 
         private void HandleMove()
