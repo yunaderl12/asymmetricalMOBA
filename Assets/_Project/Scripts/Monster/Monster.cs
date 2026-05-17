@@ -15,8 +15,19 @@ namespace Game.Monster
         public MonsterData Data => data;
         public Spawner SpawnedBy { get; private set; }
 
+        public int CurrentAtk
+        {
+            get
+            {
+                if (data == null) return 0;
+                float mul = mods != null ? mods.TotalAtkMultiplier : 1f;
+                return Mathf.Max(0, Mathf.RoundToInt(data.atk * mul));
+            }
+        }
+
         private NavMeshAgent agent;
         private HealthComponent health;
+        private StatModifierContainer mods;
         private Transform targetTransform;
         private bool destroyed;
         private bool initialized;
@@ -25,16 +36,19 @@ namespace Game.Monster
         {
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<HealthComponent>();
+            mods = GetComponent<StatModifierContainer>();
         }
 
         private void OnEnable()
         {
             if (health != null) health.OnDeath += OnDied;
+            if (mods != null) mods.OnModifiersChanged += OnModsChanged;
         }
 
         private void OnDisable()
         {
             if (health != null) health.OnDeath -= OnDied;
+            if (mods != null) mods.OnModifiersChanged -= OnModsChanged;
         }
 
         private void Start()
@@ -58,8 +72,20 @@ namespace Game.Monster
         private void ApplyData()
         {
             if (data == null) return;
-            if (agent != null) agent.speed = data.spd;
+            ApplySpeed();
             if (health != null) health.SetMaxHP(data.hp);
+        }
+
+        private void ApplySpeed()
+        {
+            if (data == null || agent == null) return;
+            float mul = mods != null ? mods.TotalSpdMultiplier : 1f;
+            agent.speed = data.spd * mul;
+        }
+
+        private void OnModsChanged()
+        {
+            ApplySpeed();
         }
 
         private void AcquireTarget()

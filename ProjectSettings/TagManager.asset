@@ -8,6 +8,7 @@ TagManager:
   - DemonCastle
   - Spawner
   - DemonKing
+  - Monster
   layers:
   - Default
   - TransparentFX

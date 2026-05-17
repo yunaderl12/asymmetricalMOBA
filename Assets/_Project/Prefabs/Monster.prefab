@@ -360,9 +360,10 @@ GameObject:
   - component: {fileID: 1863084524661409202}
   - component: {fileID: 1995854525415884408}
   - component: {fileID: 816208885878362213}
+  - component: {fileID: 4186406865660562405}
   m_Layer: 0
   m_Name: Monster
-  m_TagString: Untagged
+  m_TagString: Monster
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -436,6 +437,19 @@ MonoBehaviour:
   data: {fileID: 11400000, guid: 99308e291e52c46cba9abd910658d3e9, type: 2}
   targetTag: StartTown
   arriveDistance: 1
+--- !u!114 &4186406865660562405
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6982550704979016491}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14331d99f415444a9b55bfedc67e9b20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  activeModifiers: []
 --- !u!1 &8503151318596380759
 GameObject:
   m_ObjectHideFlags: 0

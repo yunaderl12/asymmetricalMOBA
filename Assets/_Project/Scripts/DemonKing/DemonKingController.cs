@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Game.Combat;
 
 namespace Game.DemonKing
 {
@@ -15,11 +16,13 @@ namespace Game.DemonKing
         [SerializeField] private float lookSensitivity = 0.2f;
 
         private CharacterController controller;
+        private StatModifierContainer mods;
         private DemonKingInputActions inputs;
         private float verticalVelocity;
         private bool cursorLocked;
 
         public bool MovementEnabled { get; set; } = true;
+        public float EffectiveMoveSpeed => moveSpeed * (mods != null ? mods.TotalSpdMultiplier : 1f);
 
         public DemonKingInputActions Inputs
         {
@@ -33,6 +36,7 @@ namespace Game.DemonKing
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
+            mods = GetComponent<StatModifierContainer>();
             if (inputs == null) inputs = new DemonKingInputActions();
         }
 
@@ -68,7 +72,7 @@ namespace Game.DemonKing
         private void HandleMove()
         {
             var input = inputs.DemonKing.Move.ReadValue<Vector2>();
-            var horizontal = (transform.right * input.x + transform.forward * input.y) * moveSpeed;
+            var horizontal = (transform.right * input.x + transform.forward * input.y) * EffectiveMoveSpeed;
 
             if (controller.isGrounded)
             {

@@ -18,7 +18,10 @@ namespace Game.Monster
 
             if (!nextTickTime.TryGetValue(hp, out var t) || Time.time >= t)
             {
-                hp.TakeDamage(damagePerTick);
+                int dmg = damagePerTick;
+                var monster = GetComponentInParent<Monster>();
+                if (monster != null && monster.CurrentAtk > 0) dmg = monster.CurrentAtk;
+                hp.TakeDamage(dmg);
                 nextTickTime[hp] = Time.time + tickInterval;
             }
         }

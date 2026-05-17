@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 3644642529039067530}
   - component: {fileID: 916880660298994264}
   - component: {fileID: 2727407346466487282}
+  - component: {fileID: 99744345942671443}
   m_Layer: 0
   m_Name: Spawner
   m_TagString: Spawner
@@ -190,6 +191,21 @@ LineRenderer:
   m_UseWorldSpace: 1
   m_Loop: 0
   m_ApplyActiveColorSpace: 1
+--- !u!114 &99744345942671443
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1791423612528606676}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f4231915e20f44cb80e12bfb9fdf88c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  currentLevel: 1
+  maxLevel: 15
+  secondsPerLevel: 10
 --- !u!1 &5027109844102215754
 GameObject:
   m_ObjectHideFlags: 0
