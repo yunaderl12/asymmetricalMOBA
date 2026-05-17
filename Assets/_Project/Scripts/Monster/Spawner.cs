@@ -18,6 +18,8 @@ namespace Game.Monster
         [SerializeField] private GameObject monsterPrefab;
         [SerializeField] private MeshRenderer bodyRenderer;
         [SerializeField] private Material destroyedMaterial;
+        [SerializeField] private LineRenderer attackLine;
+        [SerializeField] private float attackLineDuration = 0.15f;
 
         [Header("Spawn Location")]
         [SerializeField] private float spawnRadiusMin = 2f;
@@ -96,6 +98,8 @@ namespace Game.Monster
             return closest;
         }
 
+        private Coroutine activeAttackLineRoutine;
+
         private void Shoot(GameObject target)
         {
             if (attackOrigin == null) return;
@@ -103,14 +107,32 @@ namespace Game.Monster
             var dir = (target.transform.position + Vector3.up * 1.5f - origin).normalized;
             Debug.DrawRay(origin, dir * data.attackRange, Color.yellow, 0.2f);
 
+            Vector3 endPoint = origin + dir * data.attackRange;
             if (Physics.Raycast(origin, dir, out var hit, data.attackRange))
             {
+                endPoint = hit.point;
                 var hp = hit.collider.GetComponentInParent<HealthComponent>();
                 if (hp != null && hp.gameObject == target)
                 {
                     hp.TakeDamage(data.atk);
                 }
             }
+
+            if (attackLine != null)
+            {
+                attackLine.SetPosition(0, origin);
+                attackLine.SetPosition(1, endPoint);
+                attackLine.enabled = true;
+                if (activeAttackLineRoutine != null) StopCoroutine(activeAttackLineRoutine);
+                activeAttackLineRoutine = StartCoroutine(HideAttackLineAfter(attackLineDuration));
+            }
+        }
+
+        private IEnumerator HideAttackLineAfter(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (attackLine != null) attackLine.enabled = false;
+            activeAttackLineRoutine = null;
         }
 
         public void OnSpawnedMonsterDestroyed(Monster m)
@@ -186,6 +208,8 @@ namespace Game.Monster
         {
             IsFunctional = false;
             StopAllCoroutines();
+            activeAttackLineRoutine = null;
+            if (attackLine != null) attackLine.enabled = false;
             if (bodyRenderer != null && destroyedMaterial != null)
             {
                 bodyRenderer.material = destroyedMaterial;
