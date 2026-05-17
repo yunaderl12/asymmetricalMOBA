@@ -7,6 +7,7 @@ TagManager:
   - StartTown
   - DemonCastle
   - Spawner
+  - DemonKing
   layers:
   - Default
   - TransparentFX
