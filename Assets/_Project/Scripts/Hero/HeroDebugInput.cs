@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Game.Combat;
+using Game.Core;
 
 namespace Game.Hero
 {
@@ -24,6 +25,7 @@ namespace Game.Hero
             inputs.Hero.DebugAddExp.performed += OnAddExp;
             inputs.Hero.DebugWinHero.performed += OnDebugWinHero;
             inputs.Hero.DebugLoseHero.performed += OnDebugLoseHero;
+            inputs.Hero.DebugSpawnPowerItem.performed += OnDebugSpawnPowerItem;
         }
 
         private void OnDisable()
@@ -32,7 +34,14 @@ namespace Game.Hero
             inputs.Hero.DebugAddExp.performed -= OnAddExp;
             inputs.Hero.DebugWinHero.performed -= OnDebugWinHero;
             inputs.Hero.DebugLoseHero.performed -= OnDebugLoseHero;
+            inputs.Hero.DebugSpawnPowerItem.performed -= OnDebugSpawnPowerItem;
             inputs.Hero.Disable();
+        }
+
+        private void OnDebugSpawnPowerItem(InputAction.CallbackContext _)
+        {
+            if (MatchItemGimmick.Instance == null) { Debug.LogWarning("[Debug] F: MatchItemGimmick not in scene"); return; }
+            MatchItemGimmick.Instance.SpawnPowerItemNow();
         }
 
         private void OnAddExp(InputAction.CallbackContext _)

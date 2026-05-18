@@ -9,6 +9,7 @@ TagManager:
   - Spawner
   - DemonKing
   - Monster
+  - PowerItem
   layers:
   - Default
   - TransparentFX

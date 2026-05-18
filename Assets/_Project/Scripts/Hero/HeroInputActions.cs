@@ -118,6 +118,15 @@ namespace Game.Hero
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""DebugSpawnPowerItem"",
+                    ""type"": ""Button"",
+                    ""id"": ""a2000000-0000-0000-0000-00000000000b"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -274,6 +283,17 @@ namespace Game.Hero
                     ""action"": ""SkillWheel"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a3000000-0000-0000-0000-00000000000e"",
+                    ""path"": ""<Keyboard>/f"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""DebugSpawnPowerItem"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -292,6 +312,7 @@ namespace Game.Hero
             m_Hero_DebugLoseHero = m_Hero.FindAction("DebugLoseHero", throwIfNotFound: true);
             m_Hero_SkillCast = m_Hero.FindAction("SkillCast", throwIfNotFound: true);
             m_Hero_SkillWheel = m_Hero.FindAction("SkillWheel", throwIfNotFound: true);
+            m_Hero_DebugSpawnPowerItem = m_Hero.FindAction("DebugSpawnPowerItem", throwIfNotFound: true);
         }
 
         ~@HeroInputActions()
@@ -368,6 +389,7 @@ namespace Game.Hero
         private readonly InputAction m_Hero_DebugLoseHero;
         private readonly InputAction m_Hero_SkillCast;
         private readonly InputAction m_Hero_SkillWheel;
+        private readonly InputAction m_Hero_DebugSpawnPowerItem;
         public struct HeroActions
         {
             private @HeroInputActions m_Wrapper;
@@ -382,6 +404,7 @@ namespace Game.Hero
             public InputAction @DebugLoseHero => m_Wrapper.m_Hero_DebugLoseHero;
             public InputAction @SkillCast => m_Wrapper.m_Hero_SkillCast;
             public InputAction @SkillWheel => m_Wrapper.m_Hero_SkillWheel;
+            public InputAction @DebugSpawnPowerItem => m_Wrapper.m_Hero_DebugSpawnPowerItem;
             public InputActionMap Get() { return m_Wrapper.m_Hero; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
@@ -421,6 +444,9 @@ namespace Game.Hero
                 @SkillWheel.started += instance.OnSkillWheel;
                 @SkillWheel.performed += instance.OnSkillWheel;
                 @SkillWheel.canceled += instance.OnSkillWheel;
+                @DebugSpawnPowerItem.started += instance.OnDebugSpawnPowerItem;
+                @DebugSpawnPowerItem.performed += instance.OnDebugSpawnPowerItem;
+                @DebugSpawnPowerItem.canceled += instance.OnDebugSpawnPowerItem;
             }
 
             private void UnregisterCallbacks(IHeroActions instance)
@@ -455,6 +481,9 @@ namespace Game.Hero
                 @SkillWheel.started -= instance.OnSkillWheel;
                 @SkillWheel.performed -= instance.OnSkillWheel;
                 @SkillWheel.canceled -= instance.OnSkillWheel;
+                @DebugSpawnPowerItem.started -= instance.OnDebugSpawnPowerItem;
+                @DebugSpawnPowerItem.performed -= instance.OnDebugSpawnPowerItem;
+                @DebugSpawnPowerItem.canceled -= instance.OnDebugSpawnPowerItem;
             }
 
             public void RemoveCallbacks(IHeroActions instance)
@@ -484,6 +513,7 @@ namespace Game.Hero
             void OnDebugLoseHero(InputAction.CallbackContext context);
             void OnSkillCast(InputAction.CallbackContext context);
             void OnSkillWheel(InputAction.CallbackContext context);
+            void OnDebugSpawnPowerItem(InputAction.CallbackContext context);
         }
     }
 }
