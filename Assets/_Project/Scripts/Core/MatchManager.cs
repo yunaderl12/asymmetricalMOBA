@@ -40,6 +40,13 @@ namespace Game.Core
         public event Action<MatchState> OnStateChanged;
         public event Action<Winner> OnMatchFinished;
 
+        public void SkipPrepPhase()
+        {
+            if (CurrentState != MatchState.DemonPrepPhase) return;
+            prepElapsed = prepPhaseDuration;
+            Debug.Log("[Match] PrepPhase skipped by user.");
+        }
+
         private float prepElapsed;
         private HealthComponent startTownHealth;
         private HealthComponent demonKingHealth;

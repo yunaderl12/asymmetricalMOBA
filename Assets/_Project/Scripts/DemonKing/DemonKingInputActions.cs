@@ -73,6 +73,15 @@ namespace Game.DemonKing
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""DebugConfirmPrep"",
+                    ""type"": ""Button"",
+                    ""id"": ""b2000000-0000-0000-0000-000000000006"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -174,6 +183,17 @@ namespace Game.DemonKing
                     ""action"": ""DebugSelfDamage"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""b3000000-0000-0000-0000-000000000009"",
+                    ""path"": ""<Keyboard>/y"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""DebugConfirmPrep"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -187,6 +207,7 @@ namespace Game.DemonKing
             m_DemonKing_ViewSwitch = m_DemonKing.FindAction("ViewSwitch", throwIfNotFound: true);
             m_DemonKing_DebugUseMP = m_DemonKing.FindAction("DebugUseMP", throwIfNotFound: true);
             m_DemonKing_DebugSelfDamage = m_DemonKing.FindAction("DebugSelfDamage", throwIfNotFound: true);
+            m_DemonKing_DebugConfirmPrep = m_DemonKing.FindAction("DebugConfirmPrep", throwIfNotFound: true);
         }
 
         ~@DemonKingInputActions()
@@ -258,6 +279,7 @@ namespace Game.DemonKing
         private readonly InputAction m_DemonKing_ViewSwitch;
         private readonly InputAction m_DemonKing_DebugUseMP;
         private readonly InputAction m_DemonKing_DebugSelfDamage;
+        private readonly InputAction m_DemonKing_DebugConfirmPrep;
         public struct DemonKingActions
         {
             private @DemonKingInputActions m_Wrapper;
@@ -267,6 +289,7 @@ namespace Game.DemonKing
             public InputAction @ViewSwitch => m_Wrapper.m_DemonKing_ViewSwitch;
             public InputAction @DebugUseMP => m_Wrapper.m_DemonKing_DebugUseMP;
             public InputAction @DebugSelfDamage => m_Wrapper.m_DemonKing_DebugSelfDamage;
+            public InputAction @DebugConfirmPrep => m_Wrapper.m_DemonKing_DebugConfirmPrep;
             public InputActionMap Get() { return m_Wrapper.m_DemonKing; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
@@ -291,6 +314,9 @@ namespace Game.DemonKing
                 @DebugSelfDamage.started += instance.OnDebugSelfDamage;
                 @DebugSelfDamage.performed += instance.OnDebugSelfDamage;
                 @DebugSelfDamage.canceled += instance.OnDebugSelfDamage;
+                @DebugConfirmPrep.started += instance.OnDebugConfirmPrep;
+                @DebugConfirmPrep.performed += instance.OnDebugConfirmPrep;
+                @DebugConfirmPrep.canceled += instance.OnDebugConfirmPrep;
             }
 
             private void UnregisterCallbacks(IDemonKingActions instance)
@@ -310,6 +336,9 @@ namespace Game.DemonKing
                 @DebugSelfDamage.started -= instance.OnDebugSelfDamage;
                 @DebugSelfDamage.performed -= instance.OnDebugSelfDamage;
                 @DebugSelfDamage.canceled -= instance.OnDebugSelfDamage;
+                @DebugConfirmPrep.started -= instance.OnDebugConfirmPrep;
+                @DebugConfirmPrep.performed -= instance.OnDebugConfirmPrep;
+                @DebugConfirmPrep.canceled -= instance.OnDebugConfirmPrep;
             }
 
             public void RemoveCallbacks(IDemonKingActions instance)
@@ -334,6 +363,7 @@ namespace Game.DemonKing
             void OnViewSwitch(InputAction.CallbackContext context);
             void OnDebugUseMP(InputAction.CallbackContext context);
             void OnDebugSelfDamage(InputAction.CallbackContext context);
+            void OnDebugConfirmPrep(InputAction.CallbackContext context);
         }
     }
 }

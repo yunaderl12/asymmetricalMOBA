@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Game.Combat;
+using Game.Core;
 
 namespace Game.DemonKing
 {
@@ -23,6 +24,7 @@ namespace Game.DemonKing
             var inputs = controller.Inputs;
             inputs.DemonKing.DebugUseMP.performed += OnUseMP;
             inputs.DemonKing.DebugSelfDamage.performed += OnSelfDamage;
+            inputs.DemonKing.DebugConfirmPrep.performed += OnConfirmPrep;
         }
 
         private void OnDisable()
@@ -31,7 +33,15 @@ namespace Game.DemonKing
             {
                 controller.Inputs.DemonKing.DebugUseMP.performed -= OnUseMP;
                 controller.Inputs.DemonKing.DebugSelfDamage.performed -= OnSelfDamage;
+                controller.Inputs.DemonKing.DebugConfirmPrep.performed -= OnConfirmPrep;
             }
+        }
+
+        private void OnConfirmPrep(InputAction.CallbackContext _)
+        {
+            if (MatchManager.Instance == null) return;
+            if (MatchManager.Instance.CurrentState != MatchManager.MatchState.DemonPrepPhase) return;
+            MatchManager.Instance.SkipPrepPhase();
         }
 
         private void OnUseMP(InputAction.CallbackContext _)

@@ -13,6 +13,7 @@ namespace Game.Monster
         [Header("Data")]
         [SerializeField] private SpawnerData data;
         [SerializeField] private List<MonsterData> inv = new List<MonsterData>();
+        [SerializeField] private List<int> deckIndices = new List<int>();
 
         [Header("Refs")]
         [SerializeField] private Transform attackOrigin;
@@ -60,6 +61,8 @@ namespace Game.Monster
             var expReward = GetComponent<ExpReward>();
             if (expReward != null) expReward.Exp = data.exp;
 
+            TryResolveInvFromDeck();
+
             if (inv.Count > data.inv)
             {
                 Debug.LogWarning($"[Spawner] {name} inv ({inv.Count}) > data.inv ({data.inv}); truncating.");
@@ -68,6 +71,34 @@ namespace Game.Monster
 
             StartCoroutine(SpawnRoutine());
             // Attack is driven by Update (frame-accurate range gating) instead of a coroutine.
+        }
+
+        private void TryResolveInvFromDeck()
+        {
+            if (deckIndices == null || deckIndices.Count == 0) return;
+            var dkGO = GameObject.FindWithTag("DemonKing");
+            if (dkGO == null)
+            {
+                Debug.Log($"[Spawner] {name} has deckIndices but no DemonKing tag found; using Inspector inv fallback.");
+                return;
+            }
+            var deck = dkGO.GetComponent<Game.DemonKing.DemonKingDeck>();
+            if (deck == null)
+            {
+                Debug.Log($"[Spawner] {name} DemonKing has no DemonKingDeck; using Inspector inv fallback.");
+                return;
+            }
+            var resolved = new List<MonsterData>();
+            foreach (int i in deckIndices)
+            {
+                var md = deck.GetByIndex(i);
+                if (md != null) resolved.Add(md);
+            }
+            if (resolved.Count > 0)
+            {
+                inv = resolved;
+                Debug.Log($"[Spawner] {name} inv resolved from DemonKingDeck: {resolved.Count} entries.");
+            }
         }
 
         private float attackCooldownTimer;

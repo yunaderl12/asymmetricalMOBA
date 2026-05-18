@@ -7,11 +7,14 @@ namespace Game.UI
     public class MatchTimerUI : MonoBehaviour
     {
         [SerializeField] private Text timerText;
+        [SerializeField] private GameObject prepHintRoot;
 
         private void Update()
         {
             if (timerText == null || MatchManager.Instance == null) return;
             var m = MatchManager.Instance;
+            bool inPrep = m.CurrentState == MatchManager.MatchState.DemonPrepPhase;
+            if (prepHintRoot != null && prepHintRoot.activeSelf != inPrep) prepHintRoot.SetActive(inPrep);
             switch (m.CurrentState)
             {
                 case MatchManager.MatchState.WaitingForStart:
