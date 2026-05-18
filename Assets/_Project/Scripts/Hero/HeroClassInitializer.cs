@@ -1,6 +1,7 @@
 using UnityEngine;
 using Game.Combat;
 using Game.Skill;
+using Game.Core;
 
 namespace Game.Hero
 {
@@ -27,6 +28,12 @@ namespace Game.Hero
             sp = GetComponent<SkillPointComponent>();
             controller = GetComponent<HeroFPSController>();
             attack = GetComponent<HeroAttack>();
+
+            if (GameSession.Instance != null)
+            {
+                if (GameSession.Instance.SelectedHeroClass != null) classData = GameSession.Instance.SelectedHeroClass;
+                if (GameSession.Instance.SelectedCommonSkill != null) commonSkill = GameSession.Instance.SelectedCommonSkill;
+            }
 
             if (classData == null)
             {

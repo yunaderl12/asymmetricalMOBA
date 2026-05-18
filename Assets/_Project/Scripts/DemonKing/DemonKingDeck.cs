@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Game.Monster;
+using Game.Core;
 
 namespace Game.DemonKing
 {
@@ -10,6 +11,14 @@ namespace Game.DemonKing
 
         public int Count => deck != null ? deck.Count : 0;
         public IReadOnlyList<MonsterData> Deck => deck;
+
+        private void Awake()
+        {
+            if (GameSession.Instance != null && GameSession.Instance.DemonDeck != null && GameSession.Instance.DemonDeck.Count > 0)
+            {
+                deck = new List<MonsterData>(GameSession.Instance.DemonDeck);
+            }
+        }
 
         public MonsterData GetByIndex(int i)
         {

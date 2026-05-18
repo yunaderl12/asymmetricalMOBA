@@ -18,6 +18,9 @@ namespace Game.Combat
         public event Action<int, int> OnHPChanged;
         public event Action<DeathInfo> OnDeathDetailed;
 
+        public static event Action<HealthComponent, int, GameObject> AnyDamage;
+        public static event Action<HealthComponent, DeathInfo> AnyDeath;
+
         public struct DamageRecord
         {
             public GameObject attacker;
@@ -55,12 +58,14 @@ namespace Game.Combat
 
             Debug.Log($"[HealthComponent] {name} took {amount} dmg from {(attacker != null ? attacker.name : "null")} -> HP={currentHP}/{maxHP}");
             OnHPChanged?.Invoke(currentHP, maxHP);
+            AnyDamage?.Invoke(this, amount, attacker);
 
             if (currentHP <= 0)
             {
                 IsDead = true;
                 var info = BuildDeathInfo();
                 OnDeathDetailed?.Invoke(info);
+                AnyDeath?.Invoke(this, info);
                 OnDeath?.Invoke();
             }
         }

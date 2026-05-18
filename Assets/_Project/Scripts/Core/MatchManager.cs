@@ -2,7 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Game.Combat;
+using Game.Hero;
 
 namespace Game.Core
 {
@@ -151,6 +153,10 @@ namespace Game.Core
             FinishMatch(Winner.Heroes);
         }
 
+        [Header("Result Transition")]
+        [SerializeField] private string resultSceneName = "Result";
+        [SerializeField] private float resultDelaySeconds = 3f;
+
         private void FinishMatch(Winner w)
         {
             if (CurrentState == MatchState.Finished) return;
@@ -160,6 +166,26 @@ namespace Game.Core
             OnStateChanged?.Invoke(CurrentState);
             OnMatchFinished?.Invoke(w);
             Time.timeScale = 0f;
+
+            if (GameSession.Instance != null)
+            {
+                GameSession.Instance.LastWinner = w;
+                var hero = GameObject.FindWithTag("Player");
+                if (hero != null)
+                {
+                    var st = hero.GetComponent<StatTracker>();
+                    if (st != null) GameSession.Instance.LastMatchStats = st.Stats;
+                }
+            }
+            if (!string.IsNullOrEmpty(resultSceneName))
+                StartCoroutine(LoadResultAfterDelay());
+        }
+
+        private IEnumerator LoadResultAfterDelay()
+        {
+            yield return new WaitForSecondsRealtime(resultDelaySeconds);
+            Time.timeScale = 1f;
+            SceneManager.LoadScene(resultSceneName);
         }
 
         private void OnDestroy()
