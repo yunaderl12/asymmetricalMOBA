@@ -107,6 +107,9 @@ GameObject:
   - component: {fileID: 2915333161001633511}
   - component: {fileID: 8095684835187384214}
   - component: {fileID: 8410141199430849403}
+  - component: {fileID: 3910471770996684363}
+  - component: {fileID: 5649804080906070790}
+  - component: {fileID: 4389709817646537066}
   m_Layer: 0
   m_Name: Hero
   m_TagString: Player
@@ -314,6 +317,47 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   classData: {fileID: 11400000, guid: 6210ec3a6f1d2460e90b0ca56b16bb2a, type: 2}
+  commonSkill: {fileID: 11400000, guid: 19862323073464193be778cdef58bce9, type: 2}
+--- !u!114 &3910471770996684363
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7591807908439482892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14331d99f415444a9b55bfedc67e9b20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  activeModifiers: []
+--- !u!114 &5649804080906070790
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7591807908439482892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a0fa096e69e541eb98565b803326409, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &4389709817646537066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7591807908439482892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b349bf4c6fb8a4363a46964651e86e47, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cameraTransform: {fileID: 4596248169901172145}
+  beamLine: {fileID: 0}
+  beamDuration: 0.15
 --- !u!1 &8282447436492061361
 GameObject:
   m_ObjectHideFlags: 0

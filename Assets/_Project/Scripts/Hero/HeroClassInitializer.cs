@@ -1,13 +1,16 @@
 using UnityEngine;
 using Game.Combat;
+using Game.Skill;
 
 namespace Game.Hero
 {
     public class HeroClassInitializer : MonoBehaviour
     {
         [SerializeField] private HeroClassData classData;
+        [SerializeField] private SkillData commonSkill;
 
         public HeroClassData ClassData => classData;
+        public SkillData CommonSkill => commonSkill;
         public int CurrentAtk { get; private set; }
         public int CurrentMAtk { get; private set; }
         public int CurrentDf { get; private set; }

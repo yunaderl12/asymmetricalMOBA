@@ -100,6 +100,24 @@ namespace Game.Hero
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""SkillCast"",
+                    ""type"": ""Button"",
+                    ""id"": ""a2000000-0000-0000-0000-000000000009"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""SkillWheel"",
+                    ""type"": ""Button"",
+                    ""id"": ""a2000000-0000-0000-0000-00000000000a"",
+                    ""expectedControlType"": ""Button"",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -234,6 +252,28 @@ namespace Game.Hero
                     ""action"": ""DebugLoseHero"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a3000000-0000-0000-0000-00000000000c"",
+                    ""path"": ""<Mouse>/rightButton"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""SkillCast"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""a3000000-0000-0000-0000-00000000000d"",
+                    ""path"": ""<Keyboard>/leftShift"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""SkillWheel"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -250,6 +290,8 @@ namespace Game.Hero
             m_Hero_DebugAddExp = m_Hero.FindAction("DebugAddExp", throwIfNotFound: true);
             m_Hero_DebugWinHero = m_Hero.FindAction("DebugWinHero", throwIfNotFound: true);
             m_Hero_DebugLoseHero = m_Hero.FindAction("DebugLoseHero", throwIfNotFound: true);
+            m_Hero_SkillCast = m_Hero.FindAction("SkillCast", throwIfNotFound: true);
+            m_Hero_SkillWheel = m_Hero.FindAction("SkillWheel", throwIfNotFound: true);
         }
 
         ~@HeroInputActions()
@@ -324,6 +366,8 @@ namespace Game.Hero
         private readonly InputAction m_Hero_DebugAddExp;
         private readonly InputAction m_Hero_DebugWinHero;
         private readonly InputAction m_Hero_DebugLoseHero;
+        private readonly InputAction m_Hero_SkillCast;
+        private readonly InputAction m_Hero_SkillWheel;
         public struct HeroActions
         {
             private @HeroInputActions m_Wrapper;
@@ -336,6 +380,8 @@ namespace Game.Hero
             public InputAction @DebugAddExp => m_Wrapper.m_Hero_DebugAddExp;
             public InputAction @DebugWinHero => m_Wrapper.m_Hero_DebugWinHero;
             public InputAction @DebugLoseHero => m_Wrapper.m_Hero_DebugLoseHero;
+            public InputAction @SkillCast => m_Wrapper.m_Hero_SkillCast;
+            public InputAction @SkillWheel => m_Wrapper.m_Hero_SkillWheel;
             public InputActionMap Get() { return m_Wrapper.m_Hero; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
@@ -369,6 +415,12 @@ namespace Game.Hero
                 @DebugLoseHero.started += instance.OnDebugLoseHero;
                 @DebugLoseHero.performed += instance.OnDebugLoseHero;
                 @DebugLoseHero.canceled += instance.OnDebugLoseHero;
+                @SkillCast.started += instance.OnSkillCast;
+                @SkillCast.performed += instance.OnSkillCast;
+                @SkillCast.canceled += instance.OnSkillCast;
+                @SkillWheel.started += instance.OnSkillWheel;
+                @SkillWheel.performed += instance.OnSkillWheel;
+                @SkillWheel.canceled += instance.OnSkillWheel;
             }
 
             private void UnregisterCallbacks(IHeroActions instance)
@@ -397,6 +449,12 @@ namespace Game.Hero
                 @DebugLoseHero.started -= instance.OnDebugLoseHero;
                 @DebugLoseHero.performed -= instance.OnDebugLoseHero;
                 @DebugLoseHero.canceled -= instance.OnDebugLoseHero;
+                @SkillCast.started -= instance.OnSkillCast;
+                @SkillCast.performed -= instance.OnSkillCast;
+                @SkillCast.canceled -= instance.OnSkillCast;
+                @SkillWheel.started -= instance.OnSkillWheel;
+                @SkillWheel.performed -= instance.OnSkillWheel;
+                @SkillWheel.canceled -= instance.OnSkillWheel;
             }
 
             public void RemoveCallbacks(IHeroActions instance)
@@ -424,6 +482,8 @@ namespace Game.Hero
             void OnDebugAddExp(InputAction.CallbackContext context);
             void OnDebugWinHero(InputAction.CallbackContext context);
             void OnDebugLoseHero(InputAction.CallbackContext context);
+            void OnSkillCast(InputAction.CallbackContext context);
+            void OnSkillWheel(InputAction.CallbackContext context);
         }
     }
 }

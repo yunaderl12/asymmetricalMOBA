@@ -20,6 +20,7 @@ namespace Game.Hero
 
         public float MoveSpeed => moveSpeed;
         public void SetMoveSpeed(float value) { moveSpeed = value; }
+        public bool LookEnabled { get; set; } = true;
 
         private CharacterController controller;
         private HeroInputActions inputs;
@@ -60,6 +61,7 @@ namespace Game.Hero
         private void HandleLook()
         {
             if (!cursorLocked) return;
+            if (!LookEnabled) return;
 
             var look = inputs.Hero.Look.ReadValue<Vector2>();
             float yawDelta = look.x * lookSensitivity;
