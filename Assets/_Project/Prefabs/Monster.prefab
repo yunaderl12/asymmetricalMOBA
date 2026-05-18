@@ -143,6 +143,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   damagePerTick: 5
   tickInterval: 0.5
+  targetTags:
+  - Player
 --- !u!1 &5721938821155410009
 GameObject:
   m_ObjectHideFlags: 0
@@ -438,8 +440,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   data: {fileID: 11400000, guid: 99308e291e52c46cba9abd910658d3e9, type: 2}
   targetTag: StartTown
+  heroTag: Player
   arriveDistance: 1
+  waypointReachDistance: 1.5
   arriveDamage: 10
+  aggroRadius: 10
+  deaggroRadius: 10
+  heroLookupInterval: 0.5
+  chaseRefreshInterval: 0.2
 --- !u!114 &4186406865660562405
 MonoBehaviour:
   m_ObjectHideFlags: 0

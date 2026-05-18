@@ -14,6 +14,9 @@ namespace Game.Monster
         [SerializeField] private SpawnerData data;
         [SerializeField] private List<MonsterData> inv = new List<MonsterData>();
         [SerializeField] private List<int> deckIndices = new List<int>();
+        [SerializeField] private List<Vector3> waypointsToStartTown = new List<Vector3>();
+
+        public IReadOnlyList<Vector3> WaypointsToStartTown => waypointsToStartTown;
 
         [Header("Refs")]
         [SerializeField] private Transform attackOrigin;
@@ -22,6 +25,9 @@ namespace Game.Monster
         [SerializeField] private Material destroyedMaterial;
         [SerializeField] private LineRenderer attackLine;
         [SerializeField] private float attackLineDuration = 0.15f;
+
+        [Header("Spawn Limit")]
+        [SerializeField] private int maxConcurrentMonsters = 2;
 
         [Header("Spawn Location")]
         [SerializeField] private float spawnRadiusMin = 2f;
@@ -60,6 +66,9 @@ namespace Game.Monster
             if (health != null) health.SetMaxHP(data.hp);
             var expReward = GetComponent<ExpReward>();
             if (expReward != null) expReward.Exp = data.exp;
+
+            Game.Core.VisionRing.Create(transform, data.detectRange, new Color(0f, 1f, 1f, 0.8f));
+            Game.Core.VisionRing.Create(transform, data.attackRange, new Color(1f, 0f, 0.3f, 0.8f));
 
             TryResolveInvFromDeck();
 
@@ -191,6 +200,13 @@ namespace Game.Monster
                     continue;
                 }
 
+                int aliveCount = 0;
+                foreach (var sm in spawnedMonsters) if (sm != null) aliveCount++;
+                if (maxConcurrentMonsters > 0 && aliveCount >= maxConcurrentMonsters)
+                {
+                    continue;
+                }
+
                 int sameCount = 0;
                 foreach (var sm in spawnedMonsters)
                 {
@@ -217,7 +233,7 @@ namespace Game.Monster
                 var monsterComp = monsterGO.GetComponent<Monster>();
                 if (monsterComp != null)
                 {
-                    monsterComp.Initialize(dataToSpawn, this);
+                    monsterComp.Initialize(dataToSpawn, this, waypointsToStartTown);
                     spawnedMonsters.Add(monsterComp);
                 }
                 invIndex = (invIndex + 1) % inv.Count;
