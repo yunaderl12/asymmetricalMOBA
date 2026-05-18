@@ -21,6 +21,7 @@ namespace Game.Core
         [Header("Targets")]
         [SerializeField] private string startTownTag = "StartTown";
         [SerializeField] private string demonKingTag = "DemonKing";
+        [SerializeField] private string demonCastleTag = "DemonCastle";
         [SerializeField] private string spawnerTag = "Spawner";
 
         public MatchState CurrentState { get; private set; } = MatchState.WaitingForStart;
@@ -50,7 +51,7 @@ namespace Game.Core
         private float prepElapsed;
         private HealthComponent startTownHealth;
         private HealthComponent demonKingHealth;
-        private readonly List<HealthComponent> spawnerHealths = new List<HealthComponent>();
+        private HealthComponent demonCastleCoreHealth;
 
         private void Awake()
         {
@@ -119,16 +120,14 @@ namespace Game.Core
                 if (demonKingHealth != null) demonKingHealth.OnDeath += CheckHeroWin;
             }
 
-            foreach (var sg in GameObject.FindGameObjectsWithTag(spawnerTag))
+            var castle = GameObject.FindWithTag(demonCastleTag);
+            if (castle != null)
             {
-                var hc = sg.GetComponent<HealthComponent>();
-                if (hc != null)
-                {
-                    spawnerHealths.Add(hc);
-                    hc.OnDeath += CheckSpawnerWipe;
-                }
+                demonCastleCoreHealth = castle.GetComponent<HealthComponent>();
+                if (demonCastleCoreHealth == null) demonCastleCoreHealth = castle.GetComponentInChildren<HealthComponent>();
+                if (demonCastleCoreHealth != null) demonCastleCoreHealth.OnDeath += CheckHeroWin;
             }
-            Debug.Log($"[MatchManager] Bound. StartTown={(startTownHealth != null)} DK={(demonKingHealth != null)} Spawners={spawnerHealths.Count}");
+            Debug.Log($"[MatchManager] Bound. StartTown={(startTownHealth != null)} DK={(demonKingHealth != null)} DemonCastleCore={(demonCastleCoreHealth != null)}");
         }
 
         private void EnterState(MatchState newState)
@@ -152,17 +151,6 @@ namespace Game.Core
             FinishMatch(Winner.Heroes);
         }
 
-        private void CheckSpawnerWipe()
-        {
-            if (CurrentState != MatchState.InMatch) return;
-            foreach (var s in spawnerHealths)
-            {
-                if (s == null) continue;
-                if (!s.IsDead) return;
-            }
-            FinishMatch(Winner.Heroes);
-        }
-
         private void FinishMatch(Winner w)
         {
             if (CurrentState == MatchState.Finished) return;
@@ -178,7 +166,7 @@ namespace Game.Core
         {
             if (startTownHealth != null) startTownHealth.OnDeath -= CheckHeroLoss;
             if (demonKingHealth != null) demonKingHealth.OnDeath -= CheckHeroWin;
-            foreach (var s in spawnerHealths) if (s != null) s.OnDeath -= CheckSpawnerWipe;
+            if (demonCastleCoreHealth != null) demonCastleCoreHealth.OnDeath -= CheckHeroWin;
             if (Instance == this) Instance = null;
             Time.timeScale = 1f;
         }

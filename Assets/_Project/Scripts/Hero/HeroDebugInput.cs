@@ -51,18 +51,16 @@ namespace Game.Hero
 
         private void OnDebugWinHero(InputAction.CallbackContext _)
         {
-            var spawners = GameObject.FindGameObjectsWithTag("Spawner");
-            int killed = 0;
-            foreach (var s in spawners)
+            var castle = GameObject.FindWithTag("DemonCastle");
+            if (castle == null) { Debug.LogWarning("[Debug] N: DemonCastle not found"); return; }
+            var core = castle.GetComponent<HealthComponent>();
+            if (core == null) core = castle.GetComponentInChildren<HealthComponent>();
+            if (core != null && !core.IsDead)
             {
-                var hc = s.GetComponent<HealthComponent>();
-                if (hc != null && !hc.IsDead)
-                {
-                    hc.TakeDamage(hc.MaxHP * 2, gameObject);
-                    killed++;
-                }
+                core.TakeDamage(core.MaxHP * 2, gameObject);
+                Debug.Log("[Debug] N: DemonCastle_Core killed");
             }
-            Debug.Log($"[Debug] N: spawners killed = {killed}");
+            else Debug.LogWarning("[Debug] N: DemonCastle has no HealthComponent");
         }
 
         private void OnDebugLoseHero(InputAction.CallbackContext _)

@@ -16,6 +16,11 @@ namespace Game.Core
         [SerializeField] private AudioListener heroAudio;
         [SerializeField] private MonoBehaviour heroSpectatorScript;
 
+        [Header("HUD")]
+        [SerializeField] private GameObject heroHudRoot;
+        [SerializeField] private GameObject demonKingHudRoot;
+        [SerializeField] private GameObject spawnerListUiRoot;
+
         private bool inPrep;
 
         private void Start()
@@ -59,6 +64,11 @@ namespace Game.Core
             if (demonKingControlsToEnableInPrep != null)
                 foreach (var c in demonKingControlsToEnableInPrep) if (c != null) c.enabled = true;
 
+            // HUD swap
+            if (heroHudRoot != null) heroHudRoot.SetActive(false);
+            if (demonKingHudRoot != null) demonKingHudRoot.SetActive(true);
+            if (spawnerListUiRoot != null) spawnerListUiRoot.SetActive(true);
+
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
             Debug.Log("[PrepPhaseManager] EnterPrep: DemonKing controllable, Hero locked, camera switched.");
@@ -82,6 +92,11 @@ namespace Game.Core
             if (heroControlsToDisableInPrep != null)
                 foreach (var c in heroControlsToDisableInPrep) if (c != null) c.enabled = true;
             if (heroSpectatorScript != null) heroSpectatorScript.enabled = true;
+
+            // HUD swap back
+            if (demonKingHudRoot != null) demonKingHudRoot.SetActive(false);
+            if (spawnerListUiRoot != null) spawnerListUiRoot.SetActive(false);
+            if (heroHudRoot != null) heroHudRoot.SetActive(true);
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
