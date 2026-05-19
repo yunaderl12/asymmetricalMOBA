@@ -8,8 +8,11 @@ namespace Game.Core
 {
     public class GameSession : MonoBehaviour
     {
+        public enum PlayerRole { None, Hero, DemonKing }
+
         public static GameSession Instance { get; private set; }
 
+        public PlayerRole CurrentRole = PlayerRole.None;
         public HeroClassData SelectedHeroClass;
         public SkillData SelectedCommonSkill;
         public List<MonsterData> DemonDeck = new List<MonsterData>();

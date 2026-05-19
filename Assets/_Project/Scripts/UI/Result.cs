@@ -10,7 +10,7 @@ namespace Game.UI
         [SerializeField] private Text winnerText;
         [SerializeField] private Text statsText;
         [SerializeField] private Button returnToLobbyButton;
-        [SerializeField] private string lobbySceneName = "Lobby";
+        [SerializeField] private string lobbySceneName = "Title";
 
         private void Start()
         {

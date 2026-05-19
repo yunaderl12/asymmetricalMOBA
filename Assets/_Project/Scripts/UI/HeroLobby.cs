@@ -7,7 +7,7 @@ using Game.Skill;
 
 namespace Game.UI
 {
-    public class Lobby : MonoBehaviour
+    public class HeroLobby : MonoBehaviour
     {
         [Header("Class Buttons (4)")]
         [SerializeField] private Button[] classButtons;
@@ -22,6 +22,10 @@ namespace Game.UI
         [Header("Match Start")]
         [SerializeField] private Button startMatchButton;
         [SerializeField] private string matchSceneName = "MainStage";
+
+        [Header("Navigation")]
+        [SerializeField] private Button backToTitleButton;
+        [SerializeField] private string titleSceneName = "Title";
 
         [Header("Last Match Stats")]
         [SerializeField] private Text lastStatsText;
@@ -62,6 +66,12 @@ namespace Game.UI
             ShowLastStats();
 
             if (startMatchButton != null) startMatchButton.onClick.AddListener(OnStartClicked);
+            if (backToTitleButton != null) backToTitleButton.onClick.AddListener(OnBackToTitleClicked);
+        }
+
+        private void OnBackToTitleClicked()
+        {
+            SceneManager.LoadScene(titleSceneName);
         }
 
         private void SelectClass(int idx)
