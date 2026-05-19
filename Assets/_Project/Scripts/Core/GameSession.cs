@@ -22,6 +22,7 @@ namespace Game.Core
         public List<MonsterData> SpawnerInitialMobs = new List<MonsterData>();
         public MatchStats LastMatchStats;
         public MatchManager.Winner LastWinner = MatchManager.Winner.None;
+        public bool SkipPrepPhase = false;
 
         public static GameSession GetOrCreate()
         {

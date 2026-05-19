@@ -34,7 +34,7 @@ namespace Game.UI
         [Header("Buttons")]
         [SerializeField] private Button startMatchButton;
         [SerializeField] private Button backToTitleButton;
-        [SerializeField] private string matchSceneName = "MainStage";
+        [SerializeField] private string matchSceneName = "MatchLobby";
         [SerializeField] private string titleSceneName = "Title";
 
         [Header("Colors")]

@@ -64,6 +64,11 @@ namespace Game.Core
                 prepPhaseDuration = 5f;
                 matchDuration = 180f;
             }
+            if (GameSession.Instance != null && GameSession.Instance.SkipPrepPhase)
+            {
+                prepPhaseDuration = 1f;
+                GameSession.Instance.SkipPrepPhase = false;
+            }
         }
 
         private void Start()

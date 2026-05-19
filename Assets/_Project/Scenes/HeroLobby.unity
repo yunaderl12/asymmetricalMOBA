@@ -4008,7 +4008,7 @@ MonoBehaviour:
   freeSlotColor: {r: 0.9, g: 0.75, b: 0.2, a: 0.95}
   skillPicker: {fileID: 1159698908}
   startMatchButton: {fileID: 799352889}
-  matchSceneName: MainStage
+  matchSceneName: MatchLobby
   backToTitleButton: {fileID: 1534593809}
   titleSceneName: Title
   lastStatsText: {fileID: 790431837}

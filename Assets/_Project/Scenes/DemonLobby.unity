@@ -340,7 +340,7 @@ MonoBehaviour:
     m_FontStyle: 1
     m_BestFit: 0
     m_MinSize: 10
-    m_MaxSize: 40
+    m_MaxSize: 48
     m_Alignment: 4
     m_AlignByGeometry: 0
     m_RichText: 1
@@ -1912,7 +1912,7 @@ MonoBehaviour:
   pickerUI: {fileID: 1095201993}
   startMatchButton: {fileID: 876038872}
   backToTitleButton: {fileID: 70513902}
-  matchSceneName: MainStage
+  matchSceneName: MatchLobby
   titleSceneName: Title
   emptySlot: {r: 0.18, g: 0.18, b: 0.22, a: 0.9}
   filledSlot: {r: 0.4, g: 0.18, b: 0.22, a: 0.95}

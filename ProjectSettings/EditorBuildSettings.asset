@@ -15,6 +15,9 @@ EditorBuildSettings:
     path: Assets/_Project/Scenes/DemonLobby.unity
     guid: 445a41bded3d34c72b2ec5aa3580c723
   - enabled: 1
+    path: Assets/_Project/Scenes/MatchLobby.unity
+    guid: 2ab050f3c91944f2d8ac34e8b8d7ed72
+  - enabled: 1
     path: Assets/_Project/Scenes/MainStage.unity
     guid: b80481a233ce245c483f922885187a76
   - enabled: 1
