@@ -23,6 +23,7 @@ namespace Game.Core
         public MatchStats LastMatchStats;
         public MatchManager.Winner LastWinner = MatchManager.Winner.None;
         public bool SkipPrepPhase = false;
+        public List<BotData> CurrentMatchBots = new List<BotData>();
 
         public static GameSession GetOrCreate()
         {

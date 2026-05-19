@@ -29,6 +29,9 @@ namespace Game.UI
         [Header("Monster Picker")]
         [SerializeField] private DemonMonsterPickerUI pickerUI;
 
+        [Header("Hero Team Display")]
+        [SerializeField] private Text[] heroTeamTexts;
+
         [Header("Colors")]
         [SerializeField] private Color emptySlot = new Color(0.18f, 0.18f, 0.22f, 0.9f);
         [SerializeField] private Color filledSlot = new Color(0.4f, 0.18f, 0.22f, 0.95f);
@@ -54,6 +57,37 @@ namespace Game.UI
             WireDeckSlots();
             WireSpawnerSlots();
             RefreshAll();
+        }
+
+        public void RefreshTeamDisplay()
+        {
+            var bots = GameSession.Instance != null ? GameSession.Instance.CurrentMatchBots : null;
+            int heroIdx = 0;
+            for (int slot = 0; slot < (heroTeamTexts != null ? heroTeamTexts.Length : 0); slot++)
+            {
+                if (heroTeamTexts[slot] == null) continue;
+                BotData found = null;
+                if (bots != null)
+                {
+                    int counter = 0;
+                    foreach (var b in bots)
+                    {
+                        if (b.role != GameSession.PlayerRole.Hero) continue;
+                        if (counter == heroIdx) { found = b; break; }
+                        counter++;
+                    }
+                }
+                if (found != null)
+                {
+                    string ready = found.isReady ? " ✓" : "";
+                    heroTeamTexts[slot].text = "Slot " + (slot + 1) + ": " + found.botName + " (" + BotMatchmaker.GetClassDisplay(found.heroClass) + ")" + ready;
+                }
+                else
+                {
+                    heroTeamTexts[slot].text = "Slot " + (slot + 1) + ": マッチング中...";
+                }
+                heroIdx++;
+            }
         }
 
         public void SaveToSession()

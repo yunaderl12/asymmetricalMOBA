@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Game.UI
@@ -8,6 +9,7 @@ namespace Game.UI
     {
         [SerializeField] private GameObject root;
         [SerializeField] private Text text;
+        [SerializeField] private string allowedScene = "MainStage";
         [TextArea(8, 30)]
         [SerializeField] private string commands =
 @"=== Debug Commands ===
@@ -44,6 +46,7 @@ namespace Game.UI
         private void Update()
         {
             if (Keyboard.current == null) return;
+            if (!string.IsNullOrEmpty(allowedScene) && SceneManager.GetActiveScene().name != allowedScene) return;
             if (Keyboard.current.digit0Key.wasPressedThisFrame)
             {
                 if (root != null) root.SetActive(!root.activeSelf);

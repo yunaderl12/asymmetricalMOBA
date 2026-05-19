@@ -9947,6 +9947,11 @@ MonoBehaviour:
   - {fileID: 1397740946}
   - {fileID: 178587989}
   pickerUI: {fileID: 711808785}
+  heroTeamTexts:
+  - {fileID: 1784974719}
+  - {fileID: 1202765365}
+  - {fileID: 1725786411}
+  - {fileID: 762940438}
   emptySlot: {r: 0.18, g: 0.18, b: 0.22, a: 0.9}
   filledSlot: {r: 0.4, g: 0.18, b: 0.22, a: 0.95}
   selectedAvail: {r: 1, g: 0.85, b: 0.3, a: 0.95}
@@ -10975,6 +10980,11 @@ MonoBehaviour:
   lockedSlotColor: {r: 0.25, g: 0.25, b: 0.3, a: 0.9}
   freeSlotColor: {r: 0.9, g: 0.75, b: 0.2, a: 0.95}
   skillPicker: {fileID: 992924848}
+  otherHeroTexts:
+  - {fileID: 1752486923}
+  - {fileID: 1478825303}
+  - {fileID: 211927491}
+  demonKingText: {fileID: 668455313}
   normalFrame: {r: 0.2, g: 0.2, b: 0.25, a: 0.85}
   selectedFrame: {r: 1, g: 0.85, b: 0.2, a: 0.95}
 --- !u!1 &2000647594

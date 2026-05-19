@@ -29,6 +29,10 @@ namespace Game.UI
         [Header("Skill Picker")]
         [SerializeField] private SkillPickerUI skillPicker;
 
+        [Header("Team Display (Other Heroes + DK)")]
+        [SerializeField] private Text[] otherHeroTexts;
+        [SerializeField] private Text demonKingText;
+
         [Header("Colors")]
         [SerializeField] private Color normalFrame = new Color(0.2f, 0.2f, 0.25f, 0.85f);
         [SerializeField] private Color selectedFrame = new Color(1f, 0.85f, 0.2f, 0.95f);
@@ -55,6 +59,43 @@ namespace Game.UI
 
             if (slot5ChangeButton != null) slot5ChangeButton.onClick.AddListener(OpenPicker);
             RefreshAll();
+        }
+
+        public void RefreshTeamDisplay()
+        {
+            var bots = GameSession.Instance != null ? GameSession.Instance.CurrentMatchBots : null;
+            int heroIdx = 0;
+            for (int slot = 0; slot < (otherHeroTexts != null ? otherHeroTexts.Length : 0); slot++)
+            {
+                if (otherHeroTexts[slot] == null) continue;
+                BotData found = null;
+                if (bots != null)
+                {
+                    int counter = 0;
+                    foreach (var b in bots)
+                    {
+                        if (b.role != GameSession.PlayerRole.Hero) continue;
+                        if (counter == heroIdx) { found = b; break; }
+                        counter++;
+                    }
+                }
+                if (found != null)
+                {
+                    string ready = found.isReady ? " ✓" : "";
+                    otherHeroTexts[slot].text = "Slot " + (slot + 2) + ": " + found.botName + " (" + BotMatchmaker.GetClassDisplay(found.heroClass) + ")" + ready;
+                }
+                else
+                {
+                    otherHeroTexts[slot].text = "Slot " + (slot + 2) + ": マッチング中...";
+                }
+                heroIdx++;
+            }
+            if (demonKingText != null)
+            {
+                BotData dk = null;
+                if (bots != null) foreach (var b in bots) if (b.role == GameSession.PlayerRole.DemonKing) { dk = b; break; }
+                demonKingText.text = dk != null ? ("魔王: " + dk.botName + (dk.isReady ? " ✓" : "")) : "魔王: マッチング中...";
+            }
         }
 
         public void SaveToSession()
