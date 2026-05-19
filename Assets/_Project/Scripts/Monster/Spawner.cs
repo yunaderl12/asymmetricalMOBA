@@ -15,6 +15,7 @@ namespace Game.Monster
         [SerializeField] private List<MonsterData> inv = new List<MonsterData>();
         [SerializeField] private List<int> deckIndices = new List<int>();
         [SerializeField] private List<Vector3> waypointsToStartTown = new List<Vector3>();
+        [SerializeField] private int spawnerIndex = -1;
 
         public IReadOnlyList<Vector3> WaypointsToStartTown => waypointsToStartTown;
 
@@ -84,6 +85,19 @@ namespace Game.Monster
 
         private void TryResolveInvFromDeck()
         {
+            // Priority 1: GameSession.SpawnerInitialMobs[spawnerIndex]
+            if (spawnerIndex >= 0 && Game.Core.GameSession.Instance != null)
+            {
+                var list = Game.Core.GameSession.Instance.SpawnerInitialMobs;
+                if (list != null && spawnerIndex < list.Count && list[spawnerIndex] != null)
+                {
+                    inv = new List<MonsterData> { list[spawnerIndex] };
+                    Debug.Log($"[Spawner] {name} inv resolved from GameSession.SpawnerInitialMobs[{spawnerIndex}]: {list[spawnerIndex].monsterName}");
+                    return;
+                }
+            }
+
+            // Priority 2: deckIndices via DemonKingDeck
             if (deckIndices == null || deckIndices.Count == 0) return;
             var dkGO = GameObject.FindWithTag("DemonKing");
             if (dkGO == null)

@@ -12,10 +12,14 @@ namespace Game.Core
 
         public static GameSession Instance { get; private set; }
 
+        public const int SPAWNER_COUNT = 5;
+        public const int DECK_MAX = 20;
+
         public PlayerRole CurrentRole = PlayerRole.None;
         public HeroClassData SelectedHeroClass;
         public SkillData SelectedCommonSkill;
         public List<MonsterData> DemonDeck = new List<MonsterData>();
+        public List<MonsterData> SpawnerInitialMobs = new List<MonsterData>();
         public MatchStats LastMatchStats;
         public MatchManager.Winner LastWinner = MatchManager.Winner.None;
 
@@ -35,6 +39,8 @@ namespace Game.Core
             }
             Instance = this;
             DontDestroyOnLoad(gameObject);
+            if (SpawnerInitialMobs == null) SpawnerInitialMobs = new List<MonsterData>();
+            while (SpawnerInitialMobs.Count < SPAWNER_COUNT) SpawnerInitialMobs.Add(null);
             ApplyDefaultsIfNeeded();
         }
 
