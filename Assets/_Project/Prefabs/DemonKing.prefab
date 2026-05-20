@@ -171,8 +171,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   currentLevel: 1
-  maxLevel: 15
-  secondsPerLevel: 10
+  maxLevel: 16
+  secondsPerLevel: 120
   autoLevelUpByTime: 1
 --- !u!114 &9169919081535396307
 MonoBehaviour:

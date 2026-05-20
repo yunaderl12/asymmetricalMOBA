@@ -25,6 +25,7 @@ namespace Game.DemonKing
             inputs.DemonKing.DebugUseMP.performed += OnUseMP;
             inputs.DemonKing.DebugSelfDamage.performed += OnSelfDamage;
             inputs.DemonKing.DebugConfirmPrep.performed += OnConfirmPrep;
+            inputs.DemonKing.DebugSkipLevel.performed += OnSkipLevel;
         }
 
         private void OnDisable()
@@ -34,7 +35,14 @@ namespace Game.DemonKing
                 controller.Inputs.DemonKing.DebugUseMP.performed -= OnUseMP;
                 controller.Inputs.DemonKing.DebugSelfDamage.performed -= OnSelfDamage;
                 controller.Inputs.DemonKing.DebugConfirmPrep.performed -= OnConfirmPrep;
+                controller.Inputs.DemonKing.DebugSkipLevel.performed -= OnSkipLevel;
             }
+        }
+
+        private void OnSkipLevel(InputAction.CallbackContext _)
+        {
+            var lvl = GetComponent<Game.Core.LevelComponent>();
+            if (lvl != null) lvl.LevelUp();
         }
 
         private void OnConfirmPrep(InputAction.CallbackContext _)
