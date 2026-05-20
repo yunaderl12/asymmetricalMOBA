@@ -22,6 +22,7 @@ namespace Game.UI
         [SerializeField] private Text[] slotNameTexts;
         [SerializeField] private Text[] slotSpCostTexts;
         [SerializeField] private Text[] slotCooldownTexts;
+        [SerializeField] private Image[] slotCooldownOverlays;
         [SerializeField] private Color slotNormalColor = new Color(0.1f, 0.1f, 0.15f, 0.8f);
         [SerializeField] private Color slotSelectedColor = new Color(1f, 0.85f, 0.2f, 0.9f);
 
@@ -78,6 +79,17 @@ namespace Game.UI
                 float cd = runtime.GetCooldownRemaining(i);
                 slotCooldownTexts[i].gameObject.SetActive(cd > 0f);
                 if (cd > 0f) slotCooldownTexts[i].text = cd.ToString("F1");
+            }
+            if (slotCooldownOverlays != null)
+            {
+                for (int i = 0; i < slotCooldownOverlays.Length; i++)
+                {
+                    if (slotCooldownOverlays[i] == null) continue;
+                    var skill = runtime.EquippedSkills.Count > i ? runtime.EquippedSkills[i] : null;
+                    float remaining = runtime.GetCooldownRemaining(i);
+                    float ratio = (skill != null && skill.cooldown > 0f) ? Mathf.Clamp01(remaining / skill.cooldown) : 0f;
+                    slotCooldownOverlays[i].fillAmount = ratio;
+                }
             }
         }
 

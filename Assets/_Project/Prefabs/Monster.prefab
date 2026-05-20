@@ -142,7 +142,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   damagePerTick: 5
-  tickInterval: 0.5
+  tickInterval: 1
   targetTags:
   - Player
 --- !u!1 &5721938821155410009

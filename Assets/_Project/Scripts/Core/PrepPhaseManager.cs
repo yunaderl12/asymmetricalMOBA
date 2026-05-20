@@ -21,16 +21,20 @@ namespace Game.Core
         [SerializeField] private GameObject demonKingHudRoot;
         [SerializeField] private GameObject spawnerListUiRoot;
 
-        private bool inPrep;
+        private GameSession.PlayerRole effectiveRole;
+        private MatchManager.MatchState lastState = MatchManager.MatchState.WaitingForStart;
 
         private void Start()
         {
+            effectiveRole = GameSession.Instance != null ? GameSession.Instance.CurrentRole : GameSession.PlayerRole.Hero;
+            if (effectiveRole == GameSession.PlayerRole.None) effectiveRole = GameSession.PlayerRole.Hero;
+
             if (MatchManager.Instance != null)
             {
                 MatchManager.Instance.OnStateChanged += OnStateChanged;
-                if (MatchManager.Instance.CurrentState == MatchManager.MatchState.DemonPrepPhase) EnterPrep();
-                else ExitPrep();
+                lastState = MatchManager.Instance.CurrentState;
             }
+            ApplyState();
         }
 
         private void OnDestroy()
@@ -40,67 +44,56 @@ namespace Game.Core
 
         private void OnStateChanged(MatchManager.MatchState s)
         {
-            if (s == MatchManager.MatchState.DemonPrepPhase) EnterPrep();
-            else if (inPrep) ExitPrep();
+            lastState = s;
+            ApplyState();
         }
 
-        private void EnterPrep()
+        public void SwitchRole()
         {
-            if (inPrep) return;
-            inPrep = true;
+            effectiveRole = effectiveRole == GameSession.PlayerRole.Hero ? GameSession.PlayerRole.DemonKing : GameSession.PlayerRole.Hero;
+            Debug.Log("[PrepPhaseManager] effective role switched -> " + effectiveRole);
+            ApplyState();
+        }
 
-            // Disable hero controls (spectator stays enabled — its camera detach is harmless while DK camera is active)
+        public GameSession.PlayerRole EffectiveRole => effectiveRole;
+
+        private void ApplyState()
+        {
+            bool inMatch = lastState == MatchManager.MatchState.InMatch || lastState == MatchManager.MatchState.Finished;
+            bool inPrep = lastState == MatchManager.MatchState.DemonPrepPhase;
+
+            // === Hero side ===
+            bool heroSideActive = effectiveRole == GameSession.PlayerRole.Hero;
+            bool heroControlsOn = heroSideActive && inMatch;
+            bool spectatorOn = heroSideActive && inPrep;
+            if (heroCamera != null)
+            {
+                heroCamera.enabled = heroSideActive;
+                heroCamera.gameObject.tag = heroSideActive ? "MainCamera" : "Untagged";
+            }
+            if (heroAudio != null) heroAudio.enabled = heroSideActive;
+            if (heroSpectatorScript != null) heroSpectatorScript.enabled = spectatorOn;
             if (heroControlsToDisableInPrep != null)
-                foreach (var c in heroControlsToDisableInPrep) if (c != null) c.enabled = false;
-            if (heroSpectatorScript != null) heroSpectatorScript.enabled = true;
+                foreach (var c in heroControlsToDisableInPrep) if (c != null) c.enabled = heroControlsOn;
+            if (heroHudRoot != null) heroHudRoot.SetActive(heroSideActive && inMatch);
 
-            // Camera/audio swap
-            if (heroCamera != null) { heroCamera.enabled = false; heroCamera.gameObject.tag = "Untagged"; }
-            if (heroAudio != null) heroAudio.enabled = false;
-            if (demonKingCamera != null) { demonKingCamera.enabled = true; demonKingCamera.gameObject.tag = "MainCamera"; }
-            if (demonKingAudio != null) demonKingAudio.enabled = true;
-
-            // Enable demon king controls (so they can move during prep)
+            // === Demon King side ===
+            bool dkSideActive = effectiveRole == GameSession.PlayerRole.DemonKing;
+            bool dkControlsOn = dkSideActive;
+            if (demonKingCamera != null)
+            {
+                demonKingCamera.enabled = dkSideActive;
+                demonKingCamera.gameObject.tag = dkSideActive ? "MainCamera" : "Untagged";
+            }
+            if (demonKingAudio != null) demonKingAudio.enabled = dkSideActive;
             if (demonKingControlsToEnableInPrep != null)
-                foreach (var c in demonKingControlsToEnableInPrep) if (c != null) c.enabled = true;
-
-            // HUD swap
-            if (heroHudRoot != null) heroHudRoot.SetActive(false);
-            if (demonKingHudRoot != null) demonKingHudRoot.SetActive(true);
-            if (spawnerListUiRoot != null) spawnerListUiRoot.SetActive(true);
+                foreach (var c in demonKingControlsToEnableInPrep) if (c != null) c.enabled = dkControlsOn;
+            if (demonKingHudRoot != null) demonKingHudRoot.SetActive(dkSideActive);
+            if (spawnerListUiRoot != null) spawnerListUiRoot.SetActive(dkSideActive && inPrep);
 
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
-            Debug.Log("[PrepPhaseManager] EnterPrep: DemonKing controllable, Hero locked, camera switched.");
-        }
-
-        private void ExitPrep()
-        {
-            inPrep = false;
-
-            // Disable demon king controls again
-            if (demonKingControlsToEnableInPrep != null)
-                foreach (var c in demonKingControlsToEnableInPrep) if (c != null) c.enabled = false;
-
-            // Camera/audio swap back
-            if (demonKingCamera != null) { demonKingCamera.enabled = false; demonKingCamera.gameObject.tag = "Untagged"; }
-            if (demonKingAudio != null) demonKingAudio.enabled = false;
-            if (heroCamera != null) { heroCamera.enabled = true; heroCamera.gameObject.tag = "MainCamera"; }
-            if (heroAudio != null) heroAudio.enabled = true;
-
-            // Re-enable hero controls
-            if (heroControlsToDisableInPrep != null)
-                foreach (var c in heroControlsToDisableInPrep) if (c != null) c.enabled = true;
-            if (heroSpectatorScript != null) heroSpectatorScript.enabled = true;
-
-            // HUD swap back
-            if (demonKingHudRoot != null) demonKingHudRoot.SetActive(false);
-            if (spawnerListUiRoot != null) spawnerListUiRoot.SetActive(false);
-            if (heroHudRoot != null) heroHudRoot.SetActive(true);
-
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-            Debug.Log("[PrepPhaseManager] ExitPrep: Hero unlocked, DemonKing locked, camera restored.");
+            Debug.Log("[PrepPhaseManager] ApplyState role=" + effectiveRole + " state=" + lastState);
         }
     }
 }

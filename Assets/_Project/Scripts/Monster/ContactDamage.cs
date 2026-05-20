@@ -7,7 +7,7 @@ namespace Game.Monster
     public class ContactDamage : MonoBehaviour
     {
         [SerializeField] private int damagePerTick = 5;
-        [SerializeField] private float tickInterval = 0.5f;
+        [SerializeField] private float tickInterval = 1.0f;
         [SerializeField] private string[] targetTags = new string[] { "Player" };
 
         private readonly Dictionary<HealthComponent, float> nextTickTime = new Dictionary<HealthComponent, float>();
