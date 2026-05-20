@@ -74,10 +74,11 @@ namespace Game.Skill
 
             Debug.Log($"[Skill] {skill.skillName} cast (effect={skill.effectType},dmg={skill.damageType},target={skill.targetType})");
 
-            Execute(skill);
+            float val = runtime.GetCurrentEffectValue(idx);
+            Execute(skill, val);
         }
 
-        private void Execute(SkillData skill)
+        private void Execute(SkillData skill, float effectValue)
         {
             // Special-case placeholders first
             if (skill.skillName == "Teleport") { ExecuteTeleport(skill); return; }
@@ -86,16 +87,16 @@ namespace Game.Skill
 
             switch (skill.effectType)
             {
-                case SkillEffectType.Damage: ExecuteDamage(skill); break;
-                case SkillEffectType.Heal: ExecuteHeal(skill); break;
-                case SkillEffectType.Buff: ExecuteBuff(skill); break;
-                case SkillEffectType.Debuff: ExecuteDebuff(skill); break;
+                case SkillEffectType.Damage: ExecuteDamage(skill, effectValue); break;
+                case SkillEffectType.Heal: ExecuteHeal(skill, effectValue); break;
+                case SkillEffectType.Buff: ExecuteBuff(skill, effectValue); break;
+                case SkillEffectType.Debuff: ExecuteDebuff(skill, effectValue); break;
             }
         }
 
-        private void ExecuteDamage(SkillData skill)
+        private void ExecuteDamage(SkillData skill, float effectValue)
         {
-            int dmg = Mathf.RoundToInt(skill.effectValue);
+            int dmg = Mathf.RoundToInt(effectValue);
             if (skill.targetType == SkillTargetType.Single)
             {
                 if (cameraTransform == null) return;
@@ -128,9 +129,9 @@ namespace Game.Skill
             }
         }
 
-        private void ExecuteHeal(SkillData skill)
+        private void ExecuteHeal(SkillData skill, float effectValue)
         {
-            int amount = Mathf.RoundToInt(skill.effectValue);
+            int amount = Mathf.RoundToInt(effectValue);
             if (skill.targetType == SkillTargetType.Self)
             {
                 if (health != null) health.Heal(amount);
@@ -165,10 +166,10 @@ namespace Game.Skill
             }
         }
 
-        private void ExecuteBuff(SkillData skill)
+        private void ExecuteBuff(SkillData skill, float effectValue)
         {
             if (stats == null) return;
-            float val = skill.effectValue;
+            float val = effectValue;
             float atkMul = 1f, spdMul = 1f, dfMul = 1f;
 
             switch (skill.skillName)
@@ -187,7 +188,7 @@ namespace Game.Skill
             if (skill.duration > 0f) StartCoroutine(RemoveAfter(srcId, skill.skillName, skill.duration));
         }
 
-        private void ExecuteDebuff(SkillData skill)
+        private void ExecuteDebuff(SkillData skill, float effectValue)
         {
             if (stats == null) return;
             string srcId = "Skill_" + skill.skillName;

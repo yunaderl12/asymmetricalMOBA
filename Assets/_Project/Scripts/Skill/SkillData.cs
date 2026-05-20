@@ -19,5 +19,15 @@ namespace Game.Skill
         public float effectValue;
         public float range;
         public float duration;
+
+        [Header("Leveling")]
+        public float levelGrowthRate = 0.2f;
+        public int maxSkillLevel = 5;
+
+        public float GetEffectValueAtLevel(int level)
+        {
+            int lv = Mathf.Clamp(level, 1, maxSkillLevel);
+            return effectValue * (1f + (lv - 1) * levelGrowthRate);
+        }
     }
 }

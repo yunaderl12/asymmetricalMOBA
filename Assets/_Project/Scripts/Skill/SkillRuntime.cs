@@ -11,14 +11,58 @@ namespace Game.Skill
 
         private readonly List<SkillData> equippedSkills = new List<SkillData>(SLOT_COUNT);
         private readonly float[] cooldownTimers = new float[SLOT_COUNT];
+        private readonly int[] skillLevels = new int[SLOT_COUNT];
 
         public IReadOnlyList<SkillData> EquippedSkills => equippedSkills;
         public int SelectedIndex { get; private set; }
         public float GetCooldownRemaining(int index) => (index >= 0 && index < SLOT_COUNT) ? cooldownTimers[index] : 0f;
         public SkillData CurrentSkill => (SelectedIndex >= 0 && SelectedIndex < equippedSkills.Count) ? equippedSkills[SelectedIndex] : null;
 
+        public int GetSkillLevel(int slot) => (slot >= 0 && slot < SLOT_COUNT) ? skillLevels[slot] : 0;
+        public bool CanLevelUp(int slot)
+        {
+            if (slot < 0 || slot >= SLOT_COUNT) return false;
+            var s = equippedSkills[slot];
+            if (s == null) return false;
+            return skillLevels[slot] < s.maxSkillLevel;
+        }
+        public bool LevelUp(int slot)
+        {
+            if (!CanLevelUp(slot)) return false;
+            skillLevels[slot]++;
+            OnSkillLevelChanged?.Invoke(slot, skillLevels[slot]);
+            return true;
+        }
+        public float GetCurrentEffectValue(int slot)
+        {
+            if (slot < 0 || slot >= SLOT_COUNT) return 0f;
+            var s = equippedSkills[slot];
+            if (s == null) return 0f;
+            return s.GetEffectValueAtLevel(skillLevels[slot]);
+        }
+
         public event Action<int> OnSelectionChanged;
         public event Action<int> OnSkillCast;
+        public event Action<int, int> OnSkillLevelChanged;
+        public event Action<int> OnLevelUpPointsChanged;
+
+        public int LevelUpPointsAvailable { get; private set; }
+
+        public void AddLevelUpPoint()
+        {
+            LevelUpPointsAvailable++;
+            OnLevelUpPointsChanged?.Invoke(LevelUpPointsAvailable);
+        }
+
+        public bool SpendLevelUpPoint(int slot)
+        {
+            if (LevelUpPointsAvailable <= 0) return false;
+            if (!CanLevelUp(slot)) return false;
+            if (!LevelUp(slot)) return false;
+            LevelUpPointsAvailable--;
+            OnLevelUpPointsChanged?.Invoke(LevelUpPointsAvailable);
+            return true;
+        }
 
         private HeroClassInitializer classInit;
         private Game.Combat.SkillPointComponent sp;
@@ -28,7 +72,7 @@ namespace Game.Skill
             classInit = GetComponent<HeroClassInitializer>();
             sp = GetComponent<Game.Combat.SkillPointComponent>();
 
-            for (int i = 0; i < SLOT_COUNT; i++) equippedSkills.Add(null);
+            for (int i = 0; i < SLOT_COUNT; i++) { equippedSkills.Add(null); skillLevels[i] = 1; }
             if (classInit != null && classInit.ClassData != null)
             {
                 var classSkills = classInit.ClassData.classSkills;

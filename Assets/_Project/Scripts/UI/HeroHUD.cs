@@ -23,6 +23,7 @@ namespace Game.UI
         [SerializeField] private Text[] slotSpCostTexts;
         [SerializeField] private Text[] slotCooldownTexts;
         [SerializeField] private Image[] slotCooldownOverlays;
+        [SerializeField] private Text[] slotLevelTexts;
         [SerializeField] private Color slotNormalColor = new Color(0.1f, 0.1f, 0.15f, 0.8f);
         [SerializeField] private Color slotSelectedColor = new Color(1f, 0.85f, 0.2f, 0.9f);
 
@@ -49,7 +50,7 @@ namespace Game.UI
             if (skill != null) skill.OnSPChanged += OnSPChanged;
             if (level != null) level.OnLevelChanged += OnLevelChanged;
             if (exp != null) exp.OnExpChanged += OnExpChanged;
-            if (runtime != null) { runtime.OnSelectionChanged += OnSelectionChanged; runtime.OnSkillCast += OnSkillCast; }
+            if (runtime != null) { runtime.OnSelectionChanged += OnSelectionChanged; runtime.OnSkillCast += OnSkillCast; runtime.OnSkillLevelChanged += OnSkillLevelChanged; }
             RefreshSlots();
             UpdateAll();
         }
@@ -60,7 +61,7 @@ namespace Game.UI
             if (skill != null) skill.OnSPChanged -= OnSPChanged;
             if (level != null) level.OnLevelChanged -= OnLevelChanged;
             if (exp != null) exp.OnExpChanged -= OnExpChanged;
-            if (runtime != null) { runtime.OnSelectionChanged -= OnSelectionChanged; runtime.OnSkillCast -= OnSkillCast; }
+            if (runtime != null) { runtime.OnSelectionChanged -= OnSelectionChanged; runtime.OnSkillCast -= OnSkillCast; runtime.OnSkillLevelChanged -= OnSkillLevelChanged; }
         }
 
         private void OnHPChanged(int cur, int max) { UpdateAll(); }
@@ -69,6 +70,7 @@ namespace Game.UI
         private void OnExpChanged(int cur, int req) { UpdateAll(); }
         private void OnSelectionChanged(int idx) { RefreshSlots(); }
         private void OnSkillCast(int idx) { RefreshSlots(); }
+        private void OnSkillLevelChanged(int slot, int lv) { RefreshSlots(); }
 
         private void Update()
         {
@@ -106,6 +108,15 @@ namespace Game.UI
                     slotNameTexts[i].text = s != null ? s.skillName : "-";
                 if (slotSpCostTexts != null && i < slotSpCostTexts.Length && slotSpCostTexts[i] != null)
                     slotSpCostTexts[i].text = s != null ? "SP " + s.spCost : "";
+                if (slotLevelTexts != null && i < slotLevelTexts.Length && slotLevelTexts[i] != null)
+                {
+                    if (s == null) slotLevelTexts[i].text = "";
+                    else
+                    {
+                        int lv = runtime.GetSkillLevel(i);
+                        slotLevelTexts[i].text = lv >= s.maxSkillLevel ? ("Lv " + lv + " MAX") : ("Lv " + lv);
+                    }
+                }
             }
         }
 
