@@ -36,6 +36,34 @@ namespace Game.Monster
 
         public bool IsFunctional { get; private set; } = true;
         public IReadOnlyList<Monster> SpawnedMonsters => spawnedMonsters;
+        public IReadOnlyList<MonsterData> Inv => inv;
+        public SpawnerData Data => data;
+
+        public int CurrentCost
+        {
+            get
+            {
+                int sum = 0;
+                if (inv != null) foreach (var m in inv) if (m != null) sum += m.cost;
+                return sum;
+            }
+        }
+
+        public int MaxCost => data != null ? data.maxCost : 0;
+
+        public bool CanAddMonster(MonsterData m)
+        {
+            if (m == null || data == null) return false;
+            return (data.maxCost - CurrentCost) >= m.cost;
+        }
+
+        public bool AddToInv(MonsterData m)
+        {
+            if (!CanAddMonster(m)) { Debug.Log($"[Spawner] {name} cannot add {(m != null ? m.name : "null")}: cost {CurrentCost}/{MaxCost}, required {(m != null ? m.cost : 0)}"); return false; }
+            inv.Add(m);
+            Debug.Log($"[Spawner] {name} added {m.monsterName} (cost {CurrentCost}/{MaxCost})");
+            return true;
+        }
 
         private HealthComponent health;
         private readonly List<Monster> spawnedMonsters = new List<Monster>();

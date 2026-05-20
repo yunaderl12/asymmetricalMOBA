@@ -10,6 +10,7 @@ TagManager:
   - DemonKing
   - Monster
   - PowerItem
+  - DemonCastle_Core
   layers:
   - Default
   - TransparentFX
