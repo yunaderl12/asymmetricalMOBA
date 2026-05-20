@@ -5428,6 +5428,63 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 875873255}
   m_CullTransparentMesh: 1
+--- !u!1 &878279583
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 878279585}
+  - component: {fileID: 878279584}
+  m_Layer: 0
+  m_Name: BotSpawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &878279584
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 878279583}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: abe8ac32efad44488b4bf45fbed00847, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  botHeroPrefab: {fileID: 6575116298094681833, guid: e645da0c9cd8f4ccaa28e711364e595a, type: 3}
+  botDemonKingPrefab: {fileID: 4385786388025349936, guid: de8d154fa878746699eb01a37c2723a1, type: 3}
+  allHeroClasses:
+  - {fileID: 11400000, guid: 6210ec3a6f1d2460e90b0ca56b16bb2a, type: 2}
+  - {fileID: 11400000, guid: 5c79a6f114db141968cfd3e07c9edfba, type: 2}
+  - {fileID: 11400000, guid: 1f145e4be16da4e86afd704b5f5b5d09, type: 2}
+  - {fileID: 11400000, guid: 1e3c92a65d6174a9d80ed186ee47f313, type: 2}
+  heroPositions:
+  - {x: -72, y: 1, z: 2}
+  - {x: -72, y: 1, z: -2}
+  - {x: -68, y: 1, z: 2}
+  - {x: -68, y: 1, z: -2}
+  demonKingPosition: {x: 78, y: 1, z: 0}
+--- !u!4 &878279585
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 878279583}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &886194184
 GameObject:
   m_ObjectHideFlags: 0
@@ -13705,3 +13762,4 @@ SceneRoots:
   - {fileID: 1678266084}
   - {fileID: 75689380}
   - {fileID: 1756281643}
+  - {fileID: 878279585}

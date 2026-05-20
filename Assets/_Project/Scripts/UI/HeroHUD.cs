@@ -34,7 +34,7 @@ namespace Game.UI
 
         private void Start()
         {
-            var hero = GameObject.FindWithTag(heroTag);
+            var hero = Game.Hero.HumanHeroMarker.Instance != null ? Game.Hero.HumanHeroMarker.Instance.gameObject : GameObject.FindWithTag(heroTag);
             if (hero == null)
             {
                 Debug.LogWarning("[HeroHUD] Hero not found by tag '" + heroTag + "'");

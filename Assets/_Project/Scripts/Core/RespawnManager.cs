@@ -49,7 +49,7 @@ namespace Game.Core
 
         private void BindHero()
         {
-            hero = GameObject.FindWithTag(heroTag);
+            hero = HumanHeroMarker.Instance != null ? HumanHeroMarker.Instance.gameObject : GameObject.FindWithTag(heroTag);
             if (hero == null)
             {
                 Debug.LogWarning("[RespawnManager] Hero not found by tag '" + heroTag + "'");

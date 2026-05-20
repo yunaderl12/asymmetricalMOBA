@@ -33,7 +33,7 @@ namespace Game.UI
 
         private void Start()
         {
-            var hero = GameObject.FindWithTag(heroTag);
+            var hero = Game.Hero.HumanHeroMarker.Instance != null ? Game.Hero.HumanHeroMarker.Instance.gameObject : GameObject.FindWithTag(heroTag);
             if (hero == null) { Debug.LogWarning("[SkillWheel] hero not found"); return; }
             runtime = hero.GetComponent<SkillRuntime>();
             controller = hero.GetComponent<HeroFPSController>();
