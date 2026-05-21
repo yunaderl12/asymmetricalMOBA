@@ -11,6 +11,7 @@ TagManager:
   - Monster
   - PowerItem
   - DemonCastle_Core
+  - StartTown_Core
   layers:
   - Default
   - TransparentFX

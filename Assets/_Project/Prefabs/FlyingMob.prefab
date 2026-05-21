@@ -252,6 +252,10 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 30b3cf3ab4f0d4db999d72e0ddc8b3ee, type: 2}
+    - target: {fileID: 6859269973103773339, guid: 760b346ba027f4f828192dfe0d0f6576, type: 3}
+      propertyPath: m_Radius
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 6982550704979016491, guid: 760b346ba027f4f828192dfe0d0f6576, type: 3}
       propertyPath: m_Name
       value: FlyingMob

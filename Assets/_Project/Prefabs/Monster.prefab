@@ -145,6 +145,7 @@ MonoBehaviour:
   tickInterval: 1
   targetTags:
   - Player
+  - StartTown_Core
 --- !u!1 &5721938821155410009
 GameObject:
   m_ObjectHideFlags: 0

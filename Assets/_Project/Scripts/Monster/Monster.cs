@@ -164,6 +164,8 @@ namespace Game.Monster
                 chaseRefreshTimer -= Time.deltaTime;
                 if (chaseRefreshTimer <= 0f && heroTransform != null && agent.isOnNavMesh)
                 {
+                    agent.isStopped = false;
+                    atTarget = false;
                     agent.SetDestination(heroTransform.position);
                     chaseRefreshTimer = chaseRefreshInterval;
                 }
@@ -246,18 +248,14 @@ namespace Game.Monster
             Debug.Log($"[Monster] {name} deaggro, resuming path ({reason})");
         }
 
+        private bool atTarget;
+
         private void OnReachTarget()
         {
-            destroyed = true;
-            var target = GameObject.FindWithTag(targetTag);
-            if (target != null)
-            {
-                var coreHC = target.GetComponent<HealthComponent>();
-                if (coreHC == null) coreHC = target.GetComponentInChildren<HealthComponent>();
-                if (coreHC != null) coreHC.TakeDamage(arriveDamage, gameObject);
-            }
-            Debug.Log($"[Monster] {name} reached {targetTag}, dealt {arriveDamage} dmg");
-            Destroy(gameObject);
+            if (atTarget) return;
+            atTarget = true;
+            if (agent != null && agent.isOnNavMesh) agent.isStopped = true;
+            Debug.Log($"[Monster] {name} reached {targetTag}, holding position");
         }
 
         private void OnDied()
