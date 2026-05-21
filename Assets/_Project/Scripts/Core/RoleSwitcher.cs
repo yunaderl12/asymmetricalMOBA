@@ -9,6 +9,7 @@ namespace Game.Core
 
         private void Update()
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (Keyboard.current == null || prepPhaseManager == null) return;
             if (Keyboard.current.tKey.wasPressedThisFrame)
             {

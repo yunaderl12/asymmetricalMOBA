@@ -48,6 +48,7 @@ namespace Game.Hero
 
         private void OnAttackPerformed(InputAction.CallbackContext _)
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (cooldownTimer > 0f || cameraTransform == null) return;
             cooldownTimer = attackInterval;
             if (regen != null) regen.NotifyActed();

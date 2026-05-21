@@ -41,12 +41,14 @@ namespace Game.DemonKing
 
         private void OnSkipLevel(InputAction.CallbackContext _)
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             var lvl = GetComponent<Game.Core.LevelComponent>();
             if (lvl != null) lvl.LevelUp();
         }
 
         private void OnConfirmPrep(InputAction.CallbackContext _)
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (MatchManager.Instance == null) return;
             if (MatchManager.Instance.CurrentState != MatchManager.MatchState.DemonPrepPhase) return;
             MatchManager.Instance.SkipPrepPhase();
@@ -54,6 +56,7 @@ namespace Game.DemonKing
 
         private void OnUseMP(InputAction.CallbackContext _)
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (mana == null) return;
             bool ok = mana.TryUseMana(20);
             Debug.Log($"[DemonKing] TryUseMana(20) -> {(ok ? "OK" : "FAIL")}, MP={mana.CurrentMP}/{mana.MaxMP}");
@@ -61,6 +64,7 @@ namespace Game.DemonKing
 
         private void OnSelfDamage(InputAction.CallbackContext _)
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (health == null) return;
             health.TakeDamage(50);
         }

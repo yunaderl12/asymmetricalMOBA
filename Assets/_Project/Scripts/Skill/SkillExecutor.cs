@@ -51,6 +51,7 @@ namespace Game.Skill
 
         private void OnSkillCastPerformed(InputAction.CallbackContext _)
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             TryCast();
         }
 

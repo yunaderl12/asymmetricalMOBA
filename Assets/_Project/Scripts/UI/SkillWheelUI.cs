@@ -55,6 +55,7 @@ namespace Game.UI
 
         private void Update()
         {
+            if (ConsoleUI.IsConsoleActive) return;
             bool held = Keyboard.current != null && Keyboard.current.leftShiftKey.isPressed;
 
             if (held && !active) Open();

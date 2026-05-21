@@ -45,6 +45,7 @@ namespace Game.UI
 
         private void Update()
         {
+            if (ConsoleUI.IsConsoleActive) return;
             if (Keyboard.current == null) return;
             if (!string.IsNullOrEmpty(allowedScene) && SceneManager.GetActiveScene().name != allowedScene) return;
             if (Keyboard.current.digit0Key.wasPressedThisFrame)

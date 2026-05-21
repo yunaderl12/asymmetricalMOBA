@@ -53,6 +53,7 @@ namespace Game.Hero
 
         private void Update()
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             HandleLook();
             HandleMove();
             HandleClickToRelock();

@@ -40,17 +40,20 @@ namespace Game.Hero
 
         private void OnDebugSpawnPowerItem(InputAction.CallbackContext _)
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (MatchItemGimmick.Instance == null) { Debug.LogWarning("[Debug] F: MatchItemGimmick not in scene"); return; }
             MatchItemGimmick.Instance.SpawnPowerItemNow();
         }
 
         private void OnAddExp(InputAction.CallbackContext _)
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (exp != null) exp.AddExp(debugExpAmount);
         }
 
         private void OnDebugWinHero(InputAction.CallbackContext _)
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             var castle = GameObject.FindWithTag("DemonCastle");
             if (castle == null) { Debug.LogWarning("[Debug] N: DemonCastle not found"); return; }
             var core = castle.GetComponent<HealthComponent>();
@@ -65,6 +68,7 @@ namespace Game.Hero
 
         private void OnDebugLoseHero(InputAction.CallbackContext _)
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             var st = GameObject.FindWithTag("StartTown");
             if (st == null) { Debug.LogWarning("[Debug] B: StartTown not found"); return; }
             var core = st.GetComponent<HealthComponent>();

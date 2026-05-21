@@ -33,6 +33,7 @@ namespace Game.Core
                 return;
             }
 
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (Keyboard.current != null && Keyboard.current.backspaceKey.wasPressedThisFrame)
             {
                 Respawn();

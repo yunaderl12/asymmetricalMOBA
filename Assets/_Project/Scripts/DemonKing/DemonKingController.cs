@@ -61,6 +61,7 @@ namespace Game.DemonKing
 
         private void Update()
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             HandleClickToRelock();
             if (!MovementEnabled) return;
             HandleRotation();

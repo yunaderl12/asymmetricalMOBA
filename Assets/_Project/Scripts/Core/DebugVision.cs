@@ -11,6 +11,7 @@ namespace Game.Core
 
         private void Update()
         {
+            if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (Keyboard.current == null) return;
             if (Keyboard.current.digit9Key.wasPressedThisFrame)
             {
