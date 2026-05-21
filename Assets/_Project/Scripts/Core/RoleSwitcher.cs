@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace Game.Core
 {
@@ -7,14 +6,11 @@ namespace Game.Core
     {
         [SerializeField] private PrepPhaseManager prepPhaseManager;
 
-        private void Update()
+        public void Trigger()
         {
-            if (Game.UI.ConsoleUI.IsConsoleActive) return;
-            if (Keyboard.current == null || prepPhaseManager == null) return;
-            if (Keyboard.current.tKey.wasPressedThisFrame)
-            {
-                prepPhaseManager.SwitchRole();
-            }
+            if (prepPhaseManager != null) prepPhaseManager.SwitchRole();
         }
+
+        public PrepPhaseManager PrepPhaseManager => prepPhaseManager;
     }
 }

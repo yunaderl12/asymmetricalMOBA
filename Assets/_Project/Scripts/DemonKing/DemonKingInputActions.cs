@@ -55,42 +55,6 @@ namespace Game.DemonKing
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""DebugUseMP"",
-                    ""type"": ""Button"",
-                    ""id"": ""b2000000-0000-0000-0000-000000000004"",
-                    ""expectedControlType"": ""Button"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""DebugSelfDamage"",
-                    ""type"": ""Button"",
-                    ""id"": ""b2000000-0000-0000-0000-000000000005"",
-                    ""expectedControlType"": ""Button"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""DebugConfirmPrep"",
-                    ""type"": ""Button"",
-                    ""id"": ""b2000000-0000-0000-0000-000000000006"",
-                    ""expectedControlType"": ""Button"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""DebugSkipLevel"",
-                    ""type"": ""Button"",
-                    ""id"": ""b2000000-0000-0000-0000-000000000007"",
-                    ""expectedControlType"": ""Button"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -170,50 +134,6 @@ namespace Game.DemonKing
                     ""action"": ""ViewSwitch"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""b3000000-0000-0000-0000-000000000007"",
-                    ""path"": ""<Keyboard>/m"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""DebugUseMP"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""b3000000-0000-0000-0000-000000000008"",
-                    ""path"": ""<Keyboard>/k"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""DebugSelfDamage"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""b3000000-0000-0000-0000-000000000009"",
-                    ""path"": ""<Keyboard>/y"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""DebugConfirmPrep"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""b3000000-0000-0000-0000-00000000000a"",
-                    ""path"": ""<Keyboard>/j"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""DebugSkipLevel"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -225,10 +145,6 @@ namespace Game.DemonKing
             m_DemonKing_Move = m_DemonKing.FindAction("Move", throwIfNotFound: true);
             m_DemonKing_Look = m_DemonKing.FindAction("Look", throwIfNotFound: true);
             m_DemonKing_ViewSwitch = m_DemonKing.FindAction("ViewSwitch", throwIfNotFound: true);
-            m_DemonKing_DebugUseMP = m_DemonKing.FindAction("DebugUseMP", throwIfNotFound: true);
-            m_DemonKing_DebugSelfDamage = m_DemonKing.FindAction("DebugSelfDamage", throwIfNotFound: true);
-            m_DemonKing_DebugConfirmPrep = m_DemonKing.FindAction("DebugConfirmPrep", throwIfNotFound: true);
-            m_DemonKing_DebugSkipLevel = m_DemonKing.FindAction("DebugSkipLevel", throwIfNotFound: true);
         }
 
         ~@DemonKingInputActions()
@@ -298,10 +214,6 @@ namespace Game.DemonKing
         private readonly InputAction m_DemonKing_Move;
         private readonly InputAction m_DemonKing_Look;
         private readonly InputAction m_DemonKing_ViewSwitch;
-        private readonly InputAction m_DemonKing_DebugUseMP;
-        private readonly InputAction m_DemonKing_DebugSelfDamage;
-        private readonly InputAction m_DemonKing_DebugConfirmPrep;
-        private readonly InputAction m_DemonKing_DebugSkipLevel;
         public struct DemonKingActions
         {
             private @DemonKingInputActions m_Wrapper;
@@ -309,10 +221,6 @@ namespace Game.DemonKing
             public InputAction @Move => m_Wrapper.m_DemonKing_Move;
             public InputAction @Look => m_Wrapper.m_DemonKing_Look;
             public InputAction @ViewSwitch => m_Wrapper.m_DemonKing_ViewSwitch;
-            public InputAction @DebugUseMP => m_Wrapper.m_DemonKing_DebugUseMP;
-            public InputAction @DebugSelfDamage => m_Wrapper.m_DemonKing_DebugSelfDamage;
-            public InputAction @DebugConfirmPrep => m_Wrapper.m_DemonKing_DebugConfirmPrep;
-            public InputAction @DebugSkipLevel => m_Wrapper.m_DemonKing_DebugSkipLevel;
             public InputActionMap Get() { return m_Wrapper.m_DemonKing; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
@@ -331,18 +239,6 @@ namespace Game.DemonKing
                 @ViewSwitch.started += instance.OnViewSwitch;
                 @ViewSwitch.performed += instance.OnViewSwitch;
                 @ViewSwitch.canceled += instance.OnViewSwitch;
-                @DebugUseMP.started += instance.OnDebugUseMP;
-                @DebugUseMP.performed += instance.OnDebugUseMP;
-                @DebugUseMP.canceled += instance.OnDebugUseMP;
-                @DebugSelfDamage.started += instance.OnDebugSelfDamage;
-                @DebugSelfDamage.performed += instance.OnDebugSelfDamage;
-                @DebugSelfDamage.canceled += instance.OnDebugSelfDamage;
-                @DebugConfirmPrep.started += instance.OnDebugConfirmPrep;
-                @DebugConfirmPrep.performed += instance.OnDebugConfirmPrep;
-                @DebugConfirmPrep.canceled += instance.OnDebugConfirmPrep;
-                @DebugSkipLevel.started += instance.OnDebugSkipLevel;
-                @DebugSkipLevel.performed += instance.OnDebugSkipLevel;
-                @DebugSkipLevel.canceled += instance.OnDebugSkipLevel;
             }
 
             private void UnregisterCallbacks(IDemonKingActions instance)
@@ -356,18 +252,6 @@ namespace Game.DemonKing
                 @ViewSwitch.started -= instance.OnViewSwitch;
                 @ViewSwitch.performed -= instance.OnViewSwitch;
                 @ViewSwitch.canceled -= instance.OnViewSwitch;
-                @DebugUseMP.started -= instance.OnDebugUseMP;
-                @DebugUseMP.performed -= instance.OnDebugUseMP;
-                @DebugUseMP.canceled -= instance.OnDebugUseMP;
-                @DebugSelfDamage.started -= instance.OnDebugSelfDamage;
-                @DebugSelfDamage.performed -= instance.OnDebugSelfDamage;
-                @DebugSelfDamage.canceled -= instance.OnDebugSelfDamage;
-                @DebugConfirmPrep.started -= instance.OnDebugConfirmPrep;
-                @DebugConfirmPrep.performed -= instance.OnDebugConfirmPrep;
-                @DebugConfirmPrep.canceled -= instance.OnDebugConfirmPrep;
-                @DebugSkipLevel.started -= instance.OnDebugSkipLevel;
-                @DebugSkipLevel.performed -= instance.OnDebugSkipLevel;
-                @DebugSkipLevel.canceled -= instance.OnDebugSkipLevel;
             }
 
             public void RemoveCallbacks(IDemonKingActions instance)
@@ -390,10 +274,6 @@ namespace Game.DemonKing
             void OnMove(InputAction.CallbackContext context);
             void OnLook(InputAction.CallbackContext context);
             void OnViewSwitch(InputAction.CallbackContext context);
-            void OnDebugUseMP(InputAction.CallbackContext context);
-            void OnDebugSelfDamage(InputAction.CallbackContext context);
-            void OnDebugConfirmPrep(InputAction.CallbackContext context);
-            void OnDebugSkipLevel(InputAction.CallbackContext context);
         }
     }
 }

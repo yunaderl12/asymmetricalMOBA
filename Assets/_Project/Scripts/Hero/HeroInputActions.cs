@@ -75,33 +75,6 @@ namespace Game.Hero
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""DebugAddExp"",
-                    ""type"": ""Button"",
-                    ""id"": ""a2000000-0000-0000-0000-000000000006"",
-                    ""expectedControlType"": ""Button"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""DebugWinHero"",
-                    ""type"": ""Button"",
-                    ""id"": ""a2000000-0000-0000-0000-000000000007"",
-                    ""expectedControlType"": ""Button"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""DebugLoseHero"",
-                    ""type"": ""Button"",
-                    ""id"": ""a2000000-0000-0000-0000-000000000008"",
-                    ""expectedControlType"": ""Button"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
                     ""name"": ""SkillCast"",
                     ""type"": ""Button"",
                     ""id"": ""a2000000-0000-0000-0000-000000000009"",
@@ -114,15 +87,6 @@ namespace Game.Hero
                     ""name"": ""SkillWheel"",
                     ""type"": ""Button"",
                     ""id"": ""a2000000-0000-0000-0000-00000000000a"",
-                    ""expectedControlType"": ""Button"",
-                    ""processors"": """",
-                    ""interactions"": """",
-                    ""initialStateCheck"": false
-                },
-                {
-                    ""name"": ""DebugSpawnPowerItem"",
-                    ""type"": ""Button"",
-                    ""id"": ""a2000000-0000-0000-0000-00000000000b"",
                     ""expectedControlType"": ""Button"",
                     ""processors"": """",
                     ""interactions"": """",
@@ -231,39 +195,6 @@ namespace Game.Hero
                 },
                 {
                     ""name"": """",
-                    ""id"": ""a3000000-0000-0000-0000-000000000009"",
-                    ""path"": ""<Keyboard>/x"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""DebugAddExp"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""a3000000-0000-0000-0000-00000000000a"",
-                    ""path"": ""<Keyboard>/n"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""DebugWinHero"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""a3000000-0000-0000-0000-00000000000b"",
-                    ""path"": ""<Keyboard>/b"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""DebugLoseHero"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
                     ""id"": ""a3000000-0000-0000-0000-00000000000c"",
                     ""path"": ""<Mouse>/rightButton"",
                     ""interactions"": """",
@@ -283,17 +214,6 @@ namespace Game.Hero
                     ""action"": ""SkillWheel"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
-                },
-                {
-                    ""name"": """",
-                    ""id"": ""a3000000-0000-0000-0000-00000000000e"",
-                    ""path"": ""<Keyboard>/f"",
-                    ""interactions"": """",
-                    ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""DebugSpawnPowerItem"",
-                    ""isComposite"": false,
-                    ""isPartOfComposite"": false
                 }
             ]
         }
@@ -307,12 +227,8 @@ namespace Game.Hero
             m_Hero_Jump = m_Hero.FindAction("Jump", throwIfNotFound: true);
             m_Hero_Pause = m_Hero.FindAction("Pause", throwIfNotFound: true);
             m_Hero_Attack = m_Hero.FindAction("Attack", throwIfNotFound: true);
-            m_Hero_DebugAddExp = m_Hero.FindAction("DebugAddExp", throwIfNotFound: true);
-            m_Hero_DebugWinHero = m_Hero.FindAction("DebugWinHero", throwIfNotFound: true);
-            m_Hero_DebugLoseHero = m_Hero.FindAction("DebugLoseHero", throwIfNotFound: true);
             m_Hero_SkillCast = m_Hero.FindAction("SkillCast", throwIfNotFound: true);
             m_Hero_SkillWheel = m_Hero.FindAction("SkillWheel", throwIfNotFound: true);
-            m_Hero_DebugSpawnPowerItem = m_Hero.FindAction("DebugSpawnPowerItem", throwIfNotFound: true);
         }
 
         ~@HeroInputActions()
@@ -384,12 +300,8 @@ namespace Game.Hero
         private readonly InputAction m_Hero_Jump;
         private readonly InputAction m_Hero_Pause;
         private readonly InputAction m_Hero_Attack;
-        private readonly InputAction m_Hero_DebugAddExp;
-        private readonly InputAction m_Hero_DebugWinHero;
-        private readonly InputAction m_Hero_DebugLoseHero;
         private readonly InputAction m_Hero_SkillCast;
         private readonly InputAction m_Hero_SkillWheel;
-        private readonly InputAction m_Hero_DebugSpawnPowerItem;
         public struct HeroActions
         {
             private @HeroInputActions m_Wrapper;
@@ -399,12 +311,8 @@ namespace Game.Hero
             public InputAction @Jump => m_Wrapper.m_Hero_Jump;
             public InputAction @Pause => m_Wrapper.m_Hero_Pause;
             public InputAction @Attack => m_Wrapper.m_Hero_Attack;
-            public InputAction @DebugAddExp => m_Wrapper.m_Hero_DebugAddExp;
-            public InputAction @DebugWinHero => m_Wrapper.m_Hero_DebugWinHero;
-            public InputAction @DebugLoseHero => m_Wrapper.m_Hero_DebugLoseHero;
             public InputAction @SkillCast => m_Wrapper.m_Hero_SkillCast;
             public InputAction @SkillWheel => m_Wrapper.m_Hero_SkillWheel;
-            public InputAction @DebugSpawnPowerItem => m_Wrapper.m_Hero_DebugSpawnPowerItem;
             public InputActionMap Get() { return m_Wrapper.m_Hero; }
             public void Enable() { Get().Enable(); }
             public void Disable() { Get().Disable(); }
@@ -429,24 +337,12 @@ namespace Game.Hero
                 @Attack.started += instance.OnAttack;
                 @Attack.performed += instance.OnAttack;
                 @Attack.canceled += instance.OnAttack;
-                @DebugAddExp.started += instance.OnDebugAddExp;
-                @DebugAddExp.performed += instance.OnDebugAddExp;
-                @DebugAddExp.canceled += instance.OnDebugAddExp;
-                @DebugWinHero.started += instance.OnDebugWinHero;
-                @DebugWinHero.performed += instance.OnDebugWinHero;
-                @DebugWinHero.canceled += instance.OnDebugWinHero;
-                @DebugLoseHero.started += instance.OnDebugLoseHero;
-                @DebugLoseHero.performed += instance.OnDebugLoseHero;
-                @DebugLoseHero.canceled += instance.OnDebugLoseHero;
                 @SkillCast.started += instance.OnSkillCast;
                 @SkillCast.performed += instance.OnSkillCast;
                 @SkillCast.canceled += instance.OnSkillCast;
                 @SkillWheel.started += instance.OnSkillWheel;
                 @SkillWheel.performed += instance.OnSkillWheel;
                 @SkillWheel.canceled += instance.OnSkillWheel;
-                @DebugSpawnPowerItem.started += instance.OnDebugSpawnPowerItem;
-                @DebugSpawnPowerItem.performed += instance.OnDebugSpawnPowerItem;
-                @DebugSpawnPowerItem.canceled += instance.OnDebugSpawnPowerItem;
             }
 
             private void UnregisterCallbacks(IHeroActions instance)
@@ -466,24 +362,12 @@ namespace Game.Hero
                 @Attack.started -= instance.OnAttack;
                 @Attack.performed -= instance.OnAttack;
                 @Attack.canceled -= instance.OnAttack;
-                @DebugAddExp.started -= instance.OnDebugAddExp;
-                @DebugAddExp.performed -= instance.OnDebugAddExp;
-                @DebugAddExp.canceled -= instance.OnDebugAddExp;
-                @DebugWinHero.started -= instance.OnDebugWinHero;
-                @DebugWinHero.performed -= instance.OnDebugWinHero;
-                @DebugWinHero.canceled -= instance.OnDebugWinHero;
-                @DebugLoseHero.started -= instance.OnDebugLoseHero;
-                @DebugLoseHero.performed -= instance.OnDebugLoseHero;
-                @DebugLoseHero.canceled -= instance.OnDebugLoseHero;
                 @SkillCast.started -= instance.OnSkillCast;
                 @SkillCast.performed -= instance.OnSkillCast;
                 @SkillCast.canceled -= instance.OnSkillCast;
                 @SkillWheel.started -= instance.OnSkillWheel;
                 @SkillWheel.performed -= instance.OnSkillWheel;
                 @SkillWheel.canceled -= instance.OnSkillWheel;
-                @DebugSpawnPowerItem.started -= instance.OnDebugSpawnPowerItem;
-                @DebugSpawnPowerItem.performed -= instance.OnDebugSpawnPowerItem;
-                @DebugSpawnPowerItem.canceled -= instance.OnDebugSpawnPowerItem;
             }
 
             public void RemoveCallbacks(IHeroActions instance)
@@ -508,12 +392,8 @@ namespace Game.Hero
             void OnJump(InputAction.CallbackContext context);
             void OnPause(InputAction.CallbackContext context);
             void OnAttack(InputAction.CallbackContext context);
-            void OnDebugAddExp(InputAction.CallbackContext context);
-            void OnDebugWinHero(InputAction.CallbackContext context);
-            void OnDebugLoseHero(InputAction.CallbackContext context);
             void OnSkillCast(InputAction.CallbackContext context);
             void OnSkillWheel(InputAction.CallbackContext context);
-            void OnDebugSpawnPowerItem(InputAction.CallbackContext context);
         }
     }
 }

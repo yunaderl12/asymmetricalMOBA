@@ -9,7 +9,6 @@ namespace Game.Hero
         private HeroFPSController fps;
         private HeroAttack attack;
         private SkillExecutor executor;
-        private HeroDebugInput debugInput;
         private PrepPhaseSpectator spectator;
 
         private void Awake()
@@ -17,7 +16,6 @@ namespace Game.Hero
             fps = GetComponent<HeroFPSController>();
             attack = GetComponent<HeroAttack>();
             executor = GetComponent<SkillExecutor>();
-            debugInput = GetComponent<HeroDebugInput>();
             spectator = GetComponent<PrepPhaseSpectator>();
         }
 
@@ -39,7 +37,6 @@ namespace Game.Hero
             if (fps != null) fps.enabled = false;
             if (attack != null) attack.enabled = false;
             if (executor != null) executor.enabled = false;
-            if (debugInput != null) debugInput.enabled = false;
             if (spectator != null) spectator.enabled = false;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;

@@ -1,24 +1,29 @@
 using System;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace Game.Core
 {
     public class DebugVision : MonoBehaviour
     {
+        public static DebugVision Instance { get; private set; }
         public static bool IsActive { get; private set; }
         public static event Action<bool> OnToggled;
 
-        private void Update()
+        private void Awake()
         {
-            if (Game.UI.ConsoleUI.IsConsoleActive) return;
-            if (Keyboard.current == null) return;
-            if (Keyboard.current.digit9Key.wasPressedThisFrame)
-            {
-                IsActive = !IsActive;
-                Debug.Log("[DebugVision] toggled -> " + IsActive);
-                if (OnToggled != null) OnToggled(IsActive);
-            }
+            Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
+        public static void Toggle()
+        {
+            IsActive = !IsActive;
+            Debug.Log("[DebugVision] toggled -> " + IsActive);
+            if (OnToggled != null) OnToggled(IsActive);
         }
     }
 }

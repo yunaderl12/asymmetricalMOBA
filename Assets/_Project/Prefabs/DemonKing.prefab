@@ -14,7 +14,6 @@ GameObject:
   - component: {fileID: 3989122024850285102}
   - component: {fileID: 6624680497640299226}
   - component: {fileID: 1328229829529510799}
-  - component: {fileID: 457503958822548342}
   - component: {fileID: 7484252850510472293}
   - component: {fileID: 4956723225256096000}
   - component: {fileID: 9169919081535396307}
@@ -133,18 +132,10 @@ MonoBehaviour:
   birdsEyeCam: {fileID: 0}
   activePriority: 20
   inactivePriority: 10
---- !u!114 &457503958822548342
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1749221948093322419}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7f2d4dd50ac04e58b2f2fc0ea930a5c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  tpsPlainCamera: {fileID: 0}
+  birdsEyePlainCamera: {fileID: 0}
+  tpsAudio: {fileID: 0}
+  birdsEyeAudio: {fileID: 0}
 --- !u!114 &7484252850510472293
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -21,7 +21,7 @@ namespace Game.Core
             Register("winhero", "魔王城コア破壊 (勇者勝利)", WinHeroCmd);
             Register("losehero", "StartTown 破壊 (魔王勝利)", LoseHeroCmd);
             Register("spawnitem", "PowerItem 強制スポーン", SpawnItemCmd);
-            Register("fallrespawn", "落下リスポーン", FallRespawnCmd);
+            Register("respawn", "勇者を StartTown でリスポーン (HP/SP 全回復)", RespawnCmd);
             Register("skipprep", "PrepPhase スキップ", SkipPrepCmd);
             Register("usemp", "魔王 MP消費 [n=20]", UseMpCmd);
             Register("selfdamage", "自分にダメージ [n=50]", SelfDamageCmd);
@@ -124,7 +124,7 @@ namespace Game.Core
             return "PowerItem spawned";
         }
 
-        private static string FallRespawnCmd(string[] args)
+        private static string RespawnCmd(string[] args)
         {
             var hero = FindHero();
             if (hero == null) return "Hero not found";
@@ -134,7 +134,11 @@ namespace Game.Core
             if (cc != null) cc.enabled = false;
             hero.transform.position = st.transform.position;
             if (cc != null) cc.enabled = true;
-            return "Hero respawned at StartTown";
+            var hp = hero.GetComponent<HealthComponent>();
+            if (hp != null) hp.ResetHealth();
+            var sp = hero.GetComponent<SkillPointComponent>();
+            if (sp != null) sp.RestoreSP(int.MaxValue);
+            return "Hero respawned at StartTown (HP/SP restored)";
         }
 
         private static string SkipPrepCmd(string[] args)
@@ -186,12 +190,13 @@ namespace Game.Core
 
         private static string VisionCmd(string[] args)
         {
-            return "DebugVision: use 9 key to toggle (programmatic toggle not supported yet)";
+            DebugVision.Toggle();
+            return "DebugVision -> " + (DebugVision.IsActive ? "ON" : "OFF");
         }
 
         private static string CommandsCmd(string[] args)
         {
-            return "DebugCommandsUI: use 0 key in MainStage to toggle";
+            return HelpCmd(args);
         }
 
         private static string SkillUpCmd(string[] args)
