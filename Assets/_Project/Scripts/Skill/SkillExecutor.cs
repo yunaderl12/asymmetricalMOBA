@@ -21,6 +21,7 @@ namespace Game.Skill
         private StatModifierContainer stats;
         private HeroInputActions inputs;
         private Coroutine activeBeamRoutine;
+        private Game.Hero.HeroRegen regen;
 
         private void Awake()
         {
@@ -30,6 +31,7 @@ namespace Game.Skill
             controller = GetComponent<HeroFPSController>();
             classInit = GetComponent<HeroClassInitializer>();
             stats = GetComponent<StatModifierContainer>();
+            regen = GetComponent<Game.Hero.HeroRegen>();
             if (inputs == null) inputs = new HeroInputActions();
         }
 
@@ -71,6 +73,7 @@ namespace Game.Skill
             if (sp != null) sp.TrySpendSP(skill.spCost);
             runtime.StartCooldown(idx);
             runtime.NotifyCast(idx);
+            if (regen != null) regen.NotifyActed();
 
             Debug.Log($"[Skill] {skill.skillName} cast (effect={skill.effectType},dmg={skill.damageType},target={skill.targetType})");
 

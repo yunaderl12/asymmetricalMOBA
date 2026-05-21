@@ -11,6 +11,7 @@ namespace Game.Core
         [SerializeField] private AudioListener demonKingAudio;
 
         [Header("Hero")]
+        [SerializeField] private GameObject heroObject;
         [SerializeField] private MonoBehaviour[] heroControlsToDisableInPrep;
         [SerializeField] private Camera heroCamera;
         [SerializeField] private AudioListener heroAudio;
@@ -51,6 +52,9 @@ namespace Game.Core
         public void SwitchRole()
         {
             effectiveRole = effectiveRole == GameSession.PlayerRole.Hero ? GameSession.PlayerRole.DemonKing : GameSession.PlayerRole.Hero;
+            // Ensure both scene player objects are active so we can drive either side
+            if (heroObject != null && !heroObject.activeSelf) heroObject.SetActive(true);
+            if (demonKingObject != null && !demonKingObject.activeSelf) demonKingObject.SetActive(true);
             Debug.Log("[PrepPhaseManager] effective role switched -> " + effectiveRole);
             ApplyState();
         }

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8de724ff83bb4ea9b37ca207a87f5c3, type: 3}
+  m_Name: FlyingMob
+  m_EditorClassIdentifier: 
+  monsterName: FlyingMob
+  hp: 30
+  atk: 8
+  df: 0
+  spd: 5
+  cost: 5
+  spwnCool: 8
+  maxSpwn: 1
+  exp: 50

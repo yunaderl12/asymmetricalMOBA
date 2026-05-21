@@ -19,10 +19,12 @@ namespace Game.Hero
 
         private HeroInputActions inputs;
         private float cooldownTimer;
+        private HeroRegen regen;
 
         private void Awake()
         {
             inputs = new HeroInputActions();
+            regen = GetComponent<HeroRegen>();
         }
 
         private void OnEnable()
@@ -48,6 +50,7 @@ namespace Game.Hero
         {
             if (cooldownTimer > 0f || cameraTransform == null) return;
             cooldownTimer = attackInterval;
+            if (regen != null) regen.NotifyActed();
 
             var origin = cameraTransform.position;
             var dir = cameraTransform.forward;

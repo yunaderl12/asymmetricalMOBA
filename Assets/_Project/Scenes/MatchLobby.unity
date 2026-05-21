@@ -9862,6 +9862,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   availableMonsters:
   - {fileID: 11400000, guid: 99308e291e52c46cba9abd910658d3e9, type: 2}
+  - {fileID: 11400000, guid: 2b34e85e0e358438d86566ff807a7f18, type: 2}
+  - {fileID: 11400000, guid: 80f3d6548d6e348d79af3db17f6bc471, type: 2}
   availableListParent: {fileID: 1619294940}
   buttonSprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
   selectedMobText: {fileID: 12981678}
