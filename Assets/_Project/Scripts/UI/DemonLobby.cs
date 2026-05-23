@@ -27,6 +27,8 @@ namespace Game.UI
         [SerializeField] private string[] spawnerLabels = new string[] { "NW", "NE", "Center", "SW", "SE" };
         [SerializeField] private Button[] spawnerButtons;
         [SerializeField] private Text[] spawnerLabelTexts;
+        [SerializeField] private SpawnerData initialSpawnerData;
+        [SerializeField] private int fallbackMaxCost = 2;
 
         [Header("Monster Picker")]
         [SerializeField] private DemonMonsterPickerUI pickerUI;
@@ -106,8 +108,8 @@ namespace Game.UI
                 lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
                 lr.offsetMin = Vector2.zero; lr.offsetMax = Vector2.zero;
                 var lt = lblGO.GetComponent<Text>();
-                lt.font = font; lt.fontSize = 22; lt.fontStyle = FontStyle.Bold; lt.alignment = TextAnchor.MiddleCenter; lt.color = Color.white;
-                lt.text = md.monsterName;
+                lt.font = font; lt.fontSize = 20; lt.fontStyle = FontStyle.Bold; lt.alignment = TextAnchor.MiddleCenter; lt.color = Color.white;
+                lt.text = md.monsterName + "  Cost " + md.cost;
 
                 var btn = go.GetComponent<Button>();
                 btn.onClick.AddListener(() => SelectAvailableMonster(idx));
@@ -157,13 +159,19 @@ namespace Game.UI
             RefreshSpawners();
         }
 
+        private int GetInitialMaxCost()
+        {
+            if (initialSpawnerData != null) return initialSpawnerData.maxCost;
+            return fallbackMaxCost;
+        }
+
         private void OpenSpawnerPicker(int spawnerIdx)
         {
             if (pickerUI == null) { Debug.LogWarning("[DemonLobby] picker not assigned"); return; }
             var deckMobs = new List<MonsterData>();
             for (int i = 0; i < deck.Length; i++) if (deck[i] != null && !deckMobs.Contains(deck[i])) deckMobs.Add(deck[i]);
             string title = "Spawner " + spawnerLabels[spawnerIdx] + " 初期スポーン";
-            pickerUI.Show(title, deckMobs, true, picked =>
+            pickerUI.Show(title, deckMobs, true, GetInitialMaxCost(), picked =>
             {
                 spawnerMobs[spawnerIdx] = picked;
                 RefreshSpawners();
@@ -209,11 +217,14 @@ namespace Game.UI
         private void RefreshSpawners()
         {
             if (spawnerLabelTexts == null) return;
+            int maxCost = GetInitialMaxCost();
             for (int i = 0; i < spawnerMobs.Length; i++)
             {
                 if (i >= spawnerLabelTexts.Length || spawnerLabelTexts[i] == null) continue;
                 string label = spawnerLabels != null && i < spawnerLabels.Length ? spawnerLabels[i] : ("S" + i);
-                string mob = spawnerMobs[i] != null ? spawnerMobs[i].monsterName : "(空)";
+                var md = spawnerMobs[i];
+                int cur = md != null ? md.cost : 0;
+                string mob = md != null ? md.monsterName + " Cost " + cur + "/" + maxCost : "(空) Cost 0/" + maxCost;
                 spawnerLabelTexts[i].text = label + ": " + mob + "  ▼";
             }
         }

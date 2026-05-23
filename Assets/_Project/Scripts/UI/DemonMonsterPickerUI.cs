@@ -32,10 +32,18 @@ namespace Game.UI
 
         public void Show(string title, List<MonsterData> candidates, bool includeEmptyOption, Action<MonsterData> onPicked)
         {
+            Show(title, candidates, includeEmptyOption, -1, onPicked);
+        }
+
+        public void Show(string title, List<MonsterData> candidates, bool includeEmptyOption, int maxCost, Action<MonsterData> onPicked)
+        {
             currentCallback = onPicked;
-            if (titleText != null) titleText.text = title;
+            if (titleText != null)
+            {
+                titleText.text = maxCost > 0 ? title + "  (上限 Cost " + maxCost + ")" : title;
+            }
             ClearButtons();
-            BuildButtons(candidates, includeEmptyOption);
+            BuildButtons(candidates, includeEmptyOption, maxCost);
             if (root != null) root.SetActive(true);
         }
 
@@ -51,7 +59,7 @@ namespace Game.UI
             spawnedButtons.Clear();
         }
 
-        private void BuildButtons(List<MonsterData> candidates, bool includeEmptyOption)
+        private void BuildButtons(List<MonsterData> candidates, bool includeEmptyOption, int maxCost)
         {
             if (gridContent == null) return;
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -65,6 +73,7 @@ namespace Game.UI
                 var md = combined[i];
                 int row = i / columns;
                 int col = i % columns;
+                bool overCost = (md != null && maxCost > 0 && md.cost > maxCost);
 
                 var go = new GameObject("Cand_" + (md != null ? md.name : "Empty"), typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
                 go.transform.SetParent(gridContent, false);
@@ -74,7 +83,8 @@ namespace Game.UI
                 rt.anchoredPosition = new Vector2(col * (cellSize.x + cellGap.x), -(row * (cellSize.y + cellGap.y)));
                 var img = go.GetComponent<Image>();
                 if (buttonSprite != null) { img.sprite = buttonSprite; img.type = Image.Type.Sliced; }
-                img.color = md != null ? new Color(0.3f, 0.15f, 0.18f, 0.95f) : new Color(0.2f, 0.2f, 0.22f, 0.95f);
+                if (overCost) img.color = new Color(0.18f, 0.18f, 0.2f, 0.6f);
+                else img.color = md != null ? new Color(0.3f, 0.15f, 0.18f, 0.95f) : new Color(0.2f, 0.2f, 0.22f, 0.95f);
 
                 var lblGO = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
                 lblGO.transform.SetParent(go.transform, false);
@@ -82,10 +92,18 @@ namespace Game.UI
                 lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
                 lr.offsetMin = Vector2.zero; lr.offsetMax = Vector2.zero;
                 var lt = lblGO.GetComponent<Text>();
-                lt.font = font; lt.fontSize = 22; lt.fontStyle = FontStyle.Bold; lt.alignment = TextAnchor.MiddleCenter; lt.color = Color.white;
-                lt.text = md != null ? md.monsterName : "(空)";
+                lt.font = font; lt.fontSize = 20; lt.fontStyle = FontStyle.Bold; lt.alignment = TextAnchor.MiddleCenter;
+                lt.color = overCost ? new Color(0.7f, 0.7f, 0.7f, 1f) : Color.white;
+                if (md != null)
+                {
+                    string costStr = "Cost " + md.cost;
+                    if (overCost) costStr += " (上限超)";
+                    lt.text = md.monsterName + "\n" + costStr;
+                }
+                else lt.text = "(空)";
 
                 var btn = go.GetComponent<Button>();
+                btn.interactable = !overCost;
                 MonsterData captured = md;
                 btn.onClick.AddListener(() => OnCandidateClicked(captured));
                 spawnedButtons.Add(go);

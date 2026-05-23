@@ -166,7 +166,8 @@ namespace Game.UI
                     if (m != null && !deckMobs.Contains(m)) deckMobs.Add(m);
                 }
             }
-            pickerUI.Show(sp.name + " に魔物を追加", deckMobs, false, picked => OnPicked(sp, picked));
+            int remaining = Mathf.Max(0, sp.MaxCost - sp.CurrentCost);
+            pickerUI.Show(sp.name + " に魔物を追加", deckMobs, false, remaining, picked => OnPicked(sp, picked));
         }
 
         private void OnPicked(Spawner sp, MonsterData m)
