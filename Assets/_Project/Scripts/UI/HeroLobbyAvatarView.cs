@@ -8,7 +8,7 @@ namespace Game.UI
     {
         private RectTransform root;
         private EllipseGraphic avatarOval;
-        private PentagonGraphic[] skillPentagons;
+        private DiamondGraphic[] skillPentagons;
         private Text userNameText;
         private Text classNameText;
 
@@ -87,7 +87,7 @@ namespace Game.UI
             hRT.anchoredPosition = new Vector2(0f, -540f);
 
             // 5 pentagons at x = -176, -88, 0, 88, 176, size 48x48
-            skillPentagons = new PentagonGraphic[5];
+            skillPentagons = new DiamondGraphic[5];
             float[] xs = { -176f, -88f, 0f, 88f, 176f };
             for (int i = 0; i < 5; i++)
             {
@@ -97,7 +97,7 @@ namespace Game.UI
                 pRT.anchorMin = new Vector2(0.5f, 0.5f); pRT.anchorMax = new Vector2(0.5f, 0.5f); pRT.pivot = new Vector2(0.5f, 0.5f);
                 pRT.sizeDelta = new Vector2(48f, 48f);
                 pRT.anchoredPosition = new Vector2(xs[i], 0f);
-                var pg = pGO.AddComponent<PentagonGraphic>();
+                var pg = pGO.AddComponent<DiamondGraphic>();
                 pg.color = new Color(0.5f, 0.5f, 0.5f, 1f);
                 pg.raycastTarget = false;
                 skillPentagons[i] = pg;

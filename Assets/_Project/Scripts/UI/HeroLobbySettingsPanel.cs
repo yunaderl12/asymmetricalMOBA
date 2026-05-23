@@ -20,7 +20,7 @@ namespace Game.UI
         private EllipseGraphic currentClassFill;
         private Text currentClassNameText;
         private List<EllipseGraphic> carouselFills = new List<EllipseGraphic>();
-        private List<PentagonGraphic> slotGraphics = new List<PentagonGraphic>();
+        private List<DiamondGraphic> slotGraphics = new List<DiamondGraphic>();
         private List<Text> slotLabels = new List<Text>();
         private List<Button> slotButtons = new List<Button>();
         private RectTransform availableGrid;
@@ -104,7 +104,7 @@ namespace Game.UI
                 sRT.anchoredPosition = new Vector2(pentStartX + i * pentSpacing, -300f);
 
                 // Pentagon graphic (acts as Image / Raycast target for the Button)
-                var pg = sGO.AddComponent<PentagonGraphic>();
+                var pg = sGO.AddComponent<DiamondGraphic>();
                 pg.color = new Color(0.5f, 0.5f, 0.5f, 1f);
                 pg.raycastTarget = true;
                 slotGraphics.Add(pg);
@@ -115,7 +115,7 @@ namespace Game.UI
                 var oRT = (RectTransform)outGO.transform;
                 oRT.anchorMin = Vector2.zero; oRT.anchorMax = Vector2.one;
                 oRT.offsetMin = new Vector2(-6f, -6f); oRT.offsetMax = new Vector2(6f, 6f);
-                var outG = outGO.AddComponent<PentagonGraphic>();
+                var outG = outGO.AddComponent<DiamondGraphic>();
                 outG.color = Color.white; outG.raycastTarget = false;
                 outGO.transform.SetSiblingIndex(0); // render behind the slot pentagon
                 outGO.SetActive(false);
@@ -285,7 +285,7 @@ namespace Game.UI
                 rt.sizeDelta = new Vector2(size, size);
                 rt.anchoredPosition = new Vector2(startX + col * (size + gapX), -(row * (size + gapY) + size * 0.5f + 6f));
 
-                var pg = go.AddComponent<PentagonGraphic>();
+                var pg = go.AddComponent<DiamondGraphic>();
                 pg.color = s.EffectiveIconColor();
                 pg.raycastTarget = true;
 
