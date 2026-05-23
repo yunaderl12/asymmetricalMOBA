@@ -38,6 +38,7 @@ namespace Game.UI
 
         public void Show(string title, List<MonsterData> candidates, bool includeEmptyOption, int maxCost, Action<MonsterData> onPicked)
         {
+            Debug.Log($"[DemonMonsterPickerUI] Show title='{title}', candidates={(candidates != null ? candidates.Count : -1)}, maxCost={maxCost}, root={(root != null ? "ok" : "NULL")}");
             EnsureHighPriorityCanvas();
             currentCallback = onPicked;
             if (titleText != null)
@@ -50,6 +51,11 @@ namespace Game.UI
             {
                 root.SetActive(true);
                 root.transform.SetAsLastSibling();
+                Debug.Log($"[DemonMonsterPickerUI] root active={root.activeSelf}, parent={(root.transform.parent != null ? root.transform.parent.name : "ROOT")}");
+            }
+            else
+            {
+                Debug.LogError("[DemonMonsterPickerUI] root field is not assigned in the inspector");
             }
         }
 
@@ -78,13 +84,22 @@ namespace Game.UI
                 scaler.referenceResolution = new Vector2(1920f, 1080f);
                 scaler.matchWidthOrHeight = 0.5f;
             }
-            root.transform.SetParent(_highPriorityCanvas.transform, false);
+            // Capture the original local pose so reparenting doesn't accidentally
+            // re-anchor the panel; we want it to display exactly as authored in the
+            // scene, only on a different canvas.
             var rt = root.GetComponent<RectTransform>();
+            var anchorMin = rt != null ? rt.anchorMin : Vector2.zero;
+            var anchorMax = rt != null ? rt.anchorMax : Vector2.one;
+            var pivot = rt != null ? rt.pivot : new Vector2(0.5f, 0.5f);
+            var sizeDelta = rt != null ? rt.sizeDelta : Vector2.zero;
+            var anchoredPos = rt != null ? rt.anchoredPosition : Vector2.zero;
+            root.transform.SetParent(_highPriorityCanvas.transform, false);
             if (rt != null)
             {
-                rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
-                rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+                rt.anchorMin = anchorMin; rt.anchorMax = anchorMax; rt.pivot = pivot;
+                rt.sizeDelta = sizeDelta; rt.anchoredPosition = anchoredPos;
             }
+            Debug.Log($"[DemonMonsterPickerUI] reparented root to {_highPriorityCanvas.name} (sortingOrder={_highPriorityCanvas.sortingOrder})");
             _reparented = true;
         }
 

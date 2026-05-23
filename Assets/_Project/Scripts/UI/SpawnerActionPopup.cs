@@ -205,9 +205,11 @@ namespace Game.UI
 
         private void OnLoadoutClicked()
         {
-            if (currentSpawner == null) { Hide(); return; }
+            Debug.Log("[SpawnerActionPopup] 編成 button clicked");
+            if (currentSpawner == null) { Debug.LogWarning("[SpawnerActionPopup] currentSpawner is null"); Hide(); return; }
             var picker = FindObjectOfType<DemonMonsterPickerUI>(true);
-            if (picker == null) { Debug.LogWarning("[SpawnerActionPopup] DemonMonsterPickerUI not found in scene"); return; }
+            if (picker == null) { Debug.LogError("[SpawnerActionPopup] DemonMonsterPickerUI not found in scene — check that DemonMonsterPickerUI is present in MainStage.unity"); return; }
+            Debug.Log($"[SpawnerActionPopup] found picker GameObject='{picker.gameObject.name}', activeInHierarchy={picker.gameObject.activeInHierarchy}");
 
             var deckMobs = new List<MonsterData>();
             if (GameSession.Instance != null && GameSession.Instance.DemonDeck != null)
@@ -217,8 +219,10 @@ namespace Game.UI
                     if (m != null && !deckMobs.Contains(m)) deckMobs.Add(m);
                 }
             }
+            Debug.Log($"[SpawnerActionPopup] deck has {deckMobs.Count} unique monsters; DemonDeck.Count={(GameSession.Instance != null && GameSession.Instance.DemonDeck != null ? GameSession.Instance.DemonDeck.Count : 0)}");
             int remaining = Mathf.Max(0, currentSpawner.MaxCost - currentSpawner.CurrentCost);
             var sp = currentSpawner;
+            Debug.Log($"[SpawnerActionPopup] calling picker.Show ({sp.name}, remaining={remaining})");
             picker.Show(sp.name + "  cost " + sp.CurrentCost + "/" + sp.MaxCost + " (残 " + remaining + ")", deckMobs, false, remaining, picked => OnPickerResult(sp, picked));
             // Keep popup OPEN so the user can see live inv/cost while picking.
         }
