@@ -15,12 +15,14 @@ namespace Game.UI
 
         public void OnPointerEnter(PointerEventData e)
         {
+            Debug.Log($"[HoverTrigger] enter {(data != null ? data.monsterName : "null")} tooltip={(tooltip != null ? "ok" : "NULL")}");
             if (pending != null) StopCoroutine(pending);
             pending = StartCoroutine(ShowAfterDelay());
         }
 
         public void OnPointerExit(PointerEventData e)
         {
+            Debug.Log($"[HoverTrigger] exit {(data != null ? data.monsterName : "null")}");
             CancelPending();
             if (tooltip != null) tooltip.Hide();
         }

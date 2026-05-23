@@ -80,6 +80,7 @@ namespace Game.UI
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
             UpdatePosition();
+            Debug.Log($"[Tooltip] Show {md.monsterName} at {rt.position} parent={(parentCanvas != null ? parentCanvas.name : "null")}");
         }
 
         public void Hide()
@@ -96,7 +97,11 @@ namespace Game.UI
         private void UpdatePosition()
         {
             if (rt == null) return;
-            Vector2 mousePos = Mouse.current != null ? Mouse.current.position.ReadValue() : (Vector2)Input.mousePosition;
+            Vector2 mousePos;
+            if (Mouse.current != null) mousePos = Mouse.current.position.ReadValue();
+            else mousePos = (Vector2)Input.mousePosition;
+            // If mouse position is somehow zero (e.g. cursor off-window), pin to screen center as a fallback.
+            if (mousePos.x <= 0f && mousePos.y <= 0f) mousePos = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
             float canvasScale = parentCanvas != null ? parentCanvas.scaleFactor : 1f;
             Vector2 sizePx = rt.sizeDelta * canvasScale;
             float offX = 18f;
