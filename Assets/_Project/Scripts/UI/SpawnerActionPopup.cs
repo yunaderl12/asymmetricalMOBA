@@ -150,13 +150,15 @@ namespace Game.UI
 
         public void Show(Game.Monster.Spawner sp, DemonKingViewSwitcher viewSwitcher)
         {
-            if (sp == null) return;
+            if (sp == null) { Debug.LogWarning("[SpawnerActionPopup] Show called with null spawner"); return; }
             currentSpawner = sp;
             currentViewSwitcher = viewSwitcher;
             if (titleText != null) titleText.text = sp.name;
             UpdateStatus();
             gameObject.SetActive(true);
             transform.SetAsLastSibling();
+            var canvas = GetComponentInParent<Canvas>();
+            Debug.Log($"[SpawnerActionPopup] Show {sp.name}; canvas={(canvas != null ? canvas.name : "NULL")} sortingOrder={(canvas != null ? canvas.sortingOrder : -1)}");
         }
 
         public void Hide()

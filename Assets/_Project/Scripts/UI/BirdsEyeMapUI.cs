@@ -53,8 +53,18 @@ namespace Game.UI
             if (_instance != null && _instance != this) { Destroy(gameObject); return; }
             _instance = this;
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            EnsureEventSystem();
             BuildRoot();
             if (root != null) root.SetActive(false);
+        }
+
+        private static void EnsureEventSystem()
+        {
+            if (UnityEngine.EventSystems.EventSystem.current != null) return;
+            var go = new GameObject("EventSystem",
+                typeof(UnityEngine.EventSystems.EventSystem),
+                typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
+            Debug.Log("[BirdsEyeMapUI] created EventSystem (none existed)");
         }
 
         private void OnDestroy()
@@ -224,9 +234,15 @@ namespace Game.UI
                 var sp2 = sp; var vs = viewSwitcher;
                 btn.onClick.AddListener(() =>
                 {
-                    Debug.Log("[BirdsEyeMapUI] clicked " + sp2.name);
+                    Debug.Log($"[BirdsEyeMapUI] CLICK on {sp2.name}; getting popup...");
                     var popup = SpawnerActionPopup.GetOrCreate();
-                    if (popup != null) popup.Show(sp2, vs);
+                    if (popup == null)
+                    {
+                        Debug.LogError("[BirdsEyeMapUI] SpawnerActionPopup.GetOrCreate returned null!");
+                        return;
+                    }
+                    Debug.Log($"[BirdsEyeMapUI] popup ok, calling Show({sp2.name}, vs={(vs != null ? "ok" : "NULL")})");
+                    popup.Show(sp2, vs);
                 });
 
                 spawnerIcons.Add(new SpawnerRow { sp = sp, rt = rt, label = lt });
