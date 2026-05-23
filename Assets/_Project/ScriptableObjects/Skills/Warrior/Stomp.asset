@@ -22,3 +22,4 @@ MonoBehaviour:
   effectValue: 30
   range: 4
   duration: 0
+  ownerClass: {fileID: 11400000, guid: 1e3c92a65d6174a9d80ed186ee47f313, type: 2}

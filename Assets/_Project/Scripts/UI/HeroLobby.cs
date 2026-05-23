@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -29,12 +30,15 @@ namespace Game.UI
         private HeroLobbySettingsPanel settingsPanel;
         private GameObject overlayRoot;
         private Text titleText;
-        private Button gearButton;
+        private Button roleButton;
+        private Button settingsButton;
         private Button startButton;
+        private int selectedSlot = -1;
 
         private void Awake()
         {
             GameSession.GetOrCreate();
+            PopulateSkillOwners();
         }
 
         private void Start()
@@ -58,35 +62,57 @@ namespace Game.UI
                 settingsPanel.OnAvailableSkillPicked = OnAvailableSkillPicked;
                 settingsPanel.PopulateCarousel(allClasses, selectedClassIndex);
                 settingsPanel.SetCurrentClass(GetCurrentClass());
-                settingsPanel.SetSkillSet(currentSkills);
+                settingsPanel.SetSkillSet(currentSkills, GetCurrentClassColor());
                 settingsPanel.PopulateAvailable(BuildAvailableSkillList());
             }
             RefreshAvatar();
+
+            // Ensure an EventSystem exists in the scene (needed for buttons).
+            if (EventSystem.current == null)
+            {
+                var es = new GameObject("EventSystem", typeof(EventSystem), typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
+                Debug.Log("[HeroLobby] created EventSystem");
+            }
+        }
+
+        private void PopulateSkillOwners()
+        {
+            if (allClasses == null) return;
+            foreach (var c in allClasses)
+            {
+                if (c == null || c.classSkills == null) continue;
+                foreach (var s in c.classSkills)
+                {
+                    if (s != null && s.ownerClass == null) s.ownerClass = c;
+                }
+            }
         }
 
         private void BuildOverlayUI()
         {
-            var canvas = FindObjectOfType<Canvas>();
-            if (canvas == null) { Debug.LogWarning("[HeroLobby] no Canvas in scene"); return; }
-
-            // Hide all existing UI children to use new fullscreen design
-            for (int i = 0; i < canvas.transform.childCount; i++)
-            {
-                var child = canvas.transform.GetChild(i);
-                if (child.name.StartsWith("HeroLobbyV2")) continue;
-                child.gameObject.SetActive(false);
-            }
+            // Create a dedicated V2 canvas at sortingOrder 10 so the legacy scene UI
+            // (if any) renders below and old elements don't get disabled aggressively.
+            var canvasGO = new GameObject("HeroLobbyV2Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+            var canvas = canvasGO.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 10;
+            var scaler = canvasGO.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
 
             overlayRoot = new GameObject("HeroLobbyV2", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             overlayRoot.transform.SetParent(canvas.transform, false);
             var rt = (RectTransform)overlayRoot.transform;
             rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
             rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
-            overlayRoot.GetComponent<Image>().color = new Color(0.06f, 0.06f, 0.1f, 1f);
+            var bgImg = overlayRoot.GetComponent<Image>();
+            bgImg.color = new Color(0.06f, 0.06f, 0.1f, 1f);
+            bgImg.raycastTarget = true;
 
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            // TopBar - title left
+            // Title (top-left)
             var titleGO = new GameObject("Title", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
             titleGO.transform.SetParent(overlayRoot.transform, false);
             var tRT = (RectTransform)titleGO.transform;
@@ -97,18 +123,16 @@ namespace Game.UI
             titleText.alignment = TextAnchor.MiddleLeft; titleText.color = Color.white; titleText.text = "勇者ロビー";
             titleText.raycastTarget = false;
 
-            // Gear (top-right)
-            var gearGO = new GameObject("Gear", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-            gearGO.transform.SetParent(overlayRoot.transform, false);
-            var gRT = (RectTransform)gearGO.transform;
-            gRT.anchorMin = new Vector2(1f, 1f); gRT.anchorMax = new Vector2(1f, 1f); gRT.pivot = new Vector2(1f, 1f);
-            gRT.sizeDelta = new Vector2(56f, 56f); gRT.anchoredPosition = new Vector2(-16f, -16f);
-            gearGO.GetComponent<Image>().color = new Color(0.2f, 0.2f, 0.25f, 0.95f);
-            var gLbl = MakeText(gearGO.transform, "Lbl", font, 26, FontStyle.Bold, "⚙");
-            var gLR = (RectTransform)gLbl.transform; gLR.anchorMin = Vector2.zero; gLR.anchorMax = Vector2.one; gLR.offsetMin = Vector2.zero; gLR.offsetMax = Vector2.zero;
-            gLbl.GetComponent<Text>().alignment = TextAnchor.MiddleCenter;
-            gearButton = gearGO.GetComponent<Button>();
-            gearButton.onClick.AddListener(ToggleSettings);
+            // TopRight stack (no background image so child raycasts work cleanly)
+            var stackGO = new GameObject("TopRightStack", typeof(RectTransform));
+            stackGO.transform.SetParent(overlayRoot.transform, false);
+            var stRT = (RectTransform)stackGO.transform;
+            stRT.anchorMin = new Vector2(1f, 1f); stRT.anchorMax = new Vector2(1f, 1f); stRT.pivot = new Vector2(1f, 1f);
+            stRT.sizeDelta = new Vector2(80f, 160f);
+            stRT.anchoredPosition = new Vector2(-8f, -8f);
+
+            roleButton = CreateTopRightButton(stRT, font, "人", new Vector2(-8f, -8f), OnRoleClicked);
+            settingsButton = CreateTopRightButton(stRT, font, "設", new Vector2(-8f, -88f), OnSettingsClicked);
 
             // Match start (bottom-right)
             var btnGO = new GameObject("MatchStart", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
@@ -116,24 +140,49 @@ namespace Game.UI
             var bRT = (RectTransform)btnGO.transform;
             bRT.anchorMin = new Vector2(1f, 0f); bRT.anchorMax = new Vector2(1f, 0f); bRT.pivot = new Vector2(1f, 0f);
             bRT.sizeDelta = new Vector2(280f, 60f); bRT.anchoredPosition = new Vector2(-24f, 24f);
-            btnGO.GetComponent<Image>().color = new Color(0.95f, 0.95f, 0.95f, 1f);
+            var bImg = btnGO.GetComponent<Image>(); bImg.color = new Color(0.95f, 0.95f, 0.95f, 1f); bImg.raycastTarget = true;
             var bLbl = MakeText(btnGO.transform, "Lbl", font, 20, FontStyle.Bold, "ENTER ⏎ マッチ開始");
             var bLR = (RectTransform)bLbl.transform; bLR.anchorMin = Vector2.zero; bLR.anchorMax = Vector2.one; bLR.offsetMin = Vector2.zero; bLR.offsetMax = Vector2.zero;
             var bT = bLbl.GetComponent<Text>(); bT.alignment = TextAnchor.MiddleCenter; bT.color = new Color(0.1f, 0.1f, 0.15f, 1f);
             startButton = btnGO.GetComponent<Button>();
+            startButton.targetGraphic = bImg;
             startButton.onClick.AddListener(OnStartClicked);
 
-            // Avatar view (middle/lower)
+            // Avatar view fills the whole overlay (its own children use absolute positioning)
             var avatarHolder = new GameObject("AvatarHolder", typeof(RectTransform));
             avatarHolder.transform.SetParent(overlayRoot.transform, false);
             var aRT = (RectTransform)avatarHolder.transform;
-            aRT.anchorMin = new Vector2(0f, 0f); aRT.anchorMax = new Vector2(1f, 1f);
-            aRT.offsetMin = new Vector2(0f, 100f); aRT.offsetMax = new Vector2(0f, -60f);
+            aRT.anchorMin = Vector2.zero; aRT.anchorMax = Vector2.one;
+            aRT.offsetMin = Vector2.zero; aRT.offsetMax = Vector2.zero;
             avatarView = HeroLobbyAvatarView.Create(aRT);
             avatarView.SetUserName(userName);
 
-            // Settings panel (right side, off-screen initially)
+            // Settings panel (right side)
             settingsPanel = HeroLobbySettingsPanel.Create((RectTransform)overlayRoot.transform);
+        }
+
+        private Button CreateTopRightButton(Transform parent, Font font, string glyph, Vector2 anchoredPosFromTopRight, UnityEngine.Events.UnityAction onClick)
+        {
+            var go = new GameObject("Btn_" + glyph, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            go.transform.SetParent(parent, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(1f, 1f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(1f, 1f);
+            rt.sizeDelta = new Vector2(64f, 64f);
+            rt.anchoredPosition = anchoredPosFromTopRight;
+            var img = go.GetComponent<Image>();
+            img.color = new Color(0.95f, 0.95f, 0.95f, 1f);
+            img.raycastTarget = true;
+
+            var lblGO = MakeText(go.transform, "Lbl", font, 28, FontStyle.Bold, glyph);
+            var lRT = (RectTransform)lblGO.transform;
+            lRT.anchorMin = Vector2.zero; lRT.anchorMax = Vector2.one; lRT.offsetMin = Vector2.zero; lRT.offsetMax = Vector2.zero;
+            var lt = lblGO.GetComponent<Text>();
+            lt.alignment = TextAnchor.MiddleCenter; lt.color = new Color(0.12f, 0.12f, 0.18f, 1f);
+
+            var btn = go.GetComponent<Button>();
+            btn.targetGraphic = img;
+            btn.onClick.AddListener(onClick);
+            return btn;
         }
 
         private static GameObject MakeText(Transform parent, string name, Font font, int size, FontStyle style, string text)
@@ -154,6 +203,12 @@ namespace Game.UI
             return allClasses[i];
         }
 
+        private Color GetCurrentClassColor()
+        {
+            var c = GetCurrentClass();
+            return c != null ? c.avatarColor : new Color(0.4f, 0.4f, 0.4f, 1f);
+        }
+
         private void InitSkillsForClass()
         {
             var cls = GetCurrentClass();
@@ -162,7 +217,6 @@ namespace Game.UI
             {
                 for (int i = 0; i < 4 && i < cls.classSkills.Count; i++) currentSkills[i] = cls.classSkills[i];
             }
-            // Slot 5 from session selection or fallback to first common
             var session = GameSession.Instance;
             SkillData freeSlot = session != null ? session.SelectedCommonSkill : null;
             if (freeSlot == null && commonSkills != null && commonSkills.Count > 0) freeSlot = commonSkills[0];
@@ -179,31 +233,37 @@ namespace Game.UI
             if (settingsPanel != null)
             {
                 settingsPanel.SetCurrentClass(GetCurrentClass());
-                settingsPanel.SetSkillSet(currentSkills);
+                settingsPanel.SetSkillSet(currentSkills, GetCurrentClassColor());
                 settingsPanel.PopulateAvailable(BuildAvailableSkillList());
                 settingsPanel.ClearSelectedSlot();
             }
         }
 
-        private int selectedSlot = -1;
         private void OnSlotSelectedForReplace(int slotIdx)
         {
+            if (slotIdx < 4)
+            {
+                Debug.Log("[HeroLobby] slots 1-4 are locked to current class");
+                selectedSlot = -1;
+                if (settingsPanel != null) settingsPanel.ClearSelectedSlot();
+                return;
+            }
             selectedSlot = slotIdx;
         }
 
         private void OnAvailableSkillPicked(SkillData s)
         {
             if (s == null) return;
-            if (selectedSlot < 0)
+            if (selectedSlot != 4)
             {
-                Debug.Log("[HeroLobby] no slot selected; click a skill set slot first");
+                Debug.Log("[HeroLobby] no slot selected (only slot 5 is changeable)");
                 return;
             }
-            currentSkills[selectedSlot] = s;
+            currentSkills[4] = s;
             RefreshAvatar();
             if (settingsPanel != null)
             {
-                settingsPanel.SetSkillSet(currentSkills);
+                settingsPanel.SetSkillSet(currentSkills, GetCurrentClassColor());
                 settingsPanel.ClearSelectedSlot();
             }
             selectedSlot = -1;
@@ -235,14 +295,19 @@ namespace Game.UI
                 avatarView.SetAvatarColor(cls.avatarColor);
                 avatarView.SetClassName(cls.className);
             }
-            avatarView.SetSkills(currentSkills);
+            avatarView.SetSkills(currentSkills, GetCurrentClassColor());
         }
 
-        private void ToggleSettings()
+        private void OnRoleClicked()
         {
             if (settingsPanel == null) return;
             if (settingsPanel.IsOpen) settingsPanel.Hide();
             else settingsPanel.Show();
+        }
+
+        private void OnSettingsClicked()
+        {
+            Debug.Log("[HeroLobby] settings not yet implemented");
         }
 
         private void Update()

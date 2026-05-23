@@ -1,4 +1,5 @@
 using UnityEngine;
+using Game.Hero;
 
 namespace Game.Skill
 {
@@ -25,7 +26,8 @@ namespace Game.Skill
         public int maxSkillLevel = 5;
 
         [Header("Lobby Visual")]
-        public Color iconColor = new Color(0f, 0f, 0f, 0f); // alpha=0 -> use effectType default
+        public Color iconColor = new Color(0f, 0f, 0f, 0f); // alpha=0 -> use ownerClass.avatarColor or effectType fallback
+        public HeroClassData ownerClass; // null = common skill
 
         public float GetEffectValueAtLevel(int level)
         {
@@ -36,6 +38,7 @@ namespace Game.Skill
         public Color EffectiveIconColor()
         {
             if (iconColor.a > 0.01f) return iconColor;
+            if (ownerClass != null) return ownerClass.avatarColor;
             switch (effectType)
             {
                 case SkillEffectType.Damage: return new Color(1f, 0.25f, 0.25f, 1f);
