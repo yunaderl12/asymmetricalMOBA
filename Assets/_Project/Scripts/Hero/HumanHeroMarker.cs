@@ -11,6 +11,12 @@ namespace Game.Hero
             if (Instance == null) Instance = this;
         }
 
+        private void Start()
+        {
+            // Make sure the screen-center crosshair exists once the human hero is in the scene.
+            Game.UI.CrosshairUI.EnsureExists();
+        }
+
         private void OnDestroy()
         {
             if (Instance == this) Instance = null;
