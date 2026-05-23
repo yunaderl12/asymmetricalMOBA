@@ -24,8 +24,11 @@ namespace Game.UI
         [SerializeField] private float pollInterval = 0.05f;
         [SerializeField] private float defaultRange = 10f;
         [SerializeField] private float mageRange = 20f;
-        [SerializeField] private int armLength = 14;
-        [SerializeField] private int armThickness = 2;
+        // Geometry: previous values were length=14, thickness=2.
+        // Scale up ~1.75x (length 14 -> 24) and use a thicker base bar.
+        [SerializeField] private int armLength = 24;
+        [SerializeField] private int armThicknessNormal = 4;
+        [SerializeField] private int armThicknessHit = 7;
         [SerializeField] private int sortingOrder = 5;
 
         private Transform cameraTransform;
@@ -80,12 +83,13 @@ namespace Game.UI
             var rt = (RectTransform)transform;
             rt.anchorMin = new Vector2(0.5f, 0.5f); rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = new Vector2(armLength * 2f + armThickness, armLength * 2f + armThickness);
+            int maxThickness = Mathf.Max(armThicknessNormal, armThicknessHit);
+            rt.sizeDelta = new Vector2(armLength * 2f + maxThickness, armLength * 2f + maxThickness);
             rt.anchoredPosition = Vector2.zero;
 
-            if (horizontal == null) horizontal = CreateBar("Horizontal", new Vector2(armLength * 2f, armThickness));
-            if (vertical == null) vertical = CreateBar("Vertical", new Vector2(armThickness, armLength * 2f));
-            ApplyColor(normalColor);
+            if (horizontal == null) horizontal = CreateBar("Horizontal", new Vector2(armLength * 2f, armThicknessNormal));
+            if (vertical == null) vertical = CreateBar("Vertical", new Vector2(armThicknessNormal, armLength * 2f));
+            ApplyState(false);
         }
 
         private Image CreateBar(string n, Vector2 size)
@@ -121,7 +125,7 @@ namespace Game.UI
             bool isMage = classInit != null && classInit.ClassData != null && classInit.ClassData.className == "Mage";
             if (isMage)
             {
-                if (!currentHit) { currentHit = true; ApplyColor(hitColor); }
+                if (!currentHit) { currentHit = true; ApplyState(true); }
                 return;
             }
 
@@ -132,13 +136,23 @@ namespace Game.UI
                 var hp = info.collider.GetComponentInParent<HealthComponent>();
                 if (hp != null && classInit != null && hp.gameObject != classInit.gameObject) hit = true;
             }
-            if (hit != currentHit) { currentHit = hit; ApplyColor(hit ? hitColor : normalColor); }
+            if (hit != currentHit) { currentHit = hit; ApplyState(hit); }
         }
 
-        private void ApplyColor(Color c)
+        private void ApplyState(bool hit)
         {
-            if (horizontal != null) horizontal.color = c;
-            if (vertical != null) vertical.color = c;
+            var c = hit ? hitColor : normalColor;
+            int t = hit ? armThicknessHit : armThicknessNormal;
+            if (horizontal != null)
+            {
+                horizontal.color = c;
+                ((RectTransform)horizontal.transform).sizeDelta = new Vector2(armLength * 2f, t);
+            }
+            if (vertical != null)
+            {
+                vertical.color = c;
+                ((RectTransform)vertical.transform).sizeDelta = new Vector2(t, armLength * 2f);
+            }
         }
     }
 }
