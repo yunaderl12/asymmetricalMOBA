@@ -39,6 +39,9 @@ namespace Game.DemonKing
         private void Awake()
         {
             controller = GetComponent<DemonKingController>();
+            // Make sure the UI birds-eye map exists in the scene so OnModeChanged ->
+            // BirdsEye actually shows the icon map (and not just the 3D camera).
+            Game.UI.BirdsEyeMapUI.EnsureExists();
         }
 
         private void OnEnable()

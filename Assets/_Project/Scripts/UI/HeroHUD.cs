@@ -35,6 +35,13 @@ namespace Game.UI
 
         private void Start()
         {
+            // Not for the demon king side of the match.
+            if (GameSession.Instance != null && GameSession.Instance.CurrentRole == GameSession.PlayerRole.DemonKing)
+            {
+                gameObject.SetActive(false);
+                return;
+            }
+
             var hero = Game.Hero.HumanHeroMarker.Instance != null ? Game.Hero.HumanHeroMarker.Instance.gameObject : GameObject.FindWithTag(heroTag);
             if (hero == null)
             {

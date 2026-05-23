@@ -25,6 +25,14 @@ namespace Game.UI
 
         private void Start()
         {
+            // Not for the demon king side of the match.
+            if (Game.Core.GameSession.Instance != null && Game.Core.GameSession.Instance.CurrentRole == Game.Core.GameSession.PlayerRole.DemonKing)
+            {
+                if (root != null) root.SetActive(false);
+                enabled = false;
+                return;
+            }
+
             var hero = HumanHeroMarker.Instance != null ? HumanHeroMarker.Instance.gameObject : GameObject.FindWithTag("Player");
             if (hero == null) { Debug.LogWarning("[SkillLevelUpUI] human Hero not found"); return; }
             level = hero.GetComponent<LevelComponent>();

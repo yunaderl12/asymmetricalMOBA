@@ -14,14 +14,29 @@ namespace Game.UI
     public class BirdsEyeMapUI : MonoBehaviour
     {
         [Header("Layout")]
-        [SerializeField] private Vector2 mapSize = new Vector2(900f, 700f);
+        [SerializeField] private Vector2 mapSize = new Vector2(1100f, 800f);
         [SerializeField] private float autoBoundsPadding = 15f;
         [SerializeField] private bool autoBounds = true;
         [SerializeField] private Vector2 worldMin = new Vector2(-60f, -60f);
         [SerializeField] private Vector2 worldMax = new Vector2(120f, 60f);
 
+        [Header("Icon sizes")]
+        [SerializeField] private float spawnerIconSize = 64f;
+        [SerializeField] private float monsterIconSize = 28f;
+        [SerializeField] private float heroIconSize = 30f;
+        [SerializeField] private float dkIconSize = 38f;
+
         [Header("Refresh")]
         [SerializeField] private float refreshInterval = 0.15f;
+
+        private static BirdsEyeMapUI _instance;
+        public static BirdsEyeMapUI EnsureExists()
+        {
+            if (_instance != null) return _instance;
+            var go = new GameObject("BirdsEyeMapUI", typeof(RectTransform));
+            _instance = go.AddComponent<BirdsEyeMapUI>();
+            return _instance;
+        }
 
         private DemonKingViewSwitcher viewSwitcher;
         private GameObject root;
@@ -35,9 +50,17 @@ namespace Game.UI
 
         private void Awake()
         {
+            if (_instance != null && _instance != this) { Destroy(gameObject); return; }
+            _instance = this;
             font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             BuildRoot();
             if (root != null) root.SetActive(false);
+        }
+
+        private void OnDestroy()
+        {
+            if (_instance == this) _instance = null;
+            if (viewSwitcher != null) viewSwitcher.OnModeChanged -= OnModeChanged;
         }
 
         private void Start()
@@ -50,11 +73,6 @@ namespace Game.UI
             BuildSpawnerIcons();
             BuildLandmark("StartTown", new Color(0.3f, 0.8f, 1f, 0.95f), 34f);
             BuildLandmark("DemonCastle", new Color(0.7f, 0.3f, 1f, 0.95f), 34f);
-        }
-
-        private void OnDestroy()
-        {
-            if (viewSwitcher != null) viewSwitcher.OnModeChanged -= OnModeChanged;
         }
 
         private void OnModeChanged(DemonKingViewSwitcher.ViewMode mode)
@@ -81,8 +99,21 @@ namespace Game.UI
 
         private void BuildRoot()
         {
-            var canvas = FindObjectOfType<Canvas>();
-            if (canvas == null) { Debug.LogWarning("[BirdsEyeMapUI] no Canvas in scene"); return; }
+            // Prefer a dedicated overlay canvas so this UI is never disabled by scene UI cleanup.
+            var existing = GameObject.Find("BirdsEyeMapCanvas");
+            Canvas canvas;
+            if (existing != null) canvas = existing.GetComponent<Canvas>();
+            else
+            {
+                var cGO = new GameObject("BirdsEyeMapCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+                canvas = cGO.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 7;
+                var scaler = cGO.GetComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920f, 1080f);
+                scaler.matchWidthOrHeight = 0.5f;
+            }
             root = new GameObject("BirdsEyeMap", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             root.transform.SetParent(canvas.transform, false);
             var rt = (RectTransform)root.transform;
@@ -152,14 +183,17 @@ namespace Game.UI
             {
                 var sp = go.GetComponent<Spawner>();
                 if (sp == null) continue;
-                var iconGO = new GameObject("Sp_" + sp.name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+                var iconGO = new GameObject("Sp_" + sp.name, typeof(RectTransform), typeof(CanvasRenderer));
                 iconGO.transform.SetParent(mapArea, false);
                 var rt = (RectTransform)iconGO.transform;
                 rt.anchorMin = new Vector2(0.5f, 0.5f); rt.anchorMax = new Vector2(0.5f, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.sizeDelta = new Vector2(54f, 54f);
+                rt.sizeDelta = new Vector2(spawnerIconSize, spawnerIconSize);
                 rt.anchoredPosition = WorldToMap(sp.transform.position);
-                var img = iconGO.GetComponent<Image>();
-                img.color = new Color(0.85f, 0.4f, 0.15f, 0.95f);
+                var img = iconGO.AddComponent<PentagonGraphic>();
+                img.color = new Color(0.95f, 0.55f, 0.15f, 0.97f);
+                img.raycastTarget = true;
+                var btn = iconGO.AddComponent<Button>();
+                btn.targetGraphic = img;
 
                 var lblGO = new GameObject("Lbl", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
                 lblGO.transform.SetParent(iconGO.transform, false);
@@ -172,7 +206,7 @@ namespace Game.UI
                 lt.text = sp.name;
 
                 var sp2 = sp; var vs = viewSwitcher;
-                iconGO.GetComponent<Button>().onClick.AddListener(() =>
+                btn.onClick.AddListener(() =>
                 {
                     Debug.Log("[BirdsEyeMapUI] clicked " + sp2.name);
                     var popup = SpawnerActionPopup.GetOrCreate();
@@ -221,22 +255,30 @@ namespace Game.UI
             }
         }
 
-        private RectTransform GetOrCreateLiveIcon(Transform t, Color color, float size)
+        private enum IconShape { Diamond, Ellipse, Pentagon }
+
+        private RectTransform GetOrCreateLiveIcon(Transform t, Color color, float size, IconShape shape)
         {
             if (liveIcons.TryGetValue(t, out var rt) && rt != null)
             {
-                var imgExisting = rt.GetComponent<Image>();
-                if (imgExisting != null) imgExisting.color = color;
+                var g = rt.GetComponent<UnityEngine.UI.Graphic>();
+                if (g != null) g.color = color;
                 rt.sizeDelta = new Vector2(size, size);
                 return rt;
             }
-            var go = new GameObject("Live_" + t.name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var go = new GameObject("Live_" + t.name, typeof(RectTransform), typeof(CanvasRenderer));
             go.transform.SetParent(mapArea, false);
             rt = (RectTransform)go.transform;
             rt.anchorMin = new Vector2(0.5f, 0.5f); rt.anchorMax = new Vector2(0.5f, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(size, size);
-            var img = go.GetComponent<Image>();
-            img.color = color; img.raycastTarget = false;
+            UnityEngine.UI.Graphic graphic;
+            switch (shape)
+            {
+                case IconShape.Diamond: graphic = go.AddComponent<DiamondGraphic>(); break;
+                case IconShape.Pentagon: graphic = go.AddComponent<PentagonGraphic>(); break;
+                default: graphic = go.AddComponent<EllipseGraphic>(); break;
+            }
+            graphic.color = color; graphic.raycastTarget = false;
             liveIcons[t] = rt;
             return rt;
         }
@@ -262,27 +304,27 @@ namespace Game.UI
                 }
             }
 
-            // Monsters (red dots)
+            // Monsters (red diamonds)
             foreach (var m in FindObjectsOfType<Game.Monster.Monster>())
             {
                 if (m == null) continue;
-                var rt = GetOrCreateLiveIcon(m.transform, new Color(1f, 0.35f, 0.35f, 0.95f), 12f);
+                var rt = GetOrCreateLiveIcon(m.transform, new Color(1f, 0.35f, 0.35f, 0.97f), monsterIconSize, IconShape.Diamond);
                 rt.anchoredPosition = WorldToMap(m.transform.position);
             }
 
-            // Heroes (cyan dots)
+            // Heroes (cyan ellipses)
             foreach (var p in GameObject.FindGameObjectsWithTag("Player"))
             {
                 if (p == null) continue;
-                var rt = GetOrCreateLiveIcon(p.transform, new Color(0.3f, 0.8f, 1f, 0.95f), 16f);
+                var rt = GetOrCreateLiveIcon(p.transform, new Color(0.3f, 0.85f, 1f, 0.97f), heroIconSize, IconShape.Ellipse);
                 rt.anchoredPosition = WorldToMap(p.transform.position);
             }
 
-            // DK (magenta dot)
+            // DK (magenta ellipse, larger)
             var dk = GameObject.FindWithTag("DemonKing");
             if (dk != null)
             {
-                var rt = GetOrCreateLiveIcon(dk.transform, new Color(0.9f, 0.25f, 0.6f, 0.95f), 20f);
+                var rt = GetOrCreateLiveIcon(dk.transform, new Color(0.95f, 0.3f, 0.7f, 0.97f), dkIconSize, IconShape.Ellipse);
                 rt.anchoredPosition = WorldToMap(dk.transform.position);
             }
         }

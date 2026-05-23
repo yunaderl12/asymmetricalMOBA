@@ -33,6 +33,14 @@ namespace Game.UI
 
         private void Start()
         {
+            // Not for the demon king side of the match.
+            if (Game.Core.GameSession.Instance != null && Game.Core.GameSession.Instance.CurrentRole == Game.Core.GameSession.PlayerRole.DemonKing)
+            {
+                if (root != null) root.SetActive(false);
+                enabled = false;
+                return;
+            }
+
             var hero = Game.Hero.HumanHeroMarker.Instance != null ? Game.Hero.HumanHeroMarker.Instance.gameObject : GameObject.FindWithTag(heroTag);
             if (hero == null) { Debug.LogWarning("[SkillWheel] hero not found"); return; }
             runtime = hero.GetComponent<SkillRuntime>();
