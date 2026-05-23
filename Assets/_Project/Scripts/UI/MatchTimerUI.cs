@@ -14,13 +14,17 @@ namespace Game.UI
             EnsureTopCenter();
         }
 
-        // Move the timer's Text (with any sibling background it has) onto a dedicated
-        // MatchTimerCanvas at sortingOrder 8 so it stays above the BirdsEyeMap (7)
-        // but below the spawner action popup (10). Anchor to top-center so the
-        // position is consistent for both hero and demon king roles.
+        // Reparent ONLY the timer Text (which has a RectTransform) to a dedicated
+        // MatchTimerCanvas at sortingOrder 8. We deliberately do NOT touch the
+        // MatchTimer parent GameObject because in MainStage its component is a
+        // plain Transform, not a RectTransform — moving it under a Canvas + casting
+        // to RectTransform was throwing, which silently killed this script's Update.
         private void EnsureTopCenter()
         {
             if (timerText == null) return;
+            var trt = timerText.GetComponent<RectTransform>();
+            if (trt == null) return;
+
             var canvasGO = GameObject.Find("MatchTimerCanvas");
             Canvas canvas;
             if (canvasGO != null) canvas = canvasGO.GetComponent<Canvas>();
@@ -35,23 +39,15 @@ namespace Game.UI
                 scaler.referenceResolution = new Vector2(1920f, 1080f);
                 scaler.matchWidthOrHeight = 0.5f;
             }
-            // Reparent the timer text (preserve its parent background if it has one).
-            var timerHost = timerText.transform.parent != null ? timerText.transform.parent.gameObject : timerText.gameObject;
-            timerHost.transform.SetParent(canvas.transform, false);
-            var rt = (RectTransform)timerHost.transform;
-            rt.anchorMin = new Vector2(0.5f, 1f);
-            rt.anchorMax = new Vector2(0.5f, 1f);
-            rt.pivot = new Vector2(0.5f, 1f);
-            rt.sizeDelta = new Vector2(420f, 56f);
-            rt.anchoredPosition = new Vector2(0f, -16f);
-            // Make sure the text fills the parent if it's a child element.
-            var trt = (RectTransform)timerText.transform;
-            if (timerHost != timerText.gameObject)
-            {
-                trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one;
-                trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
-            }
+
+            trt.SetParent(canvas.transform, false);
+            trt.anchorMin = new Vector2(0.5f, 1f);
+            trt.anchorMax = new Vector2(0.5f, 1f);
+            trt.pivot = new Vector2(0.5f, 1f);
+            trt.sizeDelta = new Vector2(420f, 56f);
+            trt.anchoredPosition = new Vector2(0f, -16f);
             timerText.alignment = TextAnchor.MiddleCenter;
+            Debug.Log($"[MatchTimerUI] reparented Text to {canvas.name} (sortingOrder={canvas.sortingOrder})");
         }
 
         private void Update()
