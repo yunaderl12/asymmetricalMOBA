@@ -38,7 +38,13 @@ namespace Game.UI
             // Not for the demon king side of the match.
             if (GameSession.Instance != null && GameSession.Instance.CurrentRole == GameSession.PlayerRole.DemonKing)
             {
+                // Hide this HUD's own GameObject (HP/MP/Lv/Exp).
                 gameObject.SetActive(false);
+                // The skill-slot row is a separate sibling GameObject (e.g. "SkillSlots")
+                // — walk through any slot reference and disable its parent.
+                DisableExternalRoot(slotBackgrounds);
+                DisableExternalRoot(slotNameTexts);
+                DisableExternalRoot(slotCooldownOverlays);
                 return;
             }
 
@@ -60,6 +66,24 @@ namespace Game.UI
             if (runtime != null) { runtime.OnSelectionChanged += OnSelectionChanged; runtime.OnSkillCast += OnSkillCast; runtime.OnSkillLevelChanged += OnSkillLevelChanged; }
             RefreshSlots();
             UpdateAll();
+        }
+
+        // Walks the given array, finds the first non-null entry, walks up to its
+        // parent (= the slot panel root), and disables that GameObject. Safe for
+        // arrays that are empty or have null entries.
+        private static void DisableExternalRoot<T>(T[] entries) where T : Component
+        {
+            if (entries == null) return;
+            foreach (var e in entries)
+            {
+                if (e == null) continue;
+                var parent = e.transform.parent;
+                if (parent != null)
+                {
+                    parent.gameObject.SetActive(false);
+                    return;
+                }
+            }
         }
 
         private void OnDestroy()

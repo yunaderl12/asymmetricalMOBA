@@ -91,9 +91,12 @@ namespace Game.UI
         private void Update()
         {
             if (root == null || !root.activeSelf) return;
+            // Positions follow per-frame for smooth tracking; labels (HP/Cost text)
+            // are refreshed on the slower throttle since their string value changes
+            // far less frequently than world position.
+            RefreshLive();
             if (Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + refreshInterval;
-            RefreshLive();
             RefreshSpawnerLabels();
         }
 
