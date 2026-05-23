@@ -68,8 +68,9 @@ namespace Game.UI
             }
             DedupDeck();
 
-            var canvas = GetComponentInParent<Canvas>();
+            var canvas = ResolveCanvas();
             if (canvas != null) tooltipUI = MonsterTooltipUI.Create(canvas);
+            else Debug.LogWarning("[DemonLobby] No Canvas found; tooltip disabled.");
 
             BuildAvailableList();
             WireDeckSlots();
@@ -144,6 +145,18 @@ namespace Game.UI
                 int idx = i;
                 if (spawnerButtons[i] != null) spawnerButtons[i].onClick.AddListener(() => OpenSpawnerPicker(idx));
             }
+        }
+
+        private Canvas ResolveCanvas()
+        {
+            var c = GetComponentInParent<Canvas>();
+            if (c == null) c = GetComponentInChildren<Canvas>();
+            if (c == null)
+            {
+                if (availableListParent != null) c = availableListParent.GetComponentInParent<Canvas>();
+            }
+            if (c == null) c = FindObjectOfType<Canvas>();
+            return c;
         }
 
         private void DedupDeck()

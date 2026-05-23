@@ -95,20 +95,27 @@ namespace Game.UI
 
         private void UpdatePosition()
         {
-            if (rt == null || canvasRT == null) return;
+            if (rt == null) return;
             Vector2 mousePos = Mouse.current != null ? Mouse.current.position.ReadValue() : (Vector2)Input.mousePosition;
-            Vector2 local;
-            var cam = parentCanvas != null && parentCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : (parentCanvas != null ? parentCanvas.worldCamera : null);
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRT, mousePos, cam, out local))
+            float canvasScale = parentCanvas != null ? parentCanvas.scaleFactor : 1f;
+            Vector2 sizePx = rt.sizeDelta * canvasScale;
+            float offX = 18f;
+            float offY = 18f;
+            float x = mousePos.x + offX;
+            float y = mousePos.y - offY;
+            if (x + sizePx.x > Screen.width) x = mousePos.x - offX - sizePx.x;
+            if (y - sizePx.y < 0f) y = mousePos.y + offY + sizePx.y;
+            if (parentCanvas != null && parentCanvas.renderMode != RenderMode.ScreenSpaceOverlay && parentCanvas.worldCamera != null)
             {
-                Vector2 size = rt.sizeDelta;
-                Vector2 offset = new Vector2(18f, -18f);
-                Vector2 target = local + offset;
-                // Keep inside canvas
-                Rect cr = canvasRT.rect;
-                if (target.x + size.x > cr.xMax) target.x = local.x - size.x - 18f;
-                if (target.y - size.y < cr.yMin) target.y = local.y + size.y + 18f;
-                rt.anchoredPosition = target;
+                // Camera-space canvas: convert screen to local within canvas rect.
+                Vector2 local;
+                if (RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRT, new Vector2(x, y), parentCanvas.worldCamera, out local))
+                    rt.anchoredPosition = local;
+            }
+            else
+            {
+                // Overlay: world coords == screen pixels.
+                rt.position = new Vector3(x, y, 0f);
             }
         }
     }

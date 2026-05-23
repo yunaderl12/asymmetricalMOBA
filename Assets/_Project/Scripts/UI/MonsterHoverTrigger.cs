@@ -43,10 +43,16 @@ namespace Game.UI
             if (pending != null) { StopCoroutine(pending); pending = null; }
         }
 
+        private static bool warnedMissing;
+
         private IEnumerator ShowAfterDelay()
         {
             yield return new WaitForSeconds(hoverDelay);
-            if (tooltip != null && data != null) tooltip.Show(data);
+            if (data != null)
+            {
+                if (tooltip != null) tooltip.Show(data);
+                else if (!warnedMissing) { warnedMissing = true; Debug.LogWarning("[MonsterHoverTrigger] tooltip is null; canvas was not resolved."); }
+            }
             pending = null;
         }
     }
