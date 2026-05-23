@@ -263,7 +263,7 @@ namespace Game.UI
             }
 
             // Monsters (red dots)
-            foreach (var m in FindObjectsOfType<Monster>())
+            foreach (var m in FindObjectsOfType<Game.Monster.Monster>())
             {
                 if (m == null) continue;
                 var rt = GetOrCreateLiveIcon(m.transform, new Color(1f, 0.35f, 0.35f, 0.95f), 12f);
