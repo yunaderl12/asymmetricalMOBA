@@ -89,27 +89,36 @@ namespace Game.UI
             _carouselContainer.sizeDelta = new Vector2(560f, 120f);
             _carouselContainer.anchoredPosition = new Vector2(220f, -80f);
 
-            // Skill set row (5 pentagons) anchor (0.5,1) pos (0,-300), size 56 each
-            float pentSize = 56f;
-            float pentSpacing = 72f;
-            float pentStartX = -(pentSpacing * 2f); // -144 ... +144 (5 elements)
+            // Skill set: 5 diamonds rotated 72° each around a shared bottom-center pivot
+            // (forms a pentagon). Wrapped in a single "PentaHolder" so labels can sit below
+            // the entire pentagon group.
+            float pentSize = 70f;
+            var pentaHolderGO = new GameObject("PentaHolder", typeof(RectTransform));
+            pentaHolderGO.transform.SetParent(root, false);
+            var phRT = (RectTransform)pentaHolderGO.transform;
+            phRT.anchorMin = new Vector2(0.5f, 1f); phRT.anchorMax = new Vector2(0.5f, 1f); phRT.pivot = new Vector2(0.5f, 0.5f);
+            phRT.sizeDelta = new Vector2(220f, 220f);
+            phRT.anchoredPosition = new Vector2(0f, -240f);
+
             for (int i = 0; i < 5; i++)
             {
                 int captured = i;
                 var sGO = new GameObject("Slot_" + i, typeof(RectTransform), typeof(CanvasRenderer));
-                sGO.transform.SetParent(root, false);
+                sGO.transform.SetParent(pentaHolderGO.transform, false);
                 var sRT = (RectTransform)sGO.transform;
-                sRT.anchorMin = new Vector2(0.5f, 1f); sRT.anchorMax = new Vector2(0.5f, 1f); sRT.pivot = new Vector2(0.5f, 0.5f);
+                sRT.anchorMin = new Vector2(0.5f, 0.5f); sRT.anchorMax = new Vector2(0.5f, 0.5f);
+                sRT.pivot = new Vector2(0.5f, 0f); // bottom-center, shared rotation pivot
                 sRT.sizeDelta = new Vector2(pentSize, pentSize);
-                sRT.anchoredPosition = new Vector2(pentStartX + i * pentSpacing, -300f);
+                sRT.anchoredPosition = Vector2.zero;
+                sRT.localRotation = Quaternion.Euler(0f, 0f, i * 72f);
 
-                // Pentagon graphic (acts as Image / Raycast target for the Button)
+                // Diamond graphic acts as both the visual and the Button's raycast target.
                 var pg = sGO.AddComponent<DiamondGraphic>();
                 pg.color = new Color(0.5f, 0.5f, 0.5f, 1f);
                 pg.raycastTarget = true;
                 slotGraphics.Add(pg);
 
-                // Outline (slightly larger pentagon behind, white, initially disabled)
+                // Outline (white, slightly larger, behind the slot)
                 var outGO = new GameObject("Outline", typeof(RectTransform), typeof(CanvasRenderer));
                 outGO.transform.SetParent(sGO.transform, false);
                 var oRT = (RectTransform)outGO.transform;
@@ -117,18 +126,19 @@ namespace Game.UI
                 oRT.offsetMin = new Vector2(-6f, -6f); oRT.offsetMax = new Vector2(6f, 6f);
                 var outG = outGO.AddComponent<DiamondGraphic>();
                 outG.color = Color.white; outG.raycastTarget = false;
-                outGO.transform.SetSiblingIndex(0); // render behind the slot pentagon
+                outGO.transform.SetSiblingIndex(0);
                 outGO.SetActive(false);
                 outlineHosts.Add(outGO);
 
-                // Label below
+                // Label is awkward in a pentagon layout; keep one tiny tag below the whole
+                // pentagon group with the 5 skill names separated by " / ".
                 var lblGO = MakeText(root, "SlotLbl_" + i, font, 11, FontStyle.Bold, "");
                 var lRT = (RectTransform)lblGO.transform;
                 lRT.anchorMin = new Vector2(0.5f, 1f); lRT.anchorMax = new Vector2(0.5f, 1f); lRT.pivot = new Vector2(0.5f, 1f);
-                lRT.sizeDelta = new Vector2(pentSize + 32f, 24f);
-                lRT.anchoredPosition = new Vector2(pentStartX + i * pentSpacing, -300f - pentSize / 2f - 4f);
+                lRT.sizeDelta = new Vector2(240f, 18f);
+                lRT.anchoredPosition = new Vector2(0f, -360f - i * 18f);
                 var lt = lblGO.GetComponent<Text>();
-                lt.alignment = TextAnchor.UpperCenter; lt.color = Color.white;
+                lt.alignment = TextAnchor.MiddleCenter; lt.color = Color.white;
                 slotLabels.Add(lt);
 
                 var btn = sGO.AddComponent<Button>();
@@ -143,19 +153,19 @@ namespace Game.UI
                 });
             }
 
-            // Divider line
+            // Divider line (moved down to clear pentagon + label stack)
             var divGO = new GameObject("Divider", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             divGO.transform.SetParent(root, false);
             var dvRT = (RectTransform)divGO.transform;
             dvRT.anchorMin = new Vector2(0f, 1f); dvRT.anchorMax = new Vector2(1f, 1f); dvRT.pivot = new Vector2(0.5f, 0.5f);
-            dvRT.sizeDelta = new Vector2(-32f, 2f); dvRT.anchoredPosition = new Vector2(0f, -390f);
+            dvRT.sizeDelta = new Vector2(-32f, 2f); dvRT.anchoredPosition = new Vector2(0f, -460f);
             divGO.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.45f, 0.7f);
 
             // Available header
             var avHGO = MakeText(root, "AvailHeader", font, 14, FontStyle.Normal, "他クラス + 共通スキル (クリックでスロット 5 と入替)");
             var ahRT = (RectTransform)avHGO.transform;
             ahRT.anchorMin = new Vector2(0f, 1f); ahRT.anchorMax = new Vector2(1f, 1f); ahRT.pivot = new Vector2(0f, 1f);
-            ahRT.sizeDelta = new Vector2(-32f, 22f); ahRT.anchoredPosition = new Vector2(16f, -405f);
+            ahRT.sizeDelta = new Vector2(-32f, 22f); ahRT.anchoredPosition = new Vector2(16f, -475f);
             avHGO.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
             avHGO.GetComponent<Text>().color = new Color(0.85f, 0.85f, 0.85f, 1f);
 
@@ -165,7 +175,7 @@ namespace Game.UI
             availableGrid = (RectTransform)gridGO.transform;
             availableGrid.anchorMin = new Vector2(0.5f, 1f); availableGrid.anchorMax = new Vector2(0.5f, 1f); availableGrid.pivot = new Vector2(0.5f, 1f);
             availableGrid.sizeDelta = new Vector2(560f, 360f);
-            availableGrid.anchoredPosition = new Vector2(0f, -460f);
+            availableGrid.anchoredPosition = new Vector2(0f, -500f);
 
             // Close hint at bottom
             var hintGO = MakeText(root, "Hint", font, 12, FontStyle.Italic, "Esc キーでパネルを閉じる");

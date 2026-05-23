@@ -78,25 +78,28 @@ namespace Game.UI
             classNameText.alignment = TextAnchor.MiddleCenter; classNameText.color = Color.white;
             classNameText.raycastTarget = false; classNameText.text = "Swordsman";
 
-            // PentagonHolder: anchor (0.5,1), pos (0,-540), size (440,60)
-            var holderGO = new GameObject("PentagonHolder", typeof(RectTransform));
+            // SkillPentagonHolder: anchor (0.5,1), pos (0,-560), size 220x220 — square so 5 rotated diamonds fit
+            var holderGO = new GameObject("SkillPentagonHolder", typeof(RectTransform));
             holderGO.transform.SetParent(root, false);
             var hRT = (RectTransform)holderGO.transform;
             hRT.anchorMin = new Vector2(0.5f, 1f); hRT.anchorMax = new Vector2(0.5f, 1f); hRT.pivot = new Vector2(0.5f, 0.5f);
-            hRT.sizeDelta = new Vector2(440f, 60f);
-            hRT.anchoredPosition = new Vector2(0f, -540f);
+            hRT.sizeDelta = new Vector2(220f, 220f);
+            hRT.anchoredPosition = new Vector2(0f, -580f);
 
-            // 5 pentagons at x = -176, -88, 0, 88, 176, size 48x48
+            // 5 diamonds, all sharing the same position & pivot (bottom-center).
+            // Rotating each by i*72° around that shared bottom vertex produces a 5-petal pentagon.
             skillPentagons = new DiamondGraphic[5];
-            float[] xs = { -176f, -88f, 0f, 88f, 176f };
+            float diamondSize = 80f;
             for (int i = 0; i < 5; i++)
             {
-                var pGO = new GameObject("Pent_" + i, typeof(RectTransform), typeof(CanvasRenderer));
+                var pGO = new GameObject("Diamond_" + i, typeof(RectTransform), typeof(CanvasRenderer));
                 pGO.transform.SetParent(holderGO.transform, false);
                 var pRT = (RectTransform)pGO.transform;
-                pRT.anchorMin = new Vector2(0.5f, 0.5f); pRT.anchorMax = new Vector2(0.5f, 0.5f); pRT.pivot = new Vector2(0.5f, 0.5f);
-                pRT.sizeDelta = new Vector2(48f, 48f);
-                pRT.anchoredPosition = new Vector2(xs[i], 0f);
+                pRT.anchorMin = new Vector2(0.5f, 0.5f); pRT.anchorMax = new Vector2(0.5f, 0.5f);
+                pRT.pivot = new Vector2(0.5f, 0f); // bottom-center -> rotation pivots at the diamond's lowest point
+                pRT.sizeDelta = new Vector2(diamondSize, diamondSize);
+                pRT.anchoredPosition = Vector2.zero;
+                pRT.localRotation = Quaternion.Euler(0f, 0f, i * 72f);
                 var pg = pGO.AddComponent<DiamondGraphic>();
                 pg.color = new Color(0.5f, 0.5f, 0.5f, 1f);
                 pg.raycastTarget = false;
