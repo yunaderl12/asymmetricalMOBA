@@ -10,13 +10,11 @@ namespace Game.DemonKing
         [SerializeField] private Camera overheadCamera;
         [SerializeField] private AudioListener overheadAudio;
         [SerializeField] private float yawSpeed = 0.2f;     // deg per mouse-delta-pixel
-        [SerializeField] private float pitchSpeed = 0.15f;  // deg per mouse-delta-pixel
-        [SerializeField] private float pitchMin = 30f;
-        [SerializeField] private float pitchMax = 85f;
+        // Pitch is locked at 0 (horizontal). The user requested horizontal-only rotation.
+        [SerializeField] private float fixedPitch = 0f;
 
         private DemonKingViewSwitcher viewSwitcher;
         private float yaw;
-        private float pitch = 75f;
         private GameObject hintHUD;
         private Text hintText;
 
@@ -69,10 +67,8 @@ namespace Game.DemonKing
             ShowHint(overhead);
             if (overhead)
             {
-                // Reset yaw to face spawner forward; pitch from default
                 yaw = 0f;
-                pitch = 75f;
-                if (overheadCamera != null) overheadCamera.transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+                if (overheadCamera != null) overheadCamera.transform.rotation = Quaternion.Euler(fixedPitch, yaw, 0f);
             }
         }
 
@@ -84,9 +80,8 @@ namespace Game.DemonKing
             if (Mouse.current != null)
             {
                 Vector2 d = Mouse.current.delta.ReadValue();
-                yaw += d.x * yawSpeed;
-                pitch = Mathf.Clamp(pitch - d.y * pitchSpeed, pitchMin, pitchMax);
-                if (overheadCamera != null) overheadCamera.transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+                yaw += d.x * yawSpeed; // horizontal only
+                if (overheadCamera != null) overheadCamera.transform.rotation = Quaternion.Euler(fixedPitch, yaw, 0f);
 
                 if (Mouse.current.rightButton.wasPressedThisFrame)
                 {

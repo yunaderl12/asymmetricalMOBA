@@ -106,17 +106,10 @@ namespace Game.UI
             // far less frequently than world position.
             RefreshLive();
 
-            // Esc while looking at the map closes back to TPS (mirrors the V toggle).
-            // Only consume the key if no popup is open (popups handle Esc themselves).
-            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
-            {
-                var popup = SpawnerActionPopup.Instance;
-                bool popupOpen = popup != null && popup.gameObject.activeSelf;
-                if (!popupOpen && viewSwitcher != null && viewSwitcher.CurrentMode == DemonKingViewSwitcher.ViewMode.BirdsEye)
-                {
-                    viewSwitcher.ReturnToTps();
-                }
-            }
+            // (Intentionally no Esc-to-TPS handler here: Esc is reserved for the
+            //  SpawnerOverhead -> BirdsEye return path. If Esc were also handled
+            //  here, pressing Esc inside SpawnerOverhead would skip past BirdsEye
+            //  and snap straight to TPS within the same frame. Use V to exit map.)
 
             if (Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + refreshInterval;

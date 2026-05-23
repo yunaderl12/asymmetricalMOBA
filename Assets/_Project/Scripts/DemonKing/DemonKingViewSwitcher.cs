@@ -69,8 +69,17 @@ namespace Game.DemonKing
             if (sp == null) return;
             if (spawnerOverheadPlainCamera != null)
             {
-                spawnerOverheadPlainCamera.transform.position = sp.transform.position + Vector3.up * 18f;
-                spawnerOverheadPlainCamera.transform.rotation = Quaternion.Euler(75f, 0f, 0f);
+                // Place the camera at the SPAWNER'S TOP (renderer bounds), not high above.
+                // Falls back to spawner.position + 3.5m if no renderer is found.
+                float topY = sp.transform.position.y + 3.5f;
+                var rend = sp.GetComponentInChildren<Renderer>();
+                if (rend != null) topY = rend.bounds.max.y + 0.5f;
+                spawnerOverheadPlainCamera.transform.position = new Vector3(
+                    sp.transform.position.x,
+                    topY,
+                    sp.transform.position.z);
+                // Horizontal view (pitch = 0). Yaw is driven by SpawnerOverheadCamera.
+                spawnerOverheadPlainCamera.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
             }
             currentMode = ViewMode.SpawnerOverhead;
             ApplyState();
