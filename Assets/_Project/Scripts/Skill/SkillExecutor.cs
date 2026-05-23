@@ -14,7 +14,7 @@ namespace Game.Skill
         [SerializeField] private float beamDuration = 0.15f;
 
         private SkillRuntime runtime;
-        private SkillPointComponent sp;
+        private ManaComponent mana;
         private HealthComponent health;
         private HeroFPSController controller;
         private HeroClassInitializer classInit;
@@ -26,7 +26,7 @@ namespace Game.Skill
         private void Awake()
         {
             runtime = GetComponent<SkillRuntime>();
-            sp = GetComponent<SkillPointComponent>();
+            mana = GetComponent<ManaComponent>();
             health = GetComponent<HealthComponent>();
             controller = GetComponent<HeroFPSController>();
             classInit = GetComponent<HeroClassInitializer>();
@@ -68,10 +68,10 @@ namespace Game.Skill
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
-                Debug.Log($"[Skill] {skill.skillName} on cooldown or low SP (cd={cd:F1}, sp={(sp != null ? sp.CurrentSP : -1)}/{skill.spCost})");
+                Debug.Log($"[Skill] {skill.skillName} on cooldown or low MP (cd={cd:F1}, mp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
                 return;
             }
-            if (sp != null) sp.TrySpendSP(skill.spCost);
+            if (mana != null) mana.TryUseMana(skill.spCost);
             runtime.StartCooldown(idx);
             runtime.NotifyCast(idx);
             if (regen != null) regen.NotifyActed();

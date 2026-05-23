@@ -10,14 +10,14 @@ namespace Game.Hero
     {
         private LevelComponent level;
         private HealthComponent health;
-        private SkillPointComponent sp;
+        private ManaComponent mana;
         private HeroClassInitializer classInit;
 
         private void Awake()
         {
             level = GetComponent<LevelComponent>();
             health = GetComponent<HealthComponent>();
-            sp = GetComponent<SkillPointComponent>();
+            mana = GetComponent<ManaComponent>();
             classInit = GetComponent<HeroClassInitializer>();
         }
 
@@ -41,11 +41,11 @@ namespace Game.Hero
             var data = classInit.ClassData;
 
             if (health != null) health.SetMaxHP(health.MaxHP + data.hpGrowthPerLevel);
-            if (sp != null) sp.SetMaxSP(sp.MaxSP + data.spGrowthPerLevel);
+            if (mana != null) mana.SetMaxMP(mana.MaxMP + data.spGrowthPerLevel);
             classInit.ApplyLevelGrowth();
 
             int newHP = health != null ? health.MaxHP : -1;
-            int newSP = sp != null ? sp.MaxSP : -1;
+            int newSP = mana != null ? mana.MaxMP : -1;
             Debug.Log($"[Hero] Lv {newLevel} stat growth: MaxHP={newHP}, MaxSP={newSP}, Atk={classInit.CurrentAtk}, MAtk={classInit.CurrentMAtk}, Df={classInit.CurrentDf}, Spd={classInit.CurrentSpd}");
         }
     }

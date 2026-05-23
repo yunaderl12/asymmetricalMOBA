@@ -18,14 +18,14 @@ namespace Game.Hero
         public float CurrentSpd { get; private set; }
 
         private HealthComponent health;
-        private SkillPointComponent sp;
+        private ManaComponent mana;
         private HeroFPSController controller;
         private HeroAttack attack;
 
         private void Awake()
         {
             health = GetComponent<HealthComponent>();
-            sp = GetComponent<SkillPointComponent>();
+            mana = GetComponent<ManaComponent>();
             controller = GetComponent<HeroFPSController>();
             attack = GetComponent<HeroAttack>();
 
@@ -47,7 +47,7 @@ namespace Game.Hero
         private void ApplyInitialStats()
         {
             if (health != null) health.SetMaxHP(classData.initialHP);
-            if (sp != null) sp.SetMaxSP(classData.initialSP);
+            if (mana != null) mana.SetMaxMP(classData.initialSP);
             if (controller != null) controller.SetMoveSpeed(classData.initialSpd);
             if (attack != null) attack.SetDamage(classData.initialAtk);
 

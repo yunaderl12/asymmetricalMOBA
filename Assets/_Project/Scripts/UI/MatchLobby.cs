@@ -32,8 +32,14 @@ namespace Game.UI
             if (heroPanel != null) heroPanel.SetActive(role == GameSession.PlayerRole.Hero);
             if (demonPanel != null) demonPanel.SetActive(role == GameSession.PlayerRole.DemonKing);
 
-            // Clear any previous match bots when entering lobby
-            if (GameSession.Instance != null) GameSession.Instance.CurrentMatchBots.Clear();
+            // Auto-spawn bots so single-player has a full match without pressing 0
+            if (GameSession.Instance != null)
+            {
+                var bots = BotMatchmaker.GenerateBots(role);
+                GameSession.Instance.CurrentMatchBots = bots;
+                botMatched = true;
+                Debug.Log($"[MatchLobby] Auto-matched {bots.Count} bots for {role}");
+            }
             RefreshActivePanelTeam();
             UpdateReadyLabel();
 

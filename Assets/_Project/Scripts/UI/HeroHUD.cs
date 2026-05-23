@@ -11,8 +11,8 @@ namespace Game.UI
         [SerializeField] private string heroTag = "Player";
         [SerializeField] private Image hpFillImage;
         [SerializeField] private Text hpText;
-        [SerializeField] private Image spFillImage;
-        [SerializeField] private Text spText;
+        [SerializeField] private Image mpFillImage;
+        [SerializeField] private Text mpText;
         [SerializeField] private Image expFillImage;
         [SerializeField] private Text expText;
         [SerializeField] private Text lvText;
@@ -28,7 +28,7 @@ namespace Game.UI
         [SerializeField] private Color slotSelectedColor = new Color(1f, 0.85f, 0.2f, 0.9f);
 
         private HealthComponent health;
-        private SkillPointComponent skill;
+        private ManaComponent mana;
         private LevelComponent level;
         private ExpComponent exp;
         private SkillRuntime runtime;
@@ -42,12 +42,12 @@ namespace Game.UI
                 return;
             }
             health = hero.GetComponent<HealthComponent>();
-            skill = hero.GetComponent<SkillPointComponent>();
+            mana = hero.GetComponent<ManaComponent>();
             level = hero.GetComponent<LevelComponent>();
             exp = hero.GetComponent<ExpComponent>();
             runtime = hero.GetComponent<SkillRuntime>();
             if (health != null) health.OnHPChanged += OnHPChanged;
-            if (skill != null) skill.OnSPChanged += OnSPChanged;
+            if (mana != null) mana.OnMPChanged += OnMPChanged;
             if (level != null) level.OnLevelChanged += OnLevelChanged;
             if (exp != null) exp.OnExpChanged += OnExpChanged;
             if (runtime != null) { runtime.OnSelectionChanged += OnSelectionChanged; runtime.OnSkillCast += OnSkillCast; runtime.OnSkillLevelChanged += OnSkillLevelChanged; }
@@ -58,14 +58,14 @@ namespace Game.UI
         private void OnDestroy()
         {
             if (health != null) health.OnHPChanged -= OnHPChanged;
-            if (skill != null) skill.OnSPChanged -= OnSPChanged;
+            if (mana != null) mana.OnMPChanged -= OnMPChanged;
             if (level != null) level.OnLevelChanged -= OnLevelChanged;
             if (exp != null) exp.OnExpChanged -= OnExpChanged;
             if (runtime != null) { runtime.OnSelectionChanged -= OnSelectionChanged; runtime.OnSkillCast -= OnSkillCast; runtime.OnSkillLevelChanged -= OnSkillLevelChanged; }
         }
 
         private void OnHPChanged(int cur, int max) { UpdateAll(); }
-        private void OnSPChanged(int cur, int max) { UpdateAll(); }
+        private void OnMPChanged(int cur, int max) { UpdateAll(); }
         private void OnLevelChanged(int lv) { UpdateAll(); }
         private void OnExpChanged(int cur, int req) { UpdateAll(); }
         private void OnSelectionChanged(int idx) { RefreshSlots(); }
@@ -129,12 +129,13 @@ namespace Game.UI
                 if (hpText != null)
                     hpText.text = $"HP {health.CurrentHP} / {health.MaxHP}";
             }
-            if (skill != null)
+            // SP bar removed (heroes now use MP for skills)
+            if (mana != null)
             {
-                if (spFillImage != null)
-                    spFillImage.fillAmount = skill.MaxSP > 0 ? (float)skill.CurrentSP / skill.MaxSP : 0f;
-                if (spText != null)
-                    spText.text = $"SP {skill.CurrentSP} / {skill.MaxSP}";
+                if (mpFillImage != null)
+                    mpFillImage.fillAmount = mana.MaxMP > 0 ? (float)mana.CurrentMP / mana.MaxMP : 0f;
+                if (mpText != null)
+                    mpText.text = $"MP {mana.CurrentMP} / {mana.MaxMP}";
             }
             if (level != null && lvText != null)
                 lvText.text = $"Lv {level.CurrentLevel} / {level.MaxLevel}";

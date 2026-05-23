@@ -30,3 +30,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c08def79f328943b0a1075d06456d2f3, type: 2}
   - {fileID: 11400000, guid: b5805bb1d637745d59c9033db1420334, type: 2}
   - {fileID: 11400000, guid: be9a4dddbb337417888d6231abf8a94f, type: 2}
+  isMagicClass: 1
+  basicAttackMpCost: 2
+  regenMultiplier: 2

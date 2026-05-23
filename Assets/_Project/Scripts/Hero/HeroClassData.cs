@@ -27,5 +27,10 @@ namespace Game.Hero
 
         [Header("Skills")]
         public List<SkillData> classSkills = new List<SkillData>();
+
+        [Header("Magic Class")]
+        public bool isMagicClass = false;
+        public int basicAttackMpCost = 0;
+        public float regenMultiplier = 1.0f;
     }
 }

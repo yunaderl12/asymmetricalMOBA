@@ -65,12 +65,12 @@ namespace Game.Skill
         }
 
         private HeroClassInitializer classInit;
-        private Game.Combat.SkillPointComponent sp;
+        private Game.Combat.ManaComponent mana;
 
         private void Awake()
         {
             classInit = GetComponent<HeroClassInitializer>();
-            sp = GetComponent<Game.Combat.SkillPointComponent>();
+            mana = GetComponent<Game.Combat.ManaComponent>();
 
             for (int i = 0; i < SLOT_COUNT; i++) { equippedSkills.Add(null); skillLevels[i] = 1; }
             if (classInit != null && classInit.ClassData != null)
@@ -96,7 +96,7 @@ namespace Game.Skill
             var skill = equippedSkills[index];
             if (skill == null) return false;
             if (cooldownTimers[index] > 0f) return false;
-            if (sp != null && sp.CurrentSP < skill.spCost) return false;
+            if (mana != null && mana.CurrentMP < skill.spCost) return false;
             return true;
         }
 

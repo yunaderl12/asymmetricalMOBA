@@ -103,7 +103,6 @@ GameObject:
   - component: {fileID: 379393005528687182}
   - component: {fileID: 1812897919764439108}
   - component: {fileID: 1350440169202529894}
-  - component: {fileID: 2915333161001633511}
   - component: {fileID: 8095684835187384214}
   - component: {fileID: 8410141199430849403}
   - component: {fileID: 3910471770996684363}
@@ -114,6 +113,7 @@ GameObject:
   - component: {fileID: 2946879138653246032}
   - component: {fileID: 7029637605614127971}
   - component: {fileID: 7343757378261823322}
+  - component: {fileID: 6670793998070019982}
   m_Layer: 0
   m_Name: Hero
   m_TagString: Player
@@ -214,6 +214,8 @@ MonoBehaviour:
   range: 10
   damage: 10
   attackInterval: 0.3
+  mana: {fileID: 6670793998070019982}
+  magicProjectilePrefab: {fileID: 2263788266313650910, guid: d9e120c1a1da4460088bb278f1cbdcee, type: 3}
 --- !u!114 &6132277571267996448
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -268,20 +270,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9122c9d9fc1514912820cbba1b200988, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &2915333161001633511
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7591807908439482892}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 57804e0dda3674863a8275ac0ef17ce7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  maxSP: 50
-  currentSP: 50
 --- !u!114 &8095684835187384214
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -416,6 +404,22 @@ MonoBehaviour:
   baseRegenRate: 0.005
   regenMultiplier: 1.1
   regenTickInterval: 1
+  mpAlwaysRegenInterval: 1.5
+  mpAlwaysRegenRate: 0.04
+--- !u!114 &6670793998070019982
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7591807908439482892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e1e0098117d34c4f81dd474416c3d5a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxMP: 50
+  currentMP: 50
 --- !u!1 &8282447436492061361
 GameObject:
   m_ObjectHideFlags: 0

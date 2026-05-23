@@ -14,17 +14,24 @@ namespace Game.Hero
         [SerializeField] private int damage = 10;
         [SerializeField] private float attackInterval = 0.3f;
 
+        [Header("Magic Class")]
+        [SerializeField] private ManaComponent mana;
+        [SerializeField] private GameObject magicProjectilePrefab;
+
         public int Damage => damage;
         public void SetDamage(int value) { damage = value; }
 
         private HeroInputActions inputs;
         private float cooldownTimer;
         private HeroRegen regen;
+        private HeroClassInitializer classInit;
 
         private void Awake()
         {
             inputs = new HeroInputActions();
             regen = GetComponent<HeroRegen>();
+            classInit = GetComponent<HeroClassInitializer>();
+            if (mana == null) mana = GetComponent<ManaComponent>();
         }
 
         private void OnEnable()
@@ -50,18 +57,46 @@ namespace Game.Hero
         {
             if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (cooldownTimer > 0f || cameraTransform == null) return;
+
+            int mpCost = (classInit != null && classInit.ClassData != null) ? classInit.ClassData.basicAttackMpCost : 0;
+            if (mpCost > 0)
+            {
+                if (mana == null || mana.CurrentMP < mpCost)
+                {
+                    Debug.Log($"[HeroAttack] not enough MP ({(mana != null ? mana.CurrentMP : 0)}/{mpCost})");
+                    return;
+                }
+                mana.TryUseMana(mpCost);
+            }
+
             cooldownTimer = attackInterval;
             if (regen != null) regen.NotifyActed();
 
+            bool isMage = classInit != null && classInit.ClassData != null && classInit.ClassData.className == "Mage";
+            if (isMage && magicProjectilePrefab != null) FireMagicProjectile();
+            else DoRaycastAttack();
+        }
+
+        private void DoRaycastAttack()
+        {
             var origin = cameraTransform.position;
             var dir = cameraTransform.forward;
             Debug.DrawRay(origin, dir * range, Color.red, 0.2f);
-
             if (Physics.Raycast(origin, dir, out var hit, range))
             {
                 var hp = hit.collider.GetComponentInParent<HealthComponent>();
                 if (hp != null) hp.TakeDamage(damage, gameObject);
             }
+        }
+
+        private void FireMagicProjectile()
+        {
+            var origin = cameraTransform.position + cameraTransform.forward * 0.5f;
+            var dir = cameraTransform.forward;
+            var go = Instantiate(magicProjectilePrefab, origin, Quaternion.LookRotation(dir));
+            var mp = go.GetComponent<MagicProjectile>();
+            int dmg = classInit != null ? Mathf.Max(1, classInit.CurrentMAtk) : damage;
+            if (mp != null) mp.Init(gameObject, dmg, dir);
         }
     }
 }
