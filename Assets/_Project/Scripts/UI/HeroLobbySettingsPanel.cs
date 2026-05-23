@@ -28,6 +28,9 @@ namespace Game.UI
         private float panelWidth = 960f;
         private Coroutine slideRoutine;
         private int selectedSlot = -1;
+        private GameObject clickOutsideBackdrop;
+        private SkillTooltipUI tooltipUI;
+        private readonly List<SkillHoverTrigger> slotHoverTriggers = new List<SkillHoverTrigger>();
 
         public static HeroLobbySettingsPanel Create(RectTransform parent)
         {
@@ -41,6 +44,32 @@ namespace Game.UI
         private void Build()
         {
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            // Fullscreen click-outside backdrop. Sibling of the panel, rendered BEHIND
+            // (lower sibling index) so clicks on the panel itself don't reach it.
+            var parentRT = transform.parent as RectTransform;
+            if (parentRT != null)
+            {
+                clickOutsideBackdrop = new GameObject("ClickOutsideBackdrop", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+                clickOutsideBackdrop.transform.SetParent(parentRT, false);
+                clickOutsideBackdrop.transform.SetSiblingIndex(transform.GetSiblingIndex()); // just before the panel
+                var bRT = (RectTransform)clickOutsideBackdrop.transform;
+                bRT.anchorMin = Vector2.zero; bRT.anchorMax = Vector2.one;
+                bRT.offsetMin = Vector2.zero; bRT.offsetMax = Vector2.zero;
+                var bImg = clickOutsideBackdrop.GetComponent<Image>();
+                bImg.color = new Color(0f, 0f, 0f, 0f); // transparent but raycast-blocking
+                bImg.raycastTarget = true;
+                var bBtn = clickOutsideBackdrop.GetComponent<Button>();
+                bBtn.targetGraphic = bImg;
+                bBtn.transition = Selectable.Transition.None;
+                bBtn.onClick.AddListener(Hide);
+                clickOutsideBackdrop.SetActive(false);
+            }
+
+            // Skill tooltip lives on the same canvas as the panel so it draws above slots.
+            var canvas = GetComponentInParent<Canvas>();
+            if (canvas != null) tooltipUI = SkillTooltipUI.Create(canvas);
+
             root = (RectTransform)transform;
             // pivot = (1, 0.5): the panel's RIGHT edge is at anchoredPosition.x relative to the right-edge anchor.
             // anchoredPosition.x = 0    -> panel right edge at canvas right edge -> fully visible
@@ -141,6 +170,12 @@ namespace Game.UI
                     RefreshOutlines();
                     OnSlotSelectedForReplace?.Invoke(captured);
                 });
+
+                // Hover-to-tooltip (1s)
+                var hover = sGO.AddComponent<SkillHoverTrigger>();
+                hover.tooltip = tooltipUI;
+                hover.data = null; // SetSkillSet fills this
+                slotHoverTriggers.Add(hover);
             }
 
             // Divider line
@@ -255,6 +290,7 @@ namespace Game.UI
                     else slotGraphics[i].color = s != null ? s.EffectiveIconColor() : new Color(0.4f, 0.4f, 0.4f, 1f);
                 }
                 if (slotLabels[i] != null) slotLabels[i].text = s != null ? s.skillName : "-";
+                if (i < slotHoverTriggers.Count && slotHoverTriggers[i] != null) slotHoverTriggers[i].data = s;
             }
         }
 
@@ -299,6 +335,12 @@ namespace Game.UI
                 btn.targetGraphic = pg;
                 var captured = s;
                 btn.onClick.AddListener(() => OnAvailableSkillPicked?.Invoke(captured));
+
+                // Hover-to-tooltip (1s)
+                var hover = go.AddComponent<SkillHoverTrigger>();
+                hover.tooltip = tooltipUI;
+                hover.data = s;
+
                 availableButtons.Add(go);
             }
         }
@@ -322,7 +364,13 @@ namespace Game.UI
             if (IsOpen) return;
             IsOpen = true;
             gameObject.SetActive(true);
-            transform.SetAsLastSibling();
+            if (clickOutsideBackdrop != null)
+            {
+                clickOutsideBackdrop.SetActive(true);
+                clickOutsideBackdrop.transform.SetAsLastSibling();
+            }
+            transform.SetAsLastSibling(); // panel above backdrop
+            if (tooltipUI != null) tooltipUI.transform.SetAsLastSibling(); // tooltip above panel
             if (slideRoutine != null) StopCoroutine(slideRoutine);
             slideRoutine = StartCoroutine(SlideTo(0f, 0.18f));
         }
@@ -332,6 +380,7 @@ namespace Game.UI
             if (!IsOpen) return;
             IsOpen = false;
             ClearSelectedSlot();
+            if (tooltipUI != null) tooltipUI.Hide();
             if (slideRoutine != null) StopCoroutine(slideRoutine);
             slideRoutine = StartCoroutine(SlideToAndHide(panelWidth, 0.16f));
         }
@@ -356,6 +405,7 @@ namespace Game.UI
         {
             yield return SlideTo(targetX, duration);
             gameObject.SetActive(false);
+            if (clickOutsideBackdrop != null) clickOutsideBackdrop.SetActive(false);
         }
     }
 }
