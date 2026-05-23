@@ -88,6 +88,17 @@ namespace Game.DemonKing
             Debug.Log("[DemonKing] view -> BirdsEye (from SpawnerOverhead)");
         }
 
+        /// <summary>Force TPS view (used by BirdsEyeMapUI when Esc is pressed).</summary>
+        public void ReturnToTps()
+        {
+            if (currentMode == ViewMode.Tps) return;
+            currentMode = ViewMode.Tps;
+            ApplyState();
+            OnModeChanged?.Invoke(currentMode);
+            OnViewChanged?.Invoke(false);
+            Debug.Log("[DemonKing] view -> TPS (Esc)");
+        }
+
         private void OnViewSwitch(InputAction.CallbackContext _)
         {
             if (currentMode == ViewMode.SpawnerOverhead)

@@ -24,8 +24,27 @@ namespace Game.UI
             if (Instance != null) return Instance;
             var existing = FindObjectOfType<SpawnerActionPopup>(true);
             if (existing != null) { Instance = existing; return existing; }
-            var canvas = FindObjectOfType<Canvas>();
-            if (canvas == null) { Debug.LogWarning("[SpawnerActionPopup] No Canvas in scene; cannot create popup."); return null; }
+
+            // Use a dedicated overlay canvas at sortingOrder 10 so the popup is
+            // guaranteed to render above BirdsEyeMapCanvas (order 7) and any
+            // other in-scene canvas. Without this it was being created on the
+            // first found Canvas (often the MainStage HUD canvas at default
+            // sortingOrder 0) and the BirdsEyeMap's opaque backdrop hid it.
+            var canvasGOName = "SpawnerActionPopupCanvas";
+            var canvasGO = GameObject.Find(canvasGOName);
+            Canvas canvas;
+            if (canvasGO != null) canvas = canvasGO.GetComponent<Canvas>();
+            else
+            {
+                canvasGO = new GameObject(canvasGOName, typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+                canvas = canvasGO.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                canvas.sortingOrder = 10;
+                var scaler = canvasGO.GetComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920f, 1080f);
+                scaler.matchWidthOrHeight = 0.5f;
+            }
             var go = new GameObject("SpawnerActionPopup", typeof(RectTransform));
             go.transform.SetParent(canvas.transform, false);
             var rt = go.GetComponent<RectTransform>();

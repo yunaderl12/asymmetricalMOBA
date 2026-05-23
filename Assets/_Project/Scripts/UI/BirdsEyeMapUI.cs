@@ -95,6 +95,19 @@ namespace Game.UI
             // are refreshed on the slower throttle since their string value changes
             // far less frequently than world position.
             RefreshLive();
+
+            // Esc while looking at the map closes back to TPS (mirrors the V toggle).
+            // Only consume the key if no popup is open (popups handle Esc themselves).
+            if (UnityEngine.InputSystem.Keyboard.current != null && UnityEngine.InputSystem.Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                var popup = SpawnerActionPopup.Instance;
+                bool popupOpen = popup != null && popup.gameObject.activeSelf;
+                if (!popupOpen && viewSwitcher != null && viewSwitcher.CurrentMode == DemonKingViewSwitcher.ViewMode.BirdsEye)
+                {
+                    viewSwitcher.ReturnToTps();
+                }
+            }
+
             if (Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + refreshInterval;
             RefreshSpawnerLabels();

@@ -38,6 +38,7 @@ namespace Game.UI
 
         public void Show(string title, List<MonsterData> candidates, bool includeEmptyOption, int maxCost, Action<MonsterData> onPicked)
         {
+            EnsureHighPriorityCanvas();
             currentCallback = onPicked;
             if (titleText != null)
             {
@@ -45,7 +46,46 @@ namespace Game.UI
             }
             ClearButtons();
             BuildButtons(candidates, includeEmptyOption, maxCost);
-            if (root != null) root.SetActive(true);
+            if (root != null)
+            {
+                root.SetActive(true);
+                root.transform.SetAsLastSibling();
+            }
+        }
+
+        // Reparents `root` to a dedicated ScreenSpaceOverlay canvas at sortingOrder 11
+        // so the picker draws above MainStage's BirdsEyeMap (order 7) and the
+        // SpawnerActionPopupCanvas (order 10). Idempotent — first call moves the
+        // root; subsequent calls are cheap.
+        private static Canvas _highPriorityCanvas;
+        private bool _reparented;
+        private void EnsureHighPriorityCanvas()
+        {
+            if (_reparented || root == null) return;
+            if (_highPriorityCanvas == null)
+            {
+                var existing = GameObject.Find("DemonMonsterPickerCanvas");
+                if (existing != null) _highPriorityCanvas = existing.GetComponent<Canvas>();
+            }
+            if (_highPriorityCanvas == null)
+            {
+                var go = new GameObject("DemonMonsterPickerCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
+                _highPriorityCanvas = go.GetComponent<Canvas>();
+                _highPriorityCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                _highPriorityCanvas.sortingOrder = 11;
+                var scaler = go.GetComponent<CanvasScaler>();
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+                scaler.referenceResolution = new Vector2(1920f, 1080f);
+                scaler.matchWidthOrHeight = 0.5f;
+            }
+            root.transform.SetParent(_highPriorityCanvas.transform, false);
+            var rt = root.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+            }
+            _reparented = true;
         }
 
         public void Hide()
