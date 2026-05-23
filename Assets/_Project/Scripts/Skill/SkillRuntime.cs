@@ -72,13 +72,25 @@ namespace Game.Skill
             classInit = GetComponent<HeroClassInitializer>();
             mana = GetComponent<Game.Combat.ManaComponent>();
 
+            // Allocate slots in Awake but DON'T read classInit yet — the lobby
+            // selection on classInit is updated from GameSession during its own
+            // Awake, and Unity Awake order is non-deterministic. Defer skill
+            // population to Start so we always see the post-Awake state.
             for (int i = 0; i < SLOT_COUNT; i++) { equippedSkills.Add(null); skillLevels[i] = 1; }
-            if (classInit != null && classInit.ClassData != null)
-            {
-                var classSkills = classInit.ClassData.classSkills;
-                for (int i = 0; i < 4 && i < classSkills.Count; i++) equippedSkills[i] = classSkills[i];
-                equippedSkills[4] = classInit.CommonSkill;
-            }
+        }
+
+        private void Start()
+        {
+            if (classInit == null || classInit.ClassData == null) return;
+            var classSkills = classInit.ClassData.classSkills;
+            for (int i = 0; i < 4 && i < classSkills.Count; i++) equippedSkills[i] = classSkills[i];
+            equippedSkills[4] = classInit.CommonSkill;
+            Debug.Log($"[SkillRuntime] equipped: " +
+                $"{(equippedSkills[0] != null ? equippedSkills[0].skillName : "-")} / " +
+                $"{(equippedSkills[1] != null ? equippedSkills[1].skillName : "-")} / " +
+                $"{(equippedSkills[2] != null ? equippedSkills[2].skillName : "-")} / " +
+                $"{(equippedSkills[3] != null ? equippedSkills[3].skillName : "-")} / " +
+                $"{(equippedSkills[4] != null ? equippedSkills[4].skillName : "-")}");
         }
 
         private void Update()
