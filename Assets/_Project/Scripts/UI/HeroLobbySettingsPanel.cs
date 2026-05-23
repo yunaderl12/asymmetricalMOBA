@@ -17,9 +17,9 @@ namespace Game.UI
         public Action<SkillData> OnAvailableSkillPicked;
 
         private RectTransform root;
-        private Image currentClassFill;
+        private EllipseGraphic currentClassFill;
         private Text currentClassNameText;
-        private List<Image> carouselFills = new List<Image>();
+        private List<EllipseGraphic> carouselFills = new List<EllipseGraphic>();
         private List<PentagonGraphic> slotGraphics = new List<PentagonGraphic>();
         private List<Text> slotLabels = new List<Text>();
         private List<Button> slotButtons = new List<Button>();
@@ -59,14 +59,14 @@ namespace Game.UI
             titleGO.GetComponent<Text>().alignment = TextAnchor.MiddleCenter;
             titleGO.GetComponent<Text>().color = new Color(1f, 0.85f, 0.4f, 1f);
 
-            // Current class big oval (left, 160x220 at (40,-40) anchor (0,1))
-            var ccGO = new GameObject("CurrentClass", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            // Current class big oval (left, 160x220 at (40,-40) anchor (0,1)) — EllipseGraphic
+            var ccGO = new GameObject("CurrentClass", typeof(RectTransform), typeof(CanvasRenderer));
             ccGO.transform.SetParent(root, false);
             var ccRT = (RectTransform)ccGO.transform;
             ccRT.anchorMin = new Vector2(0f, 1f); ccRT.anchorMax = new Vector2(0f, 1f); ccRT.pivot = new Vector2(0f, 1f);
             ccRT.sizeDelta = new Vector2(160f, 220f);
             ccRT.anchoredPosition = new Vector2(40f, -40f);
-            currentClassFill = ccGO.GetComponent<Image>();
+            currentClassFill = ccGO.AddComponent<EllipseGraphic>();
             currentClassFill.color = new Color(1f, 0.15f, 0.15f, 1f);
             currentClassFill.raycastTarget = false;
 
@@ -210,15 +210,15 @@ namespace Game.UI
                 rt.anchoredPosition = new Vector2(i * (btnSize + gap), 0f);
                 bGO.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.01f); // transparent hit area
 
-                var fGO = new GameObject("Fill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                var fGO = new GameObject("Fill", typeof(RectTransform), typeof(CanvasRenderer));
                 fGO.transform.SetParent(bGO.transform, false);
                 var fRT = (RectTransform)fGO.transform;
                 fRT.anchorMin = new Vector2(0.5f, 1f); fRT.anchorMax = new Vector2(0.5f, 1f); fRT.pivot = new Vector2(0.5f, 1f);
                 fRT.sizeDelta = new Vector2(btnSize, btnSize);
                 fRT.anchoredPosition = new Vector2(0f, 0f);
-                var fImg = fGO.GetComponent<Image>();
-                fImg.color = c.avatarColor; fImg.raycastTarget = false;
-                carouselFills.Add(fImg);
+                var fEll = fGO.AddComponent<EllipseGraphic>();
+                fEll.color = c.avatarColor; fEll.raycastTarget = false;
+                carouselFills.Add(fEll);
 
                 var nameGO = MakeText(bGO.transform, "Name", Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), 12, FontStyle.Bold, c.className);
                 var nRT = (RectTransform)nameGO.transform;

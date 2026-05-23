@@ -7,7 +7,7 @@ namespace Game.UI
     public class HeroLobbyAvatarView : MonoBehaviour
     {
         private RectTransform root;
-        private Image avatarOval;
+        private EllipseGraphic avatarOval;
         private PentagonGraphic[] skillPentagons;
         private Text userNameText;
         private Text classNameText;
@@ -29,25 +29,28 @@ namespace Game.UI
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             // AvatarOval: anchor (0.5, 1), pivot (0.5, 1), pos (0, -130), size 260x360
-            var ovalGO = new GameObject("AvatarOval", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            // Use EllipseGraphic so the shape is an actual oval, not a solid rectangle.
+            var ovalGO = new GameObject("AvatarOval", typeof(RectTransform), typeof(CanvasRenderer));
             ovalGO.transform.SetParent(root, false);
             var oRT = (RectTransform)ovalGO.transform;
             oRT.anchorMin = new Vector2(0.5f, 1f); oRT.anchorMax = new Vector2(0.5f, 1f); oRT.pivot = new Vector2(0.5f, 1f);
             oRT.sizeDelta = new Vector2(260f, 360f);
             oRT.anchoredPosition = new Vector2(0f, -130f);
-            avatarOval = ovalGO.GetComponent<Image>();
+            avatarOval = ovalGO.AddComponent<EllipseGraphic>();
             avatarOval.color = new Color(1f, 0.15f, 0.15f, 1f);
             avatarOval.raycastTarget = false;
 
-            // NamePlate: child of AvatarOval, anchor (0.5,0), pivot (0.5,1), pos (0,0), size 200x28
+            // NamePlate: child of AvatarOval, sits INSIDE the lower portion of the oval
+            // anchor (0.5,0) bottom-center, pivot (0.5,0) bottom-center, pos (0, 36) so
+            // the plate sits ~36px above the oval's bottom (visually overlapping the avatar)
             var npGO = new GameObject("NamePlate", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             npGO.transform.SetParent(ovalGO.transform, false);
             var npRT = (RectTransform)npGO.transform;
-            npRT.anchorMin = new Vector2(0.5f, 0f); npRT.anchorMax = new Vector2(0.5f, 0f); npRT.pivot = new Vector2(0.5f, 1f);
-            npRT.sizeDelta = new Vector2(200f, 28f);
-            npRT.anchoredPosition = new Vector2(0f, 0f);
+            npRT.anchorMin = new Vector2(0.5f, 0f); npRT.anchorMax = new Vector2(0.5f, 0f); npRT.pivot = new Vector2(0.5f, 0f);
+            npRT.sizeDelta = new Vector2(220f, 28f);
+            npRT.anchoredPosition = new Vector2(0f, 36f);
             var npImg = npGO.GetComponent<Image>();
-            npImg.color = new Color(0f, 0f, 0f, 0.85f);
+            npImg.color = new Color(0f, 0f, 0f, 0.9f);
             npImg.raycastTarget = false;
 
             // UserName: full fill of NamePlate
@@ -61,13 +64,15 @@ namespace Game.UI
             userNameText.alignment = TextAnchor.MiddleCenter; userNameText.color = Color.white;
             userNameText.raycastTarget = false; userNameText.text = "ユーザー名";
 
-            // ClassName: child of AvatarOval, anchor (0.5,0), pivot (0.5,1), pos (0,-32) (28 nameplate + 4 gap roughly)
+            // ClassName: sits just below the oval's bottom edge
+            // anchor (0.5,0) bottom-center of oval, pivot (0.5,1) top-center of text,
+            // pos (0, -12) so the text starts 12px below the oval.
             var cnGO = new GameObject("ClassName", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
             cnGO.transform.SetParent(ovalGO.transform, false);
             var cnRT = (RectTransform)cnGO.transform;
             cnRT.anchorMin = new Vector2(0.5f, 0f); cnRT.anchorMax = new Vector2(0.5f, 0f); cnRT.pivot = new Vector2(0.5f, 1f);
             cnRT.sizeDelta = new Vector2(300f, 28f);
-            cnRT.anchoredPosition = new Vector2(0f, -16f - 28f);
+            cnRT.anchoredPosition = new Vector2(0f, -12f);
             classNameText = cnGO.GetComponent<Text>();
             classNameText.font = font; classNameText.fontSize = 16; classNameText.fontStyle = FontStyle.Bold;
             classNameText.alignment = TextAnchor.MiddleCenter; classNameText.color = Color.white;

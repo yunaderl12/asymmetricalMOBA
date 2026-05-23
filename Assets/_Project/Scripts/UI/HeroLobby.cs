@@ -90,8 +90,18 @@ namespace Game.UI
 
         private void BuildOverlayUI()
         {
-            // Create a dedicated V2 canvas at sortingOrder 10 so the legacy scene UI
-            // (if any) renders below and old elements don't get disabled aggressively.
+            // Disable any pre-existing Canvas in the scene so the V2 overlay is the only
+            // visible/interactive UI. Old scene UI tends to leak click handlers and
+            // overlap the new layout.
+            foreach (var existingCanvas in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+            {
+                if (existingCanvas == null) continue;
+                if (existingCanvas.name == "HeroLobbyV2Canvas") continue;
+                Debug.Log($"[HeroLobby] disabling legacy canvas '{existingCanvas.name}'");
+                existingCanvas.gameObject.SetActive(false);
+            }
+
+            // Create a dedicated V2 canvas at sortingOrder 10.
             var canvasGO = new GameObject("HeroLobbyV2Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
             var canvas = canvasGO.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
