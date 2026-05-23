@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 9169919081535396307}
   - component: {fileID: 842698350914466984}
   - component: {fileID: 6646909166288378614}
+  - component: {fileID: 7777777777777777777}
   m_Layer: 0
   m_Name: DemonKing
   m_TagString: DemonKing
@@ -163,7 +164,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   currentLevel: 1
   maxLevel: 16
-  secondsPerLevel: 120
+  secondsPerLevel: 60
   autoLevelUpByTime: 1
 --- !u!114 &9169919081535396307
 MonoBehaviour:
@@ -205,10 +206,25 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9e0a076d15ace461bbeb5711fbfa4f7e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   deck:
   - {fileID: 11400000, guid: 99308e291e52c46cba9abd910658d3e9, type: 2}
+--- !u!114 &7777777777777777777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1749221948093322419}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7b3c2d4e5f60718293a4b5c6d7e8f90, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  hpGrowthPerLevel: 50
+  mpGrowthPerLevel: 20
+  healToFullOnLevelUp: 1
 --- !u!1 &3447037085168827552
 GameObject:
   m_ObjectHideFlags: 0

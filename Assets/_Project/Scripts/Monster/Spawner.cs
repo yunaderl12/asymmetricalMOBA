@@ -49,12 +49,27 @@ namespace Game.Monster
             }
         }
 
-        public int MaxCost => data != null ? data.maxCost : 0;
+        public int MaxCost
+        {
+            get
+            {
+                if (data == null) return 0;
+                int dkLevel = 1;
+                var dkGO = GameObject.FindWithTag("DemonKing");
+                if (dkGO != null)
+                {
+                    var lc = dkGO.GetComponent<Game.Core.LevelComponent>();
+                    if (lc != null) dkLevel = lc.CurrentLevel;
+                }
+                int growth = Mathf.Max(0, dkLevel - 1) * Mathf.Max(0, data.costPerDkLevel);
+                return data.maxCost + growth;
+            }
+        }
 
         public bool CanAddMonster(MonsterData m)
         {
             if (m == null || data == null) return false;
-            return (data.maxCost - CurrentCost) >= m.cost;
+            return (MaxCost - CurrentCost) >= m.cost;
         }
 
         public bool AddToInv(MonsterData m)
@@ -227,18 +242,28 @@ namespace Game.Monster
 
         private IEnumerator SpawnRoutine()
         {
+            // Short retry delay used when we can't actually spawn (no inv, cap reached, etc.)
+            float retryDelay = 0.5f;
+
             while (IsFunctional)
             {
-                yield return new WaitForSeconds(data.spawnInterval);
-                if (!IsFunctional) yield break;
                 // Don't spawn until the match has actually started.
-                if (MatchManager.Instance != null && MatchManager.Instance.CurrentState != MatchManager.MatchState.InMatch) continue;
-                if (inv == null || inv.Count == 0) continue;
+                if (MatchManager.Instance != null && MatchManager.Instance.CurrentState != MatchManager.MatchState.InMatch)
+                {
+                    yield return new WaitForSeconds(retryDelay);
+                    continue;
+                }
+                if (inv == null || inv.Count == 0)
+                {
+                    yield return new WaitForSeconds(retryDelay);
+                    continue;
+                }
 
                 var dataToSpawn = inv[invIndex];
                 if (dataToSpawn == null)
                 {
                     invIndex = (invIndex + 1) % inv.Count;
+                    yield return null;
                     continue;
                 }
 
@@ -246,6 +271,7 @@ namespace Game.Monster
                 foreach (var sm in spawnedMonsters) if (sm != null) aliveCount++;
                 if (maxConcurrentMonsters > 0 && aliveCount >= maxConcurrentMonsters)
                 {
+                    yield return new WaitForSeconds(retryDelay);
                     continue;
                 }
 
@@ -256,18 +282,23 @@ namespace Game.Monster
                 }
                 if (sameCount >= dataToSpawn.maxSpwn)
                 {
+                    // can't spawn more of this one right now; advance roster
+                    invIndex = (invIndex + 1) % inv.Count;
+                    yield return new WaitForSeconds(retryDelay);
                     continue;
                 }
 
                 if (monsterPrefab == null)
                 {
                     Debug.LogWarning($"[Spawner] {name} monsterPrefab not set.");
+                    yield return new WaitForSeconds(retryDelay);
                     continue;
                 }
 
                 var spawnPos = SampleSpawnPosition();
                 if (!spawnPos.HasValue)
                 {
+                    yield return new WaitForSeconds(retryDelay);
                     continue;
                 }
 
@@ -278,7 +309,14 @@ namespace Game.Monster
                     monsterComp.Initialize(dataToSpawn, this, waypointsToStartTown);
                     spawnedMonsters.Add(monsterComp);
                 }
+
+                // Per-monster cooldown × global slowdown multiplier (default 5x).
+                float perMonsterCool = dataToSpawn.spwnCool * Mathf.Max(0.01f, data.spawnIntervalMultiplier);
+                if (perMonsterCool < 0.05f) perMonsterCool = data.spawnInterval;
+                Debug.Log($"[Spawner] {name} spawned {dataToSpawn.monsterName}, next in {perMonsterCool:F1}s");
+
                 invIndex = (invIndex + 1) % inv.Count;
+                yield return new WaitForSeconds(perMonsterCool);
             }
         }
 
