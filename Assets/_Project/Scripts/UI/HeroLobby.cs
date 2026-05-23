@@ -310,6 +310,7 @@ namespace Game.UI
 
         private void OnRoleClicked()
         {
+            Debug.Log($"[HeroLobby] role button clicked, settingsPanel={(settingsPanel != null ? "ok" : "null")}, isOpen={(settingsPanel != null && settingsPanel.IsOpen)}");
             if (settingsPanel == null) return;
             if (settingsPanel.IsOpen) settingsPanel.Hide();
             else settingsPanel.Show();

@@ -42,7 +42,10 @@ namespace Game.UI
         {
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             root = (RectTransform)transform;
-            root.anchorMin = new Vector2(1f, 0f); root.anchorMax = new Vector2(1f, 1f); root.pivot = new Vector2(0f, 0.5f);
+            // pivot = (1, 0.5): the panel's RIGHT edge is at anchoredPosition.x relative to the right-edge anchor.
+            // anchoredPosition.x = 0    -> panel right edge at canvas right edge -> fully visible
+            // anchoredPosition.x = +W   -> panel right edge at canvas.right + W -> fully off-screen
+            root.anchorMin = new Vector2(1f, 0f); root.anchorMax = new Vector2(1f, 1f); root.pivot = new Vector2(1f, 0.5f);
             root.sizeDelta = new Vector2(panelWidth, 0f);
             root.anchoredPosition = new Vector2(panelWidth, 0f); // off-screen initially
 
