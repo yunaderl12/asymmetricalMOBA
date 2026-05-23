@@ -232,25 +232,9 @@ namespace Game.UI
             if (sp == null || picked == null) return;
             if (sp.AddToInv(picked)) Debug.Log("[SpawnerActionPopup] added " + picked.monsterName + " to " + sp.name);
             else Debug.Log("[SpawnerActionPopup] cost exceeded for " + picked.monsterName);
-            // Refresh the popup's status text immediately and reopen the picker so
-            // the player can keep adding monsters until they hit the cost cap.
+            // Picker closes after each pick. To add more monsters, the user reopens
+            // it via the 編成 button on the popup, which is still on screen.
             UpdateStatus();
-            if (currentSpawner != null)
-            {
-                var picker = FindObjectOfType<DemonMonsterPickerUI>(true);
-                if (picker != null && currentSpawner.MaxCost - currentSpawner.CurrentCost > 0)
-                {
-                    var deckMobs = new List<MonsterData>();
-                    if (GameSession.Instance != null && GameSession.Instance.DemonDeck != null)
-                    {
-                        foreach (var m in GameSession.Instance.DemonDeck)
-                            if (m != null && !deckMobs.Contains(m)) deckMobs.Add(m);
-                    }
-                    int rem = Mathf.Max(0, currentSpawner.MaxCost - currentSpawner.CurrentCost);
-                    var sp2 = currentSpawner;
-                    picker.Show(sp2.name + "  cost " + sp2.CurrentCost + "/" + sp2.MaxCost + " (残 " + rem + ")", deckMobs, false, rem, p => OnPickerResult(sp2, p));
-                }
-            }
         }
     }
 }

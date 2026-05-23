@@ -49,6 +49,7 @@ namespace Game.UI
             BuildButtons(candidates, includeEmptyOption, maxCost);
             if (root != null)
             {
+                if (_clickOutsideBackdrop != null) _clickOutsideBackdrop.SetActive(true);
                 root.SetActive(true);
                 root.transform.SetAsLastSibling();
                 Debug.Log($"[DemonMonsterPickerUI] root active={root.activeSelf}, parent={(root.transform.parent != null ? root.transform.parent.name : "ROOT")}");
@@ -61,10 +62,11 @@ namespace Game.UI
 
         // Reparents `root` to a dedicated ScreenSpaceOverlay canvas at sortingOrder 11
         // so the picker draws above MainStage's BirdsEyeMap (order 7) and the
-        // SpawnerActionPopupCanvas (order 10). Idempotent — first call moves the
-        // root; subsequent calls are cheap.
+        // SpawnerActionPopupCanvas (order 10). Also injects a fullscreen
+        // transparent click-outside backdrop that calls Hide.
         private static Canvas _highPriorityCanvas;
         private bool _reparented;
+        private GameObject _clickOutsideBackdrop;
         private void EnsureHighPriorityCanvas()
         {
             if (_reparented || root == null) return;
@@ -85,20 +87,35 @@ namespace Game.UI
                 scaler.matchWidthOrHeight = 0.5f;
             }
             // Capture the original local pose so reparenting doesn't accidentally
-            // re-anchor the panel; we want it to display exactly as authored in the
-            // scene, only on a different canvas.
+            // re-anchor the panel.
             var rt = root.GetComponent<RectTransform>();
             var anchorMin = rt != null ? rt.anchorMin : Vector2.zero;
             var anchorMax = rt != null ? rt.anchorMax : Vector2.one;
             var pivot = rt != null ? rt.pivot : new Vector2(0.5f, 0.5f);
             var sizeDelta = rt != null ? rt.sizeDelta : Vector2.zero;
             var anchoredPos = rt != null ? rt.anchoredPosition : Vector2.zero;
+
+            // Click-outside backdrop -> sibling BEFORE root, so root paints over it.
+            _clickOutsideBackdrop = new GameObject("ClickOutsideBackdrop", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            _clickOutsideBackdrop.transform.SetParent(_highPriorityCanvas.transform, false);
+            var bRT = (RectTransform)_clickOutsideBackdrop.transform;
+            bRT.anchorMin = Vector2.zero; bRT.anchorMax = Vector2.one;
+            bRT.offsetMin = Vector2.zero; bRT.offsetMax = Vector2.zero;
+            var bImg = _clickOutsideBackdrop.GetComponent<Image>();
+            bImg.color = new Color(0f, 0f, 0f, 0.0f); // fully transparent
+            bImg.raycastTarget = true;
+            var bBtn = _clickOutsideBackdrop.GetComponent<Button>();
+            bBtn.targetGraphic = bImg;
+            bBtn.transition = Selectable.Transition.None;
+            bBtn.onClick.AddListener(Hide);
+
             root.transform.SetParent(_highPriorityCanvas.transform, false);
             if (rt != null)
             {
                 rt.anchorMin = anchorMin; rt.anchorMax = anchorMax; rt.pivot = pivot;
                 rt.sizeDelta = sizeDelta; rt.anchoredPosition = anchoredPos;
             }
+            root.transform.SetAsLastSibling(); // root above backdrop
             Debug.Log($"[DemonMonsterPickerUI] reparented root to {_highPriorityCanvas.name} (sortingOrder={_highPriorityCanvas.sortingOrder})");
             _reparented = true;
         }
@@ -106,6 +123,7 @@ namespace Game.UI
         public void Hide()
         {
             if (root != null) root.SetActive(false);
+            if (_clickOutsideBackdrop != null) _clickOutsideBackdrop.SetActive(false);
             currentCallback = null;
         }
 
