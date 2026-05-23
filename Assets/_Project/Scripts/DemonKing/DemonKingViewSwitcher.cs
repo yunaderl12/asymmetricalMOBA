@@ -8,23 +8,33 @@ namespace Game.DemonKing
     [RequireComponent(typeof(DemonKingController))]
     public class DemonKingViewSwitcher : MonoBehaviour
     {
+        public enum ViewMode { Tps, BirdsEye, SpawnerOverhead }
+
         [SerializeField] private CinemachineCamera tpsCam;
         [SerializeField] private CinemachineCamera birdsEyeCam;
+        [SerializeField] private CinemachineCamera spawnerOverheadCam;
         [SerializeField] private int activePriority = 20;
         [SerializeField] private int inactivePriority = 10;
 
         [Header("Plain camera fallback (used when Cinemachine cams are null)")]
         [SerializeField] private Camera tpsPlainCamera;
         [SerializeField] private Camera birdsEyePlainCamera;
+        [SerializeField] private Camera spawnerOverheadPlainCamera;
         [SerializeField] private AudioListener tpsAudio;
         [SerializeField] private AudioListener birdsEyeAudio;
+        [SerializeField] private AudioListener spawnerOverheadAudio;
 
         public bool IsAtViewer { get; set; }
-        public bool TpsActive => tpsActive;
-        public event Action<bool> OnViewChanged; // true=BirdsEye, false=TPS
+        public bool TpsActive => currentMode == ViewMode.Tps;
+        public ViewMode CurrentMode => currentMode;
+        public Camera BirdsEyePlainCamera => birdsEyePlainCamera;
+        public Camera SpawnerOverheadPlainCamera => spawnerOverheadPlainCamera;
+
+        public event Action<bool> OnViewChanged; // legacy: true=BirdsEye, false=other
+        public event Action<ViewMode> OnModeChanged;
 
         private DemonKingController controller;
-        private bool tpsActive = true;
+        private ViewMode currentMode = ViewMode.Tps;
 
         private void Awake()
         {
@@ -44,39 +54,92 @@ namespace Game.DemonKing
                 controller.Inputs.DemonKing.ViewSwitch.performed -= OnViewSwitch;
         }
 
+        public void AssignOverheadCamera(Camera cam, AudioListener al)
+        {
+            if (cam != null && spawnerOverheadPlainCamera == null) spawnerOverheadPlainCamera = cam;
+            if (al != null && spawnerOverheadAudio == null) spawnerOverheadAudio = al;
+            ApplyState();
+        }
+
+        public void EnterSpawnerOverhead(Game.Monster.Spawner sp)
+        {
+            if (sp == null) return;
+            if (spawnerOverheadPlainCamera != null)
+            {
+                spawnerOverheadPlainCamera.transform.position = sp.transform.position + Vector3.up * 18f;
+                spawnerOverheadPlainCamera.transform.rotation = Quaternion.Euler(75f, 0f, 0f);
+            }
+            currentMode = ViewMode.SpawnerOverhead;
+            ApplyState();
+            OnModeChanged?.Invoke(currentMode);
+            OnViewChanged?.Invoke(false);
+            Debug.Log($"[DemonKing] view -> SpawnerOverhead ({sp.name})");
+        }
+
+        public void ExitSpawnerOverhead()
+        {
+            currentMode = ViewMode.BirdsEye;
+            ApplyState();
+            OnModeChanged?.Invoke(currentMode);
+            OnViewChanged?.Invoke(true);
+            Debug.Log("[DemonKing] view -> BirdsEye (from SpawnerOverhead)");
+        }
+
         private void OnViewSwitch(InputAction.CallbackContext _)
         {
-            if (tpsActive)
+            if (currentMode == ViewMode.SpawnerOverhead)
+            {
+                // V is reserved while in spawner overhead; use Esc / right-click to exit.
+                return;
+            }
+            if (currentMode == ViewMode.Tps)
             {
                 if (!IsAtViewer)
                 {
                     Debug.Log("[DemonKing] V pressed but not at Core - ignored");
                     return;
                 }
-                tpsActive = false;
+                currentMode = ViewMode.BirdsEye;
                 ApplyState();
+                OnModeChanged?.Invoke(currentMode);
+                OnViewChanged?.Invoke(true);
                 Debug.Log("[DemonKing] view -> BirdsEye, movement disabled");
             }
             else
             {
-                tpsActive = true;
+                currentMode = ViewMode.Tps;
                 ApplyState();
+                OnModeChanged?.Invoke(currentMode);
+                OnViewChanged?.Invoke(false);
                 Debug.Log("[DemonKing] view -> TPS, movement enabled");
             }
-            OnViewChanged?.Invoke(!tpsActive);
         }
 
         private void ApplyState()
         {
-            if (tpsCam != null) tpsCam.Priority = tpsActive ? activePriority : inactivePriority;
-            if (birdsEyeCam != null) birdsEyeCam.Priority = tpsActive ? inactivePriority : activePriority;
+            bool tps = currentMode == ViewMode.Tps;
+            bool be = currentMode == ViewMode.BirdsEye;
+            bool overhead = currentMode == ViewMode.SpawnerOverhead;
 
-            if (tpsPlainCamera != null) { tpsPlainCamera.enabled = tpsActive; tpsPlainCamera.gameObject.tag = tpsActive ? "MainCamera" : "Untagged"; }
-            if (birdsEyePlainCamera != null) { birdsEyePlainCamera.enabled = !tpsActive; birdsEyePlainCamera.gameObject.tag = !tpsActive ? "MainCamera" : "Untagged"; }
-            if (tpsAudio != null) tpsAudio.enabled = tpsActive;
-            if (birdsEyeAudio != null) birdsEyeAudio.enabled = !tpsActive;
+            if (tpsCam != null) tpsCam.Priority = tps ? activePriority : inactivePriority;
+            if (birdsEyeCam != null) birdsEyeCam.Priority = be ? activePriority : inactivePriority;
+            if (spawnerOverheadCam != null) spawnerOverheadCam.Priority = overhead ? activePriority : inactivePriority;
 
-            if (controller != null) controller.MovementEnabled = tpsActive;
+            ApplyPlainCam(tpsPlainCamera, tpsAudio, tps);
+            ApplyPlainCam(birdsEyePlainCamera, birdsEyeAudio, be);
+            ApplyPlainCam(spawnerOverheadPlainCamera, spawnerOverheadAudio, overhead);
+
+            if (controller != null) controller.MovementEnabled = tps;
+        }
+
+        private void ApplyPlainCam(Camera c, AudioListener a, bool active)
+        {
+            if (c != null)
+            {
+                c.enabled = active;
+                c.gameObject.tag = active ? "MainCamera" : "Untagged";
+            }
+            if (a != null) a.enabled = active;
         }
     }
 }
