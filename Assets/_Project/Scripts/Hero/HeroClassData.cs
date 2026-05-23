@@ -32,5 +32,8 @@ namespace Game.Hero
         public bool isMagicClass = false;
         public int basicAttackMpCost = 0;
         public float regenMultiplier = 1.0f;
+
+        [Header("Lobby Visual")]
+        public Color avatarColor = new Color(1f, 0.15f, 0.15f, 1f);
     }
 }

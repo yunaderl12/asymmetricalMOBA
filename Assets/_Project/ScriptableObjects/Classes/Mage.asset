@@ -33,3 +33,4 @@ MonoBehaviour:
   isMagicClass: 1
   basicAttackMpCost: 2
   regenMultiplier: 2
+  avatarColor: {r: 0.7, g: 0.2, b: 0.95, a: 1}
