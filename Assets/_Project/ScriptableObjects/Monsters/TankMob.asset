@@ -21,3 +21,4 @@ MonoBehaviour:
   spwnCool: 4
   maxSpwn: 2
   exp: 40
+  description: "重装の盾役モブ。HP150・防御3で勇者の攻撃を吸い、後続のモブを通す前線維持役。生成は遅くコストも重い。"

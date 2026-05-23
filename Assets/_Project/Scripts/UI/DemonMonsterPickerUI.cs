@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using Game.Monster;
 
@@ -51,6 +52,12 @@ namespace Game.UI
         {
             if (root != null) root.SetActive(false);
             currentCallback = null;
+        }
+
+        private void Update()
+        {
+            if (root == null || !root.activeSelf) return;
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) Hide();
         }
 
         private void ClearButtons()

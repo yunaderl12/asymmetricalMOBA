@@ -21,3 +21,4 @@ MonoBehaviour:
   spwnCool: 1
   maxSpwn: 10
   exp: 15
+  description: "標準的な歩兵モブ。HPと火力は控えめだが、コストが軽く生成も速いので頭数で押し込む基礎ユニット。"

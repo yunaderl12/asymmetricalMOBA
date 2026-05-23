@@ -21,3 +21,4 @@ MonoBehaviour:
   spwnCool: 8
   maxSpwn: 1
   exp: 50
+  description: "高速移動の飛行モブ。HPは紙だが速度5で勇者を翻弄し、地形を無視してスタートタウンへ届く奇襲ユニット。"

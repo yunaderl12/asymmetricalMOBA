@@ -14,5 +14,6 @@ namespace Game.Monster
         public float spwnCool;
         public int maxSpwn;
         public int exp;
+        [TextArea(2, 5)] public string description;
     }
 }

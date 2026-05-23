@@ -44,6 +44,7 @@ namespace Game.UI
         private MonsterData[] deck;
         private MonsterData[] spawnerMobs;
         private readonly List<Image> availableButtonBgs = new List<Image>();
+        private MonsterTooltipUI tooltipUI;
 
         private void Start()
         {
@@ -55,6 +56,9 @@ namespace Game.UI
                 for (int i = 0; i < deck.Length && i < session.DemonDeck.Count; i++) deck[i] = session.DemonDeck[i];
                 for (int i = 0; i < spawnerMobs.Length && i < session.SpawnerInitialMobs.Count; i++) spawnerMobs[i] = session.SpawnerInitialMobs[i];
             }
+            DedupDeck();
+            var canvas = GetComponentInParent<Canvas>();
+            if (canvas != null) tooltipUI = MonsterTooltipUI.Create(canvas);
             BuildAvailableList();
             WireDeckSlots();
             WireSpawnerSlots();
@@ -132,9 +136,13 @@ namespace Game.UI
                 lr.anchorMin = Vector2.zero; lr.anchorMax = Vector2.one;
                 lr.offsetMin = Vector2.zero; lr.offsetMax = Vector2.zero;
                 var lt = lblGO.GetComponent<Text>();
-                lt.font = font; lt.fontSize = 20; lt.fontStyle = FontStyle.Bold; lt.alignment = TextAnchor.MiddleCenter; lt.color = Color.white;
-                lt.text = md.monsterName + "  Cost " + md.cost;
-                go.GetComponent<Button>().onClick.AddListener(() => SelectAvailableMonster(idx));
+                lt.font = font; lt.fontSize = 22; lt.fontStyle = FontStyle.Bold; lt.alignment = TextAnchor.MiddleCenter; lt.color = Color.white;
+                lt.text = md.monsterName;
+                lt.raycastTarget = false;
+                go.GetComponent<Button>().onClick.AddListener(() => AddAvailableToDeck(idx));
+                var hover = go.AddComponent<MonsterHoverTrigger>();
+                hover.data = md;
+                hover.tooltip = tooltipUI;
             }
         }
 
@@ -158,19 +166,60 @@ namespace Game.UI
             }
         }
 
-        private void SelectAvailableMonster(int idx)
+        private void DedupDeck()
+        {
+            if (deck == null) return;
+            var seen = new HashSet<MonsterData>();
+            for (int i = 0; i < deck.Length; i++)
+            {
+                if (deck[i] == null) continue;
+                if (!seen.Add(deck[i])) deck[i] = null;
+            }
+        }
+
+        private bool DeckContains(MonsterData md)
+        {
+            if (md == null || deck == null) return false;
+            for (int i = 0; i < deck.Length; i++) if (deck[i] == md) return true;
+            return false;
+        }
+
+        private void AddAvailableToDeck(int idx)
         {
             if (idx < 0 || idx >= availableMonsters.Count) return;
-            selectedMonster = availableMonsters[idx];
+            var md = availableMonsters[idx];
+            if (md == null) return;
+            selectedMonster = md;
+            if (DeckContains(md))
+            {
+                if (selectedMobText != null) selectedMobText.text = "既にデッキにあります: " + md.monsterName;
+                RefreshAvailable();
+                return;
+            }
+            int placed = -1;
+            for (int i = 0; i < deck.Length; i++) { if (deck[i] == null) { deck[i] = md; placed = i; break; } }
+            if (placed < 0)
+            {
+                if (selectedMobText != null) selectedMobText.text = "デッキ満杯: " + md.monsterName;
+            }
+            else
+            {
+                if (selectedMobText != null) selectedMobText.text = "追加: " + md.monsterName + " (枠 " + (placed + 1) + ")";
+            }
             RefreshAvailable();
-            RefreshSelectedText();
+            RefreshDeck();
+            RefreshSpawners();
         }
 
         private void AssignToDeckSlot(int slotIdx)
         {
             if (deck == null || slotIdx < 0 || slotIdx >= deck.Length) return;
-            if (deck[slotIdx] != null) deck[slotIdx] = null;
-            else if (selectedMonster != null) deck[slotIdx] = selectedMonster;
+            if (deck[slotIdx] != null)
+            {
+                var removed = deck[slotIdx];
+                deck[slotIdx] = null;
+                if (selectedMobText != null) selectedMobText.text = "削除: " + removed.monsterName;
+            }
             RefreshDeck();
             RefreshSpawners();
         }
@@ -195,13 +244,7 @@ namespace Game.UI
             RefreshAvailable();
             RefreshDeck();
             RefreshSpawners();
-            RefreshSelectedText();
-        }
-
-        private void RefreshSelectedText()
-        {
-            if (selectedMobText == null) return;
-            selectedMobText.text = "選択中: " + (selectedMonster != null ? selectedMonster.monsterName : "なし");
+            if (selectedMobText != null && string.IsNullOrEmpty(selectedMobText.text)) selectedMobText.text = "クリックでデッキに追加 / デッキ枠クリックで削除";
         }
 
         private void RefreshAvailable()
