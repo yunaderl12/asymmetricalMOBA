@@ -86,7 +86,7 @@ namespace Game.UI
             float[] xs = { -176f, -88f, 0f, 88f, 176f };
             for (int i = 0; i < 5; i++)
             {
-                var pGO = new GameObject("Pent_" + i, typeof(RectTransform));
+                var pGO = new GameObject("Pent_" + i, typeof(RectTransform), typeof(CanvasRenderer));
                 pGO.transform.SetParent(holderGO.transform, false);
                 var pRT = (RectTransform)pGO.transform;
                 pRT.anchorMin = new Vector2(0.5f, 0.5f); pRT.anchorMax = new Vector2(0.5f, 0.5f); pRT.pivot = new Vector2(0.5f, 0.5f);

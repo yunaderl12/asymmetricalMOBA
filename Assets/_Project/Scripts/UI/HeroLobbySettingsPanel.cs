@@ -93,7 +93,7 @@ namespace Game.UI
             for (int i = 0; i < 5; i++)
             {
                 int captured = i;
-                var sGO = new GameObject("Slot_" + i, typeof(RectTransform));
+                var sGO = new GameObject("Slot_" + i, typeof(RectTransform), typeof(CanvasRenderer));
                 sGO.transform.SetParent(root, false);
                 var sRT = (RectTransform)sGO.transform;
                 sRT.anchorMin = new Vector2(0.5f, 1f); sRT.anchorMax = new Vector2(0.5f, 1f); sRT.pivot = new Vector2(0.5f, 0.5f);
@@ -107,7 +107,7 @@ namespace Game.UI
                 slotGraphics.Add(pg);
 
                 // Outline (slightly larger pentagon behind, white, initially disabled)
-                var outGO = new GameObject("Outline", typeof(RectTransform));
+                var outGO = new GameObject("Outline", typeof(RectTransform), typeof(CanvasRenderer));
                 outGO.transform.SetParent(sGO.transform, false);
                 var oRT = (RectTransform)outGO.transform;
                 oRT.anchorMin = Vector2.zero; oRT.anchorMax = Vector2.one;
@@ -275,7 +275,7 @@ namespace Game.UI
                 if (s == null) continue;
                 int row = i / columns;
                 int col = i % columns;
-                var go = new GameObject("Skill_" + s.skillName, typeof(RectTransform));
+                var go = new GameObject("Skill_" + s.skillName, typeof(RectTransform), typeof(CanvasRenderer));
                 go.transform.SetParent(availableGrid, false);
                 var rt = (RectTransform)go.transform;
                 rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f); rt.pivot = new Vector2(0.5f, 0.5f);
