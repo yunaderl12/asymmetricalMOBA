@@ -62,16 +62,19 @@ namespace Game.UI
         private void Setup()
         {
             // Auto-load from Resources if no model was assigned in the Inspector.
+            // Prefer the "alert" pose (more dynamic ready stance); fall back to the
+            // plain idle if it isn't there yet.
             if (modelRoot == null)
             {
-                var prefab = Resources.Load<GameObject>("Knight/knight");
+                var prefab = Resources.Load<GameObject>("Knight/knight_alert");
+                if (prefab == null) prefab = Resources.Load<GameObject>("Knight/knight");
                 if (prefab == null)
                 {
-                    Debug.LogWarning("[KnightAvatarPreview] Could not load Resources/Knight/knight — is the FBX in a Resources folder?");
+                    Debug.LogWarning("[KnightAvatarPreview] Could not load Resources/Knight/knight_alert or knight — is the FBX in a Resources folder?");
                     return;
                 }
                 modelRoot = Instantiate(prefab, new Vector3(200f, 0f, 0f), Quaternion.identity);
-                modelRoot.name = "Knight_Auto";
+                modelRoot.name = "Knight_Auto (" + prefab.name + ")";
                 // Apply KnightMat to all renderers so the textures show up.
                 var mat = Resources.Load<Material>("Knight/KnightMat");
                 if (mat != null)
