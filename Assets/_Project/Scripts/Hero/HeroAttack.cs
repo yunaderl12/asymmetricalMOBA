@@ -25,6 +25,13 @@ namespace Game.Hero
         private float cooldownTimer;
         private HeroRegen regen;
         private HeroClassInitializer classInit;
+        private HeroKnightAnimator knightAnim;
+
+        private bool IsAnimLocked()
+        {
+            if (knightAnim == null) knightAnim = GetComponent<HeroKnightAnimator>();
+            return knightAnim != null && knightAnim.IsRespawnAnimPlaying;
+        }
 
         private void Awake()
         {
@@ -56,6 +63,7 @@ namespace Game.Hero
         private void OnAttackPerformed(InputAction.CallbackContext _)
         {
             if (Game.UI.ConsoleUI.IsConsoleActive) return;
+            if (IsAnimLocked()) return;
             if (cooldownTimer > 0f || cameraTransform == null) return;
 
             int mpCost = (classInit != null && classInit.ClassData != null) ? classInit.ClassData.basicAttackMpCost : 0;

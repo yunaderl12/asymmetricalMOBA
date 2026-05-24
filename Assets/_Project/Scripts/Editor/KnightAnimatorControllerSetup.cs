@@ -20,28 +20,72 @@ namespace Game.Hero.EditorTools
         const string ControllerPath = "Assets/_Project/Resources/Knight/KnightAnimator.controller";
         const string ResourcesKnight = "Assets/_Project/Resources/Knight/";
 
-        // Each entry: (state name, fbx file name without extension, clip-name substring hint).
-        private static readonly (string state, string fbx, string clipHint)[] States = new[]
+        // Each entry: (state name, fbx file name without extension, clip-name substring hint, loop).
+        // loop=false で取り込まれるクリップは Animator 上で一度だけ再生され、最後のフレームで停止する。
+        // 特に Dying は一度だけ再生したいので false。Attacking も振り動作なのでループさせない。
+        private static readonly (string state, string fbx, string clipHint, bool loop)[] States = new[]
         {
-            ("Idle",       "knight_alert",                "Alert"),
-            ("Forward",    "knight_Run_02",               "Run_02"),
-            ("BackLeft",   "knight_BackLeft_run",         "BackLeft_run"),
-            ("BackRight",  "knight_BackRight_Run",        "BackRight_Run"),
-            ("Dying",      "knight_dying_backwards",      "dying_backwards"),
-            ("Respawning", "knight_Fall4",                "Fall4"),
-            ("Attacking",  "knight_Right_Hand_Sword_Slash", "Right_Hand_Sword_Slash"),
+            ("Idle",       "knight_alert",                "Alert",                  true),
+            ("Forward",    "knight_Run_02",               "Run_02",                 true),
+            ("BackLeft",   "knight_BackLeft_run",         "BackLeft_run",           true),
+            ("BackRight",  "knight_BackRight_Run",        "BackRight_Run",          true),
+            ("Dying",      "knight_dying_backwards",      "dying_backwards",        false),
+            ("Respawning", "knight_Fall4",                "Fall4",                  false),
+            ("Attacking",  "knight_Right_Hand_Sword_Slash", "Right_Hand_Sword_Slash", false),
         };
 
         static KnightAnimatorControllerSetup()
         {
-            EditorApplication.delayCall += EnsureController;
+            EditorApplication.delayCall += () =>
+            {
+                EnsureClipLoopSettings();
+                EnsureController();
+            };
         }
 
         [MenuItem("Tools/Knight/Regenerate Animator Controller")]
         public static void Regenerate()
         {
+            EnsureClipLoopSettings();
             AssetDatabase.DeleteAsset(ControllerPath);
             EnsureController();
+        }
+
+        /// <summary>
+        /// 各 FBX の ModelImporter を覗いて、States で指定した loop フラグと
+        /// clipAnimations[i].loopTime が一致しているか確認し、ズレていれば修正して
+        /// SaveAndReimport する。Unity を開き直したり FBX を差し替えた直後でも
+        /// Dying 等が勝手にループしないようにするためのガード。
+        /// </summary>
+        private static void EnsureClipLoopSettings()
+        {
+            foreach (var s in States)
+            {
+                string fbxPath = ResourcesKnight + s.fbx + ".fbx";
+                var importer = AssetImporter.GetAtPath(fbxPath) as ModelImporter;
+                if (importer == null) continue;
+
+                var clips = importer.clipAnimations;
+                if (clips == null || clips.Length == 0) clips = importer.defaultClipAnimations;
+                if (clips == null || clips.Length == 0) continue;
+
+                bool changed = false;
+                for (int i = 0; i < clips.Length; i++)
+                {
+                    if (clips[i].loopTime != s.loop)
+                    {
+                        clips[i].loopTime = s.loop;
+                        changed = true;
+                    }
+                }
+
+                if (changed)
+                {
+                    importer.clipAnimations = clips;
+                    importer.SaveAndReimport();
+                    Debug.Log("[KnightAnimatorControllerSetup] set loopTime=" + s.loop + " on clip(s) in " + fbxPath);
+                }
+            }
         }
 
         private static void EnsureController()

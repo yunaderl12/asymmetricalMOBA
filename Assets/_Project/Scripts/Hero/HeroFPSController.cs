@@ -24,10 +24,17 @@ namespace Game.Hero
 
         private CharacterController controller;
         private HeroInputActions inputs;
+        private HeroKnightAnimator knightAnim; // lazily cached (added at runtime by HeroClassInitializer)
 
         private float pitch;
         private float verticalVelocity;
         private bool cursorLocked;
+
+        private bool IsAnimLocked()
+        {
+            if (knightAnim == null) knightAnim = GetComponent<HeroKnightAnimator>();
+            return knightAnim != null && knightAnim.IsRespawnAnimPlaying;
+        }
 
         private void Awake()
         {
@@ -54,6 +61,14 @@ namespace Game.Hero
         private void Update()
         {
             if (Game.UI.ConsoleUI.IsConsoleActive) return;
+            if (IsAnimLocked())
+            {
+                // Keep gravity so the hero doesn't float, but ignore movement input.
+                verticalVelocity += gravity * Time.deltaTime;
+                if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = groundedStickForce;
+                controller.Move(new Vector3(0f, verticalVelocity * Time.deltaTime, 0f));
+                return;
+            }
             HandleLook();
             HandleMove();
             HandleClickToRelock();

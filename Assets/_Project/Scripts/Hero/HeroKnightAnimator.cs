@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Game.Combat;
@@ -26,19 +27,68 @@ namespace Game.Hero
         [SerializeField] private Vector3 modelEulerOffset = Vector3.zero;
         [SerializeField] private float modelScale = 1f;
         [SerializeField] private bool hideExistingBody = true;
+        // 自分のFPSカメラから自分のアバターを除外するためのLayer名。
+        // Hero.prefab のCameraの cullingMask はこのLayerを外しているので、
+        // 同名のLayerをここに設定すれば1人称視点でアバターが映り込まなくなる。
+        // 空文字 or 未定義のLayerならレイヤー設定をスキップする。
+        [SerializeField] private string avatarLayerName = "LocalAvatar";
 
         [Header("Attack")]
         [SerializeField] private float attackClipDuration = 0.6f;
 
+        [Header("Respawn")]
+        // Fall4 を 1 回だけ再生してから Idle に戻すまでの時間（秒）。
+        // クリップ自体は loopTime=0 で最後のフレームを保持するので、
+        // この時間が過ぎたタイミングで respawning フラグを下ろして Idle に戻す。
+        [SerializeField] private float respawnClipDuration = 4f;
+
+        [Header("Death FX")]
+        // Dying クリップ再生開始からアニメーターを停止して死亡ポーズで固める時刻（秒）。
+        // dying_backwards はループ前提のクリップで終端が立ち姿に戻るため、
+        // 倒れたフレームでフリーズさせて「仁王立ち戻り」を抑止する。
+        [SerializeField] private float dyingFreezeAt = 1.5f;
+        // フリーズ後、白フラッシュに移るまで死亡ポーズを見せる時間（秒）。
+        [SerializeField] private float dyingHoldAfterFreeze = 0.5f;
+        // 真っ白マテリアルに切り替えてから粒子に弾けるまでの「白い静止」時間。
+        [SerializeField] private float whiteHoldDuration = 0.15f;
+        // 純白フラッシュ色（マテリアル・パーティクル共通）。
+        [SerializeField] private Color whiteFlashColor = Color.white;
+        // 純白マテリアルに乗せるエミッション強度（Unlit シェーダーが取れない時のフォールバック）。
+        [SerializeField] private float whiteEmissionIntensity = 4f;
+        // 粒子総数。
+        [SerializeField] private int deathParticleBurstCount = 140;
+        // 粒子の上昇速度（m/s）。
+        [SerializeField] private float deathParticleUpwardSpeed = 6f;
+        // 粒子の寿命（秒）。
+        [SerializeField] private float deathParticleLifetime = 1.8f;
+        // 粒子のサイズ。
+        [SerializeField] private float deathParticleSize = 0.18f;
+        // 粒子発生位置のオフセット（モデル基点からの上下）。
+        [SerializeField] private float deathParticleVerticalOffset = 1f;
+        // 任意で差し替えるパーティクルプレハブ。null の場合は内部で生成する。
+        [SerializeField] private ParticleSystem deathParticlesPrefab;
+
         private enum AnimState { Idle, Forward, BackLeft, BackRight, Dying, Respawning, Attacking }
+
+        /// <summary>
+        /// True while the Fall4 respawn animation is playing (set in OnRespawnFinished,
+        /// cleared when respawnAnimTimer hits 0). Other Hero scripts (FPS controller,
+        /// attack, skill executor) check this to suspend player input during the
+        /// animation so the Swordsman cannot be moved or shoot mid-Fall4.
+        /// </summary>
+        public bool IsRespawnAnimPlaying => respawning;
 
         private GameObject knightModel;
         private Animator animator;
         private AnimState currentState = AnimState.Idle;
         private float attackTimer;
         private bool respawning;
+        private float respawnAnimTimer;
         private HeroInputActions inputs;
         private HealthComponent health;
+        private Material knightBaseMaterial;
+        private Material whiteFlashMaterial;
+        private Coroutine deathSequenceRoutine;
 
         private static readonly string[] TriggerNames =
         {
@@ -90,17 +140,12 @@ namespace Game.Hero
             knightModel.transform.localEulerAngles = modelEulerOffset;
             knightModel.transform.localScale = Vector3.one * modelScale;
 
-            // Apply KnightMat
-            var mat = Resources.Load<Material>("Knight/KnightMat");
-            if (mat != null)
-            {
-                foreach (var r in knightModel.GetComponentsInChildren<Renderer>(true))
-                {
-                    var mats = new Material[r.sharedMaterials.Length];
-                    for (int i = 0; i < mats.Length; i++) mats[i] = mat;
-                    r.sharedMaterials = mats;
-                }
-            }
+            // 1人称カメラから自分のアバターが映り込まないように専用Layerへ移す。
+            ApplyAvatarLayer(knightModel);
+
+            // Apply KnightMat (cached for restore after respawn)
+            knightBaseMaterial = Resources.Load<Material>("Knight/KnightMat");
+            ApplyMaterialToModel(knightBaseMaterial);
 
             animator = knightModel.GetComponentInChildren<Animator>(true);
             if (animator == null) animator = knightModel.AddComponent<Animator>();
@@ -133,6 +178,11 @@ namespace Game.Hero
         private void Update()
         {
             if (attackTimer > 0f) attackTimer -= Time.deltaTime;
+            if (respawnAnimTimer > 0f)
+            {
+                respawnAnimTimer -= Time.deltaTime;
+                if (respawnAnimTimer <= 0f) respawning = false;
+            }
             if (inputs.Hero.Attack.WasPerformedThisFrame() && !(health != null && health.IsDead))
             {
                 attackTimer = attackClipDuration;
@@ -142,6 +192,9 @@ namespace Game.Hero
 
         private AnimState ComputeState()
         {
+            // 死亡カウントダウン中(IsDead=true / respawning=false)は Dying を保持する。
+            // 実際のリスポーン(テレポート)瞬間に OnRespawnFinished で respawning=true と
+            // Fall4 用タイマーがセットされ、その間 Respawning ステートを優先する。
             if (health != null && health.IsDead) return AnimState.Dying;
             if (respawning) return AnimState.Respawning;
             if (attackTimer > 0f) return AnimState.Attacking;
@@ -172,6 +225,181 @@ namespace Game.Hero
         {
             currentState = AnimState.Dying;
             FireTrigger(AnimState.Dying);
+            if (deathSequenceRoutine != null) StopCoroutine(deathSequenceRoutine);
+            deathSequenceRoutine = StartCoroutine(DeathSequence());
+        }
+
+        /// <summary>
+        /// Dying クリップを最後まで流す → アバターを純白マテリアルで一気にフラッシュ →
+        /// 一瞬白を保持 → ParticleSystem で光弾として上方向に拡散・蒸散させ、
+        /// アバター本体は非表示にする。リスポーン時(OnRespawnFinished)で再表示と
+        /// マテリアル復元を行う。
+        /// </summary>
+        private IEnumerator DeathSequence()
+        {
+            // 念のため、前回フリーズしたままになっていた場合のリセット
+            if (animator != null) animator.speed = 1f;
+
+            // Phase 1: Dying クリップを「倒れた」フレームまで再生
+            yield return new WaitForSeconds(dyingFreezeAt);
+
+            // Phase 2: アニメーターを止めて死亡ポーズで固める。
+            // (loopTime=0 でも dying_backwards の最終フレームが立ち姿に戻るため、
+            //  Mecanim に任せず明示的に speed=0 でフリーズする。)
+            if (animator != null) animator.speed = 0f;
+
+            // Phase 3: 死亡ポーズを少し見せる
+            yield return new WaitForSeconds(dyingHoldAfterFreeze);
+
+            // Phase 4: 一気に純白へ
+            ApplyMaterialToModel(GetOrCreateWhiteFlashMaterial());
+
+            // Phase 5: 真っ白の状態を一瞬保持
+            yield return new WaitForSeconds(whiteHoldDuration);
+
+            // Phase 6: 光弾として拡散・蒸散し、アバターは消す
+            Vector3 spawnPos = (knightModel != null ? knightModel.transform.position : transform.position)
+                               + Vector3.up * deathParticleVerticalOffset;
+            SpawnDeathParticles(spawnPos);
+            if (knightModel != null) knightModel.SetActive(false);
+
+            deathSequenceRoutine = null;
+        }
+
+        private void ApplyMaterialToModel(Material m)
+        {
+            if (knightModel == null || m == null) return;
+            foreach (var r in knightModel.GetComponentsInChildren<Renderer>(true))
+            {
+                var mats = new Material[r.sharedMaterials.Length];
+                for (int i = 0; i < mats.Length; i++) mats[i] = m;
+                r.sharedMaterials = mats;
+            }
+        }
+
+        /// <summary>
+        /// avatarLayerName で指定されたLayerをroot以下の全GameObjectに再帰的に適用する。
+        /// Hero.prefab の Camera は同 Layer を cullingMask から外しているので、
+        /// 自分のアバターが1人称視点で映り込まなくなる。
+        /// </summary>
+        private void ApplyAvatarLayer(GameObject root)
+        {
+            if (root == null || string.IsNullOrEmpty(avatarLayerName)) return;
+            int layer = LayerMask.NameToLayer(avatarLayerName);
+            if (layer < 0)
+            {
+                Debug.LogWarning("[HeroKnightAnimator] Layer '" + avatarLayerName + "' not defined in TagManager — skipping.");
+                return;
+            }
+            SetLayerRecursively(root, layer);
+        }
+
+        private static void SetLayerRecursively(GameObject go, int layer)
+        {
+            go.layer = layer;
+            var t = go.transform;
+            for (int i = 0; i < t.childCount; i++)
+            {
+                SetLayerRecursively(t.GetChild(i).gameObject, layer);
+            }
+        }
+
+        private Material GetOrCreateWhiteFlashMaterial()
+        {
+            if (whiteFlashMaterial != null) return whiteFlashMaterial;
+            // ライティングに左右されない真っ白を出したいので Unlit を優先する。
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) shader = Shader.Find("Unlit/Color");
+            if (shader == null) shader = Shader.Find("Standard");
+            whiteFlashMaterial = new Material(shader);
+            if (whiteFlashMaterial.HasProperty("_BaseColor"))
+                whiteFlashMaterial.SetColor("_BaseColor", whiteFlashColor);
+            if (whiteFlashMaterial.HasProperty("_Color"))
+                whiteFlashMaterial.SetColor("_Color", whiteFlashColor);
+            if (whiteFlashMaterial.HasProperty("_EmissionColor"))
+            {
+                whiteFlashMaterial.EnableKeyword("_EMISSION");
+                whiteFlashMaterial.SetColor("_EmissionColor", whiteFlashColor * whiteEmissionIntensity);
+            }
+            return whiteFlashMaterial;
+        }
+
+        private void SpawnDeathParticles(Vector3 position)
+        {
+            if (deathParticlesPrefab != null)
+            {
+                var inst = Instantiate(deathParticlesPrefab, position, Quaternion.identity);
+                inst.Play();
+                Destroy(inst.gameObject, deathParticleLifetime + 1f);
+                return;
+            }
+
+            var go = new GameObject("KnightDeathParticles");
+            go.transform.position = position;
+            var ps = go.AddComponent<ParticleSystem>();
+
+            var main = ps.main;
+            main.duration = 0.3f;
+            main.loop = false;
+            main.startLifetime = deathParticleLifetime;
+            main.startSpeed = deathParticleUpwardSpeed;
+            main.startSize = deathParticleSize;
+            main.startColor = whiteFlashColor;
+            main.maxParticles = deathParticleBurstCount * 2;
+            main.gravityModifier = -0.4f; // 負の重力で上方向に漂わせる
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.playOnAwake = false;
+
+            var emission = ps.emission;
+            emission.rateOverTime = 0f;
+            emission.SetBursts(new[] { new ParticleSystem.Burst(0f, deathParticleBurstCount) });
+
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 0.45f;
+
+            var vol = ps.velocityOverLifetime;
+            vol.enabled = true;
+            vol.space = ParticleSystemSimulationSpace.World;
+            vol.x = new ParticleSystem.MinMaxCurve(-1.5f, 1.5f);
+            vol.z = new ParticleSystem.MinMaxCurve(-1.5f, 1.5f);
+            vol.y = new ParticleSystem.MinMaxCurve(deathParticleUpwardSpeed * 0.5f, deathParticleUpwardSpeed);
+
+            var sol = ps.sizeOverLifetime;
+            sol.enabled = true;
+            sol.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0f));
+
+            var col = ps.colorOverLifetime;
+            col.enabled = true;
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(whiteFlashColor, 0f), new GradientColorKey(whiteFlashColor, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 0.55f), new GradientAlphaKey(0f, 1f) }
+            );
+            col.color = gradient;
+
+            var renderer = ps.GetComponent<ParticleSystemRenderer>();
+            renderer.material = GetOrCreateParticleMaterial();
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+
+            ps.Play();
+            Destroy(go, deathParticleLifetime + 1f);
+        }
+
+        private Material GetOrCreateParticleMaterial()
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null) shader = Shader.Find("Particles/Standard Unlit");
+            if (shader == null) shader = Shader.Find("Particles/Additive");
+            if (shader == null) shader = Shader.Find("Sprites/Default");
+            var mat = new Material(shader);
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", whiteFlashColor);
+            if (mat.HasProperty("_TintColor")) mat.SetColor("_TintColor", whiteFlashColor);
+            if (mat.HasProperty("_Color")) mat.SetColor("_Color", whiteFlashColor);
+            // URP Particles/Unlit を半透明・加算合成寄りに寄せる試み。
+            if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);   // 1 = Transparent
+            if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 1f);       // 1 = Additive
+            return mat;
         }
 
         private void AttachRespawnEvents()
@@ -192,14 +420,38 @@ namespace Game.Hero
 
         private void OnRespawnStarted(int seconds)
         {
-            respawning = true;
-            currentState = AnimState.Respawning;
-            FireTrigger(AnimState.Respawning);
+            // 死亡カウントダウン中は Dying 姿勢を保持するだけ。Fall4 は実際にリスポーンする
+            // 瞬間(OnRespawnFinished)で初めて再生する。
         }
 
         private void OnRespawnFinished()
         {
-            respawning = false;
+            // テレポート + ResetHealth 後にここが呼ばれる。IsDead=false になっているので
+            // ComputeState の優先順位上 Respawning が選ばれ、Fall4 が頭から再生される。
+
+            // 死亡演出を中断 & アバターとマテリアルを復帰
+            if (deathSequenceRoutine != null)
+            {
+                StopCoroutine(deathSequenceRoutine);
+                deathSequenceRoutine = null;
+            }
+            if (knightModel != null && !knightModel.activeSelf) knightModel.SetActive(true);
+            if (knightBaseMaterial != null) ApplyMaterialToModel(knightBaseMaterial);
+            // DeathSequence で speed=0 に凍結されている場合があるので戻す。
+            if (animator != null) animator.speed = 1f;
+
+            respawning = true;
+            respawnAnimTimer = respawnClipDuration;
+            currentState = AnimState.Respawning;
+            FireTrigger(AnimState.Respawning);
+
+            // SetActive(false→true) で Animator が直前(Dying)の姿勢で一瞬目覚めて
+            // ちらつくのを避けるため、Respawning を強制的に頭から再生する。
+            if (animator != null && animator.runtimeAnimatorController != null)
+            {
+                animator.Play("Respawning", 0, 0f);
+                animator.Update(0f);
+            }
         }
     }
 }
