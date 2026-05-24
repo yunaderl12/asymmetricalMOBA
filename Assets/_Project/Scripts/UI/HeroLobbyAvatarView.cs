@@ -29,14 +29,14 @@ namespace Game.UI
             root.offsetMin = Vector2.zero; root.offsetMax = Vector2.zero;
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            // AvatarOval: anchor (0.5, 1), pivot (0.5, 1), pos (0, -130), size 260x360
-            // Use EllipseGraphic so the shape is an actual oval, not a solid rectangle.
+            // AvatarOval: anchored to the LEFT half of the screen (anchor 0.25, 1).
+            // Fills most of the left half vertically so the 3D Knight reads at a glance.
             var ovalGO = new GameObject("AvatarOval", typeof(RectTransform), typeof(CanvasRenderer));
             ovalGO.transform.SetParent(root, false);
             var oRT = (RectTransform)ovalGO.transform;
-            oRT.anchorMin = new Vector2(0.5f, 1f); oRT.anchorMax = new Vector2(0.5f, 1f); oRT.pivot = new Vector2(0.5f, 1f);
-            oRT.sizeDelta = new Vector2(260f, 360f);
-            oRT.anchoredPosition = new Vector2(0f, -130f);
+            oRT.anchorMin = new Vector2(0.25f, 1f); oRT.anchorMax = new Vector2(0.25f, 1f); oRT.pivot = new Vector2(0.5f, 1f);
+            oRT.sizeDelta = new Vector2(700f, 880f);
+            oRT.anchoredPosition = new Vector2(0f, -80f);
             avatarOval = ovalGO.AddComponent<EllipseGraphic>();
             avatarOval.color = new Color(1f, 0.15f, 0.15f, 1f);
             avatarOval.raycastTarget = false;
@@ -48,7 +48,7 @@ namespace Game.UI
             imgGO.transform.SetParent(ovalGO.transform, false);
             var iRT = (RectTransform)imgGO.transform;
             iRT.anchorMin = new Vector2(0f, 0f); iRT.anchorMax = new Vector2(1f, 1f);
-            iRT.offsetMin = new Vector2(-30f, -30f); iRT.offsetMax = new Vector2(30f, 30f);
+            iRT.offsetMin = new Vector2(-80f, -40f); iRT.offsetMax = new Vector2(80f, 40f);
             avatar3D = imgGO.GetComponent<RawImage>();
             avatar3D.raycastTarget = false;
             avatar3D.gameObject.SetActive(false);
@@ -60,8 +60,8 @@ namespace Game.UI
             npGO.transform.SetParent(ovalGO.transform, false);
             var npRT = (RectTransform)npGO.transform;
             npRT.anchorMin = new Vector2(0.5f, 0f); npRT.anchorMax = new Vector2(0.5f, 0f); npRT.pivot = new Vector2(0.5f, 0f);
-            npRT.sizeDelta = new Vector2(220f, 28f);
-            npRT.anchoredPosition = new Vector2(0f, 36f);
+            npRT.sizeDelta = new Vector2(360f, 40f);
+            npRT.anchoredPosition = new Vector2(0f, 60f);
             var npImg = npGO.GetComponent<Image>();
             npImg.color = new Color(0f, 0f, 0f, 0.9f);
             npImg.raycastTarget = false;
@@ -73,7 +73,7 @@ namespace Game.UI
             unRT.anchorMin = Vector2.zero; unRT.anchorMax = Vector2.one;
             unRT.offsetMin = Vector2.zero; unRT.offsetMax = Vector2.zero;
             userNameText = unGO.GetComponent<Text>();
-            userNameText.font = font; userNameText.fontSize = 14; userNameText.fontStyle = FontStyle.Bold;
+            userNameText.font = font; userNameText.fontSize = 20; userNameText.fontStyle = FontStyle.Bold;
             userNameText.alignment = TextAnchor.MiddleCenter; userNameText.color = Color.white;
             userNameText.raycastTarget = false; userNameText.text = "ユーザー名";
 
@@ -84,25 +84,25 @@ namespace Game.UI
             cnGO.transform.SetParent(ovalGO.transform, false);
             var cnRT = (RectTransform)cnGO.transform;
             cnRT.anchorMin = new Vector2(0.5f, 0f); cnRT.anchorMax = new Vector2(0.5f, 0f); cnRT.pivot = new Vector2(0.5f, 1f);
-            cnRT.sizeDelta = new Vector2(300f, 28f);
-            cnRT.anchoredPosition = new Vector2(0f, -12f);
+            cnRT.sizeDelta = new Vector2(420f, 36f);
+            cnRT.anchoredPosition = new Vector2(0f, -16f);
             classNameText = cnGO.GetComponent<Text>();
-            classNameText.font = font; classNameText.fontSize = 16; classNameText.fontStyle = FontStyle.Bold;
+            classNameText.font = font; classNameText.fontSize = 24; classNameText.fontStyle = FontStyle.Bold;
             classNameText.alignment = TextAnchor.MiddleCenter; classNameText.color = Color.white;
             classNameText.raycastTarget = false; classNameText.text = "Swordsman";
 
-            // SkillPentagonHolder: anchor (0.5,1), pos (0,-560), size 220x220 — square so 5 rotated diamonds fit
+            // SkillPentagonHolder: anchored to the LEFT half too, sitting below the bigger avatar.
             var holderGO = new GameObject("SkillPentagonHolder", typeof(RectTransform));
             holderGO.transform.SetParent(root, false);
             var hRT = (RectTransform)holderGO.transform;
-            hRT.anchorMin = new Vector2(0.5f, 1f); hRT.anchorMax = new Vector2(0.5f, 1f); hRT.pivot = new Vector2(0.5f, 0.5f);
-            hRT.sizeDelta = new Vector2(220f, 220f);
-            hRT.anchoredPosition = new Vector2(0f, -580f);
+            hRT.anchorMin = new Vector2(0.25f, 1f); hRT.anchorMax = new Vector2(0.25f, 1f); hRT.pivot = new Vector2(0.5f, 0.5f);
+            hRT.sizeDelta = new Vector2(280f, 280f);
+            hRT.anchoredPosition = new Vector2(0f, -1010f);
 
             // 5 diamonds, all sharing the same position & pivot (bottom-center).
             // Rotating each by i*72° around that shared bottom vertex produces a 5-petal pentagon.
             skillPentagons = new DiamondGraphic[5];
-            float diamondSize = 80f;
+            float diamondSize = 100f;
             for (int i = 0; i < 5; i++)
             {
                 var pGO = new GameObject("Diamond_" + i, typeof(RectTransform), typeof(CanvasRenderer));
