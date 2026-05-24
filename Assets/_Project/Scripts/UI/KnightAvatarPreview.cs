@@ -263,18 +263,34 @@ namespace Game.UI
             return null;
         }
 
+        // Minimum length to consider a clip "real". Anything below this is treated as
+        // an empty/keyframe stub and skipped (the FBX export sometimes emits a 1-frame
+        // T-pose clip alongside the real animation).
+        private const float MinUsefulClipLength = 0.2f;
+
         // Prefers the user's explicitly-requested 'Alert_frame_rate_60' first,
         // then any clip containing 'alert', then idle/stand/ready as fallbacks.
+        // Empty / 1-frame clips are filtered out and the longest non-preview clip is
+        // used as the very last resort.
         private static AnimationClip PickPreferredClip(AnimationClip[] clips)
         {
             if (clips == null || clips.Length == 0) return null;
-            // 1) Exact-substring match for the requested clip name.
+
+            // Dump every clip we found with its length so we can see what the FBX exposed.
+            for (int i = 0; i < clips.Length; i++)
+            {
+                var c = clips[i];
+                if (c == null) continue;
+                Debug.Log($"  [candidate {i}] name='{c.name}' length={c.length:F3}s frameRate={c.frameRate} isLooping={c.isLooping}");
+            }
+
+            // 1) Exact-substring match for the requested clip name (length must be useful).
             foreach (var c in clips)
             {
-                if (c == null) continue;
+                if (c == null || c.length < MinUsefulClipLength) continue;
                 if (c.name.IndexOf("Alert_frame_rate_60", System.StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    Debug.Log($"[KnightAvatarPreview] selected clip '{c.name}' (exact 'Alert_frame_rate_60' match)");
+                    Debug.Log($"[KnightAvatarPreview] selected '{c.name}' (exact 'Alert_frame_rate_60' match, len={c.length:F2}s)");
                     return c;
                 }
             }
@@ -284,14 +300,30 @@ namespace Game.UI
             {
                 foreach (var c in clips)
                 {
-                    if (c == null) continue;
+                    if (c == null || c.length < MinUsefulClipLength) continue;
                     if (c.name.IndexOf(p, System.StringComparison.OrdinalIgnoreCase) >= 0)
                     {
-                        Debug.Log($"[KnightAvatarPreview] selected clip '{c.name}' (matched preference '{p}')");
+                        Debug.Log($"[KnightAvatarPreview] selected '{c.name}' (matched preference '{p}', len={c.length:F2}s)");
                         return c;
                     }
                 }
             }
+
+            // 3) Longest non-preview clip whose length is useful.
+            AnimationClip longest = null;
+            foreach (var c in clips)
+            {
+                if (c == null || c.length < MinUsefulClipLength) continue;
+                if (c.name.StartsWith("__preview__")) continue;
+                if (longest == null || c.length > longest.length) longest = c;
+            }
+            if (longest != null)
+            {
+                Debug.Log($"[KnightAvatarPreview] selected '{longest.name}' (longest useful clip, len={longest.length:F2}s)");
+                return longest;
+            }
+
+            // 4) Last-ditch: any non-preview clip regardless of length.
             return PickNonPreviewClip(clips);
         }
 
