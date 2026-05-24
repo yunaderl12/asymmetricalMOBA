@@ -79,16 +79,13 @@ namespace Game.UI
 
         private void Setup()
         {
-            // Auto-load from Resources if no model was assigned in the Inspector.
-            // Prefer the "alert" pose (more dynamic ready stance); fall back to the
-            // plain idle if it isn't there yet.
+            // Single FBX now holds mesh + every animation merged together.
             if (modelRoot == null)
             {
-                var prefab = Resources.Load<GameObject>("Knight/knight_alert");
-                if (prefab == null) prefab = Resources.Load<GameObject>("Knight/knight");
+                var prefab = Resources.Load<GameObject>("Knight/knight");
                 if (prefab == null)
                 {
-                    Debug.LogWarning("[KnightAvatarPreview] Could not load Resources/Knight/knight_alert or knight — is the FBX in a Resources folder?");
+                    Debug.LogWarning("[KnightAvatarPreview] Could not load Resources/Knight/knight — is the FBX in a Resources folder?");
                     return;
                 }
                 modelRoot = Instantiate(prefab, new Vector3(200f, 0f, 0f), Quaternion.identity);
@@ -189,8 +186,7 @@ namespace Game.UI
                 }
                 // Add one. PlayableGraph still drives an empty Animator if no controller is set.
                 animator = modelRoot.AddComponent<Animator>();
-                var avatars = Resources.LoadAll<Avatar>("Knight/knight_alert");
-                if (avatars == null || avatars.Length == 0) avatars = Resources.LoadAll<Avatar>("Knight/knight_animations");
+                var avatars = Resources.LoadAll<Avatar>("Knight/knight");
                 if (avatars == null || avatars.Length == 0) avatars = Resources.LoadAll<Avatar>("Knight");
                 if (avatars != null && avatars.Length > 0) { animator.avatar = avatars[0]; Debug.Log($"[KnightAvatarPreview] added Animator with avatar '{avatars[0].name}'"); }
                 else Debug.Log("[KnightAvatarPreview] added Animator (no Avatar found in Resources/Knight)");
@@ -217,28 +213,17 @@ namespace Game.UI
 
         private static AnimationClip FindAnimationClip()
         {
-            // 1) Look inside the dedicated animations FBX first (Meshy's "Merged Animations").
-            var clipsAnims = Resources.LoadAll<AnimationClip>("Knight/knight_animations");
-            Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight/knight_animations') -> {(clipsAnims != null ? clipsAnims.Length : 0)} clips");
-            if (clipsAnims != null)
-            {
-                foreach (var c in clipsAnims) if (c != null) Debug.Log($"  anim-clip: '{c.name}' length={c.length:F2}");
-                // Prefer one whose name suggests alert / idle / stand if present.
-                var match = PickPreferredClip(clipsAnims);
-                if (match != null) return match;
-            }
-
-            // 2) Try the character FBX (some pipelines bake an idle into the character itself).
-            var clipsFile = Resources.LoadAll<AnimationClip>("Knight/knight_alert");
-            Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight/knight_alert') -> {(clipsFile != null ? clipsFile.Length : 0)} clips");
+            // Everything is now in Resources/Knight/knight.fbx (single merged file).
+            var clipsFile = Resources.LoadAll<AnimationClip>("Knight/knight");
+            Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight/knight') -> {(clipsFile != null ? clipsFile.Length : 0)} clips");
             if (clipsFile != null)
             {
-                foreach (var c in clipsFile) if (c != null) Debug.Log($"  file-clip: '{c.name}' length={c.length:F2}");
+                foreach (var c in clipsFile) if (c != null) Debug.Log($"  clip: '{c.name}' length={c.length:F2}");
                 var picked = PickPreferredClip(clipsFile);
                 if (picked != null) return picked;
             }
 
-            // 3) Folder-level LoadAll across all FBX in Knight/.
+            // Fallback: search the whole Knight/ folder if the file path lookup returned nothing.
             var clipsFolder = Resources.LoadAll<AnimationClip>("Knight");
             Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight') -> {(clipsFolder != null ? clipsFolder.Length : 0)} clips");
             if (clipsFolder != null)
@@ -248,7 +233,7 @@ namespace Game.UI
                 if (picked != null) return picked;
             }
 
-            // 4) Last-ditch: untyped enumeration.
+            // Last-ditch: untyped enumeration.
             var all = Resources.LoadAll("Knight");
             Debug.Log($"[KnightAvatarPreview] LoadAll('Knight') (untyped) -> {(all != null ? all.Length : 0)} objects");
             if (all != null)
@@ -261,8 +246,8 @@ namespace Game.UI
             return null;
         }
 
-        // Prefers clips whose name hints at an "alert / idle / stand / ready" loop.
-        // Falls back to first non-preview clip, then first clip.
+        // Prefers clips whose name hints at "alert" (the requested ready stance),
+        // then idle/stand/ready as fallbacks. Falls back to first non-preview clip.
         private static AnimationClip PickPreferredClip(AnimationClip[] clips)
         {
             if (clips == null || clips.Length == 0) return null;
@@ -272,7 +257,11 @@ namespace Game.UI
                 foreach (var c in clips)
                 {
                     if (c == null) continue;
-                    if (c.name.IndexOf(p, System.StringComparison.OrdinalIgnoreCase) >= 0) return c;
+                    if (c.name.IndexOf(p, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        Debug.Log($"[KnightAvatarPreview] selected clip '{c.name}' (matched preference '{p}')");
+                        return c;
+                    }
                 }
             }
             return PickNonPreviewClip(clips);
