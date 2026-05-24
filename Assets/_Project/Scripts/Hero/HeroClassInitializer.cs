@@ -42,6 +42,13 @@ namespace Game.Hero
             }
 
             ApplyInitialStats();
+
+            // Visual avatar: only Swordsman has the Knight model for now.
+            if (classData.className == "Swordsman" && GetComponent<HeroKnightAnimator>() == null)
+            {
+                gameObject.AddComponent<HeroKnightAnimator>();
+                Debug.Log("[HeroClass] added HeroKnightAnimator (Swordsman)");
+            }
         }
 
         private void ApplyInitialStats()
