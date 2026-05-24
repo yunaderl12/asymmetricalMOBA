@@ -28,12 +28,12 @@ namespace Game.Hero
 
         [Header("Clip name hints (substring, case-insensitive)")]
         [SerializeField] private string idleHint = "Alert";
-        [SerializeField] private string forwardHint = "Run02";
-        [SerializeField] private string backLeftHint = "BackLeft";
-        [SerializeField] private string backRightHint = "BackRight";
+        [SerializeField] private string forwardHint = "Run_02";
+        [SerializeField] private string backLeftHint = "BackLeft_run";
+        [SerializeField] private string backRightHint = "BackRight_Run";
         [SerializeField] private string deathHint = "dying_backwards";
-        [SerializeField] private string respawnHint = "fall4";
-        [SerializeField] private string attackHint = "right_hand_sword";
+        [SerializeField] private string respawnHint = "Fall4";
+        [SerializeField] private string attackHint = "Right_Hand_Sword_Slash";
 
         private enum AnimState { Idle, Forward, BackLeft, BackRight, Dying, Respawning, Attacking }
 
