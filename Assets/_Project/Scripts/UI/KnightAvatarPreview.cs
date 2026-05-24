@@ -67,6 +67,7 @@ namespace Game.UI
             if (playableGraph.IsValid()) playableGraph.Destroy();
         }
 
+        private float lastProgressLog;
         private void Update()
         {
             // Manual looping for the AnimationClipPlayable.
@@ -74,6 +75,11 @@ namespace Game.UI
             {
                 double t = clipPlayable.GetTime();
                 if (t >= clipDuration) clipPlayable.SetTime(t - clipDuration);
+                if (Time.unscaledTime - lastProgressLog > 2f)
+                {
+                    lastProgressLog = Time.unscaledTime;
+                    Debug.Log($"[KnightAvatarPreview] clipPlayable.GetTime={t:F2}/{clipDuration:F2}s graphPlaying={playableGraph.IsPlaying()}");
+                }
             }
         }
 
@@ -199,6 +205,17 @@ namespace Game.UI
                 return;
             }
 
+            // Make the Animator behave well for an off-screen preview:
+            //  - applyRootMotion=false so root drift doesn't push the model
+            //    out of the auto-framed camera.
+            //  - updateMode=UnscaledTime so a paused game (Time.timeScale=0)
+            //    still animates the lobby preview.
+            //  - enabled=true defensively.
+            animator.applyRootMotion = false;
+            animator.updateMode = AnimatorUpdateMode.UnscaledTime;
+            animator.enabled = true;
+            Debug.Log($"[KnightAvatarPreview] animator pre-play: avatar={(animator.avatar != null ? animator.avatar.name : "NULL")} isHuman={animator.isHuman} hasController={(animator.runtimeAnimatorController != null)}");
+
             clipDuration = clip.length;
             playableGraph = PlayableGraph.Create("KnightAvatarPreview");
             playableGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
@@ -246,11 +263,22 @@ namespace Game.UI
             return null;
         }
 
-        // Prefers clips whose name hints at "alert" (the requested ready stance),
-        // then idle/stand/ready as fallbacks. Falls back to first non-preview clip.
+        // Prefers the user's explicitly-requested 'Alert_frame_rate_60' first,
+        // then any clip containing 'alert', then idle/stand/ready as fallbacks.
         private static AnimationClip PickPreferredClip(AnimationClip[] clips)
         {
             if (clips == null || clips.Length == 0) return null;
+            // 1) Exact-substring match for the requested clip name.
+            foreach (var c in clips)
+            {
+                if (c == null) continue;
+                if (c.name.IndexOf("Alert_frame_rate_60", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    Debug.Log($"[KnightAvatarPreview] selected clip '{c.name}' (exact 'Alert_frame_rate_60' match)");
+                    return c;
+                }
+            }
+            // 2) Fuzzier "alert / idle / stand / ready" matching.
             string[] prefer = new[] { "alert", "idle", "stand", "ready" };
             foreach (var p in prefer)
             {
