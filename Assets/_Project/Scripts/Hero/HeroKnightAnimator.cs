@@ -20,7 +20,10 @@ namespace Game.Hero
     {
         [Header("Visual")]
         [SerializeField] private Vector3 modelOffset = Vector3.zero;
-        [SerializeField] private Vector3 modelEulerOffset = new Vector3(0f, 180f, 0f);
+        // 0,0,0 so the Knight faces the same direction as the Hero's transform.forward.
+        // (180° offset caused the run animation to play opposite to actual movement
+        // direction — classic moonwalk.)
+        [SerializeField] private Vector3 modelEulerOffset = Vector3.zero;
         [SerializeField] private float modelScale = 1f;
         [SerializeField] private bool hideExistingBody = true;
 
