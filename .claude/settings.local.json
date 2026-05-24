@@ -13,7 +13,19 @@
       "mcp__UnityMCP__refresh_unity",
       "Bash(git -c user.email=dev@local -c user.name=Dev commit -m ' *)",
       "mcp__UnityMCP__execute_code",
-      "mcp__UnityMCP__manage_editor"
+      "mcp__UnityMCP__manage_editor",
+      "mcp__UnityMCP__manage_prefabs",
+      "mcp__UnityMCP__find_gameobjects",
+      "Bash(git commit -m ' *)",
+      "Bash(gh *)",
+      "Bash(brew --version)",
+      "Bash(brew install *)",
+      "Bash(ssh-keyscan -t ed25519 github.com)",
+      "Bash(git push *)",
+      "Bash(git checkout *)",
+      "Bash(xxd)",
+      "Bash(grep -l \"UnityEngine.InputSystem\" Assets/_Project/Scripts/*.asmdef Assets/_Project/Scripts/**/*.asmdef)",
+      "Bash(cat Assets/_Project/Scripts/Game.Runtime.asmdef)"
     ]
   }
 }
