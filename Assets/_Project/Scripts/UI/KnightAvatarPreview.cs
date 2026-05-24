@@ -268,39 +268,42 @@ namespace Game.UI
         // T-pose clip alongside the real animation).
         private const float MinUsefulClipLength = 0.2f;
 
-        // Prefers the user's explicitly-requested 'Alert_frame_rate_60' first,
-        // then any clip containing 'alert', then idle/stand/ready as fallbacks.
-        // Empty / 1-frame clips are filtered out and the longest non-preview clip is
-        // used as the very last resort.
+        // Prefers any clip whose name contains 'alert' (the requested ready stance),
+        // even if it's only a single-frame static pose. Length filtering is only
+        // applied to the longest-clip fallback, NOT to name-based matches, because
+        // an alert/idle pose is often authored as a 1-frame static.
         private static AnimationClip PickPreferredClip(AnimationClip[] clips)
         {
             if (clips == null || clips.Length == 0) return null;
 
             // Dump every clip we found with its length so we can see what the FBX exposed.
+            var concat = new System.Text.StringBuilder("[KnightAvatarPreview] all clips:");
             for (int i = 0; i < clips.Length; i++)
             {
                 var c = clips[i];
                 if (c == null) continue;
                 Debug.Log($"  [candidate {i}] name='{c.name}' length={c.length:F3}s frameRate={c.frameRate} isLooping={c.isLooping}");
+                concat.Append("\n  ").Append(i).Append(": '").Append(c.name).Append("' ").Append(c.length.ToString("F3")).Append("s");
             }
+            Debug.Log(concat.ToString());
 
-            // 1) Exact-substring match for the requested clip name (length must be useful).
+            // 1) Exact-substring match for the requested clip name (NO length filter — alert can be static).
             foreach (var c in clips)
             {
-                if (c == null || c.length < MinUsefulClipLength) continue;
+                if (c == null) continue;
                 if (c.name.IndexOf("Alert_frame_rate_60", System.StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     Debug.Log($"[KnightAvatarPreview] selected '{c.name}' (exact 'Alert_frame_rate_60' match, len={c.length:F2}s)");
                     return c;
                 }
             }
-            // 2) Fuzzier "alert / idle / stand / ready" matching.
+            // 2) Fuzzier name matching (still NO length filter — these are likely poses).
             string[] prefer = new[] { "alert", "idle", "stand", "ready" };
             foreach (var p in prefer)
             {
                 foreach (var c in clips)
                 {
-                    if (c == null || c.length < MinUsefulClipLength) continue;
+                    if (c == null) continue;
                     if (c.name.IndexOf(p, System.StringComparison.OrdinalIgnoreCase) >= 0)
                     {
                         Debug.Log($"[KnightAvatarPreview] selected '{c.name}' (matched preference '{p}', len={c.length:F2}s)");
@@ -309,7 +312,7 @@ namespace Game.UI
                 }
             }
 
-            // 3) Longest non-preview clip whose length is useful.
+            // 3) Longest non-preview clip whose length is useful (filter applied here only).
             AnimationClip longest = null;
             foreach (var c in clips)
             {
