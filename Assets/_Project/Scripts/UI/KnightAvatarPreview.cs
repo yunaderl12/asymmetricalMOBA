@@ -53,10 +53,33 @@ namespace Game.UI
 
         private void Setup()
         {
+            // Auto-load from Resources if no model was assigned in the Inspector.
             if (modelRoot == null)
             {
-                Debug.LogWarning("[KnightAvatarPreview] modelRoot not assigned — no model to render.");
-                return;
+                var prefab = Resources.Load<GameObject>("Knight/knight");
+                if (prefab == null)
+                {
+                    Debug.LogWarning("[KnightAvatarPreview] Could not load Resources/Knight/knight — is the FBX in a Resources folder?");
+                    return;
+                }
+                modelRoot = Instantiate(prefab, new Vector3(200f, 0f, 0f), Quaternion.identity);
+                modelRoot.name = "Knight_Auto";
+                // Apply KnightMat to all renderers so the textures show up.
+                var mat = Resources.Load<Material>("Knight/KnightMat");
+                if (mat != null)
+                {
+                    foreach (var r in modelRoot.GetComponentsInChildren<Renderer>(true))
+                    {
+                        var mats = new Material[r.sharedMaterials.Length];
+                        for (int i = 0; i < mats.Length; i++) mats[i] = mat;
+                        r.sharedMaterials = mats;
+                    }
+                    Debug.Log("[KnightAvatarPreview] applied KnightMat to auto-loaded Knight");
+                }
+                else
+                {
+                    Debug.LogWarning("[KnightAvatarPreview] KnightMat not found in Resources/Knight/");
+                }
             }
 
             // 1. RenderTexture

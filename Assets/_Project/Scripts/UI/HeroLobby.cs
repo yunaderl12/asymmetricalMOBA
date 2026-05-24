@@ -58,6 +58,15 @@ namespace Game.UI
             }
 
             BuildOverlayUI();
+            // Auto-spawn a KnightAvatarPreview if the Inspector reference is blank.
+            // Pairs with KnightAvatarPreview's Resources.Load fallback so the lobby
+            // works out of the box without manual scene wiring.
+            if (knightPreview == null)
+            {
+                var pvGO = new GameObject("KnightAvatarPreview_Auto");
+                knightPreview = pvGO.AddComponent<KnightAvatarPreview>();
+                Debug.Log("[HeroLobby] auto-spawned KnightAvatarPreview");
+            }
             InitSkillsForClass();
             if (settingsPanel != null)
             {
