@@ -178,18 +178,13 @@ namespace Game.UI
                 Debug.Log("[KnightAvatarPreview] no Animator on model — animation skipped");
                 return;
             }
-            // Look in the loaded FBX for any embedded animation clip(s).
-            var clips = Resources.LoadAll<AnimationClip>("Knight/knight_alert");
-            if (clips == null || clips.Length == 0) clips = Resources.LoadAll<AnimationClip>("Knight/knight");
-            if (clips == null || clips.Length == 0)
+
+            AnimationClip clip = FindAnimationClip();
+            if (clip == null)
             {
-                Debug.Log("[KnightAvatarPreview] no AnimationClip found in knight_alert / knight FBX");
+                Debug.LogWarning("[KnightAvatarPreview] no AnimationClip found anywhere under Resources/Knight/");
                 return;
             }
-            // Prefer the first non-internal clip ("__preview__..." ones are sometimes added by Unity).
-            AnimationClip clip = null;
-            foreach (var c in clips) { if (c != null && !c.name.StartsWith("__preview__")) { clip = c; break; } }
-            if (clip == null) clip = clips[0];
 
             clipDuration = clip.length;
             playableGraph = PlayableGraph.Create("KnightAvatarPreview");
@@ -201,6 +196,54 @@ namespace Game.UI
             output.SetSourcePlayable(clipPlayable);
             playableGraph.Play();
             Debug.Log($"[KnightAvatarPreview] playing clip '{clip.name}' length={clipDuration:F2}s isLooping={clip.isLooping}");
+        }
+
+        private static AnimationClip FindAnimationClip()
+        {
+            // 1) Try the file path (Unity sometimes returns sub-assets here, sometimes not).
+            var clipsFile = Resources.LoadAll<AnimationClip>("Knight/knight_alert");
+            Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight/knight_alert') -> {(clipsFile != null ? clipsFile.Length : 0)} clips");
+            if (clipsFile != null)
+            {
+                foreach (var c in clipsFile) if (c != null) Debug.Log($"  file-clip: '{c.name}' length={c.length:F2}");
+                var picked = PickNonPreviewClip(clipsFile);
+                if (picked != null) return picked;
+            }
+
+            // 2) Folder-level LoadAll: enumerates every sub-asset clip across all FBX in Knight/.
+            var clipsFolder = Resources.LoadAll<AnimationClip>("Knight");
+            Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight') -> {(clipsFolder != null ? clipsFolder.Length : 0)} clips");
+            if (clipsFolder != null)
+            {
+                foreach (var c in clipsFolder) if (c != null) Debug.Log($"  folder-clip: '{c.name}' length={c.length:F2}");
+                // Prefer one whose name suggests alert (contains "alert" case-insensitive).
+                foreach (var c in clipsFolder)
+                {
+                    if (c == null) continue;
+                    if (c.name.IndexOf("alert", System.StringComparison.OrdinalIgnoreCase) >= 0) return c;
+                }
+                var picked = PickNonPreviewClip(clipsFolder);
+                if (picked != null) return picked;
+            }
+
+            // 3) Last-ditch: enumerate ALL Object assets and grab the first AnimationClip.
+            var all = Resources.LoadAll("Knight");
+            Debug.Log($"[KnightAvatarPreview] LoadAll('Knight') (untyped) -> {(all != null ? all.Length : 0)} objects");
+            if (all != null)
+            {
+                foreach (var o in all)
+                {
+                    if (o is AnimationClip ac) { Debug.Log($"  untyped-clip: '{ac.name}'"); return ac; }
+                }
+            }
+            return null;
+        }
+
+        private static AnimationClip PickNonPreviewClip(AnimationClip[] clips)
+        {
+            foreach (var c in clips) { if (c != null && !c.name.StartsWith("__preview__")) return c; }
+            if (clips != null && clips.Length > 0) return clips[0];
+            return null;
         }
 
         private bool TryComputeModelBounds(out Bounds bounds)
