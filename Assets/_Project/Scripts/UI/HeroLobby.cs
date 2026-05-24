@@ -309,7 +309,11 @@ namespace Game.UI
                 avatarView.SetAvatarColor(cls.avatarColor);
                 avatarView.SetClassName(cls.className);
                 // Show 3D Knight preview when Swordsman is selected; revert to flat oval otherwise.
-                if (cls.className == "Swordsman" && knightPreview != null && knightPreview.Texture != null)
+                bool isSwordsman = cls.className == "Swordsman";
+                bool hasPreview = knightPreview != null;
+                bool hasTex = hasPreview && knightPreview.Texture != null;
+                Debug.Log($"[HeroLobby] RefreshAvatar class='{cls.className}' isSwordsman={isSwordsman} knightPreview={(hasPreview ? "ok" : "NULL")} texture={(hasTex ? "ok" : "NULL")}");
+                if (isSwordsman && hasTex)
                     avatarView.SetAvatar3D(knightPreview.Texture);
                 else
                     avatarView.SetAvatar3D(null);
