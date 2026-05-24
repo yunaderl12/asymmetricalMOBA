@@ -172,11 +172,27 @@ namespace Game.UI
         private void SetupAnimation()
         {
             if (modelRoot == null) return;
-            var animator = modelRoot.GetComponentInChildren<Animator>();
+            var animator = modelRoot.GetComponentInChildren<Animator>(true);
             if (animator == null)
             {
-                Debug.Log("[KnightAvatarPreview] no Animator on model — animation skipped");
-                return;
+                // Dump hierarchy + components so we can see what the Instantiate actually produced.
+                Debug.LogWarning($"[KnightAvatarPreview] no Animator found on '{modelRoot.name}'. Dumping hierarchy:");
+                foreach (var t in modelRoot.GetComponentsInChildren<Transform>(true))
+                {
+                    string comps = "";
+                    foreach (var c in t.GetComponents<Component>())
+                    {
+                        if (comps.Length > 0) comps += ", ";
+                        comps += (c == null) ? "<missing>" : c.GetType().Name;
+                    }
+                    Debug.Log($"  '{t.name}': [{comps}]");
+                }
+                // Add one. PlayableGraph still drives an empty Animator if no controller is set.
+                animator = modelRoot.AddComponent<Animator>();
+                var avatars = Resources.LoadAll<Avatar>("Knight/knight_alert");
+                if (avatars == null || avatars.Length == 0) avatars = Resources.LoadAll<Avatar>("Knight");
+                if (avatars != null && avatars.Length > 0) { animator.avatar = avatars[0]; Debug.Log($"[KnightAvatarPreview] added Animator with avatar '{avatars[0].name}'"); }
+                else Debug.Log("[KnightAvatarPreview] added Animator (no Avatar found in Resources/Knight)");
             }
 
             AnimationClip clip = FindAnimationClip();
