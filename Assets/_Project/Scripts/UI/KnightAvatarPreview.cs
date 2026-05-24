@@ -190,6 +190,7 @@ namespace Game.UI
                 // Add one. PlayableGraph still drives an empty Animator if no controller is set.
                 animator = modelRoot.AddComponent<Animator>();
                 var avatars = Resources.LoadAll<Avatar>("Knight/knight_alert");
+                if (avatars == null || avatars.Length == 0) avatars = Resources.LoadAll<Avatar>("Knight/knight_animations");
                 if (avatars == null || avatars.Length == 0) avatars = Resources.LoadAll<Avatar>("Knight");
                 if (avatars != null && avatars.Length > 0) { animator.avatar = avatars[0]; Debug.Log($"[KnightAvatarPreview] added Animator with avatar '{avatars[0].name}'"); }
                 else Debug.Log("[KnightAvatarPreview] added Animator (no Avatar found in Resources/Knight)");
@@ -216,33 +217,38 @@ namespace Game.UI
 
         private static AnimationClip FindAnimationClip()
         {
-            // 1) Try the file path (Unity sometimes returns sub-assets here, sometimes not).
+            // 1) Look inside the dedicated animations FBX first (Meshy's "Merged Animations").
+            var clipsAnims = Resources.LoadAll<AnimationClip>("Knight/knight_animations");
+            Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight/knight_animations') -> {(clipsAnims != null ? clipsAnims.Length : 0)} clips");
+            if (clipsAnims != null)
+            {
+                foreach (var c in clipsAnims) if (c != null) Debug.Log($"  anim-clip: '{c.name}' length={c.length:F2}");
+                // Prefer one whose name suggests alert / idle / stand if present.
+                var match = PickPreferredClip(clipsAnims);
+                if (match != null) return match;
+            }
+
+            // 2) Try the character FBX (some pipelines bake an idle into the character itself).
             var clipsFile = Resources.LoadAll<AnimationClip>("Knight/knight_alert");
             Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight/knight_alert') -> {(clipsFile != null ? clipsFile.Length : 0)} clips");
             if (clipsFile != null)
             {
                 foreach (var c in clipsFile) if (c != null) Debug.Log($"  file-clip: '{c.name}' length={c.length:F2}");
-                var picked = PickNonPreviewClip(clipsFile);
+                var picked = PickPreferredClip(clipsFile);
                 if (picked != null) return picked;
             }
 
-            // 2) Folder-level LoadAll: enumerates every sub-asset clip across all FBX in Knight/.
+            // 3) Folder-level LoadAll across all FBX in Knight/.
             var clipsFolder = Resources.LoadAll<AnimationClip>("Knight");
             Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight') -> {(clipsFolder != null ? clipsFolder.Length : 0)} clips");
             if (clipsFolder != null)
             {
                 foreach (var c in clipsFolder) if (c != null) Debug.Log($"  folder-clip: '{c.name}' length={c.length:F2}");
-                // Prefer one whose name suggests alert (contains "alert" case-insensitive).
-                foreach (var c in clipsFolder)
-                {
-                    if (c == null) continue;
-                    if (c.name.IndexOf("alert", System.StringComparison.OrdinalIgnoreCase) >= 0) return c;
-                }
-                var picked = PickNonPreviewClip(clipsFolder);
+                var picked = PickPreferredClip(clipsFolder);
                 if (picked != null) return picked;
             }
 
-            // 3) Last-ditch: enumerate ALL Object assets and grab the first AnimationClip.
+            // 4) Last-ditch: untyped enumeration.
             var all = Resources.LoadAll("Knight");
             Debug.Log($"[KnightAvatarPreview] LoadAll('Knight') (untyped) -> {(all != null ? all.Length : 0)} objects");
             if (all != null)
@@ -253,6 +259,23 @@ namespace Game.UI
                 }
             }
             return null;
+        }
+
+        // Prefers clips whose name hints at an "alert / idle / stand / ready" loop.
+        // Falls back to first non-preview clip, then first clip.
+        private static AnimationClip PickPreferredClip(AnimationClip[] clips)
+        {
+            if (clips == null || clips.Length == 0) return null;
+            string[] prefer = new[] { "alert", "idle", "stand", "ready" };
+            foreach (var p in prefer)
+            {
+                foreach (var c in clips)
+                {
+                    if (c == null) continue;
+                    if (c.name.IndexOf(p, System.StringComparison.OrdinalIgnoreCase) >= 0) return c;
+                }
+            }
+            return PickNonPreviewClip(clips);
         }
 
         private static AnimationClip PickNonPreviewClip(AnimationClip[] clips)
