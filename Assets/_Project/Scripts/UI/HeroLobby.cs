@@ -23,6 +23,10 @@ namespace Game.UI
         [Header("Player")]
         [SerializeField] private string userName = "ユーザー名";
 
+        [Header("3D Class Previews (optional)")]
+        [Tooltip("Knight preview component in the scene. When Swordsman is selected, its RenderTexture is shown in the avatar area instead of the flat ellipse.")]
+        [SerializeField] private KnightAvatarPreview knightPreview;
+
         private int selectedClassIndex = 0;
         private readonly SkillData[] currentSkills = new SkillData[5];
 
@@ -304,6 +308,11 @@ namespace Game.UI
             {
                 avatarView.SetAvatarColor(cls.avatarColor);
                 avatarView.SetClassName(cls.className);
+                // Show 3D Knight preview when Swordsman is selected; revert to flat oval otherwise.
+                if (cls.className == "Swordsman" && knightPreview != null && knightPreview.Texture != null)
+                    avatarView.SetAvatar3D(knightPreview.Texture);
+                else
+                    avatarView.SetAvatar3D(null);
             }
             avatarView.SetSkills(currentSkills, GetCurrentClassColor());
         }

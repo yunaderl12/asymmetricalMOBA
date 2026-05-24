@@ -8,6 +8,7 @@ namespace Game.UI
     {
         private RectTransform root;
         private EllipseGraphic avatarOval;
+        private RawImage avatar3D; // shown instead of avatarOval when SetAvatar3D(tex) provides a texture
         private DiamondGraphic[] skillPentagons;
         private Text userNameText;
         private Text classNameText;
@@ -39,6 +40,18 @@ namespace Game.UI
             avatarOval = ovalGO.AddComponent<EllipseGraphic>();
             avatarOval.color = new Color(1f, 0.15f, 0.15f, 1f);
             avatarOval.raycastTarget = false;
+
+            // RawImage overlay for an optional 3D render (Knight via KnightAvatarPreview).
+            // Sized slightly larger than the oval so the model isn't cropped to the oval
+            // shape, but anchored to the same area so it visually replaces the avatar.
+            var imgGO = new GameObject("Avatar3D", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+            imgGO.transform.SetParent(ovalGO.transform, false);
+            var iRT = (RectTransform)imgGO.transform;
+            iRT.anchorMin = new Vector2(0f, 0f); iRT.anchorMax = new Vector2(1f, 1f);
+            iRT.offsetMin = new Vector2(-30f, -30f); iRT.offsetMax = new Vector2(30f, 30f);
+            avatar3D = imgGO.GetComponent<RawImage>();
+            avatar3D.raycastTarget = false;
+            avatar3D.gameObject.SetActive(false);
 
             // NamePlate: child of AvatarOval, sits INSIDE the lower portion of the oval
             // anchor (0.5,0) bottom-center, pivot (0.5,0) bottom-center, pos (0, 36) so
@@ -110,6 +123,27 @@ namespace Game.UI
         public void SetAvatarColor(Color c)
         {
             if (avatarOval != null) avatarOval.color = c;
+        }
+
+        /// <summary>
+        /// Show a live 3D preview (e.g. from KnightAvatarPreview.Texture). Pass null to
+        /// fall back to the flat-coloured EllipseGraphic.
+        /// </summary>
+        public void SetAvatar3D(Texture tex)
+        {
+            if (avatar3D == null) return;
+            if (tex != null)
+            {
+                avatar3D.texture = tex;
+                avatar3D.gameObject.SetActive(true);
+                if (avatarOval != null) avatarOval.enabled = false; // hide flat oval
+            }
+            else
+            {
+                avatar3D.texture = null;
+                avatar3D.gameObject.SetActive(false);
+                if (avatarOval != null) avatarOval.enabled = true;
+            }
         }
 
         public void SetClassName(string s)
