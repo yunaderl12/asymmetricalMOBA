@@ -18,10 +18,18 @@ namespace Game.UI
         [Tooltip("The 3D model GameObject (Knight prefab / FBX instance). Place it off-screen in the scene.")]
         [SerializeField] private GameObject modelRoot;
 
-        [Header("Camera placement (in model local space)")]
+        [Header("Camera framing")]
+        [Tooltip("When true, the camera is positioned automatically so the model fits the texture. Disable to use the manual values below.")]
+        [SerializeField] private bool autoFrame = true;
+        [Tooltip("Extra space around the model when auto-framing (1.0 = exact fit; 1.3 = 30% padding).")]
+        [SerializeField] private float framePadding = 1.35f;
+        [Tooltip("Direction the camera looks FROM in model space (e.g. (0,0,1) looks toward -Z; the model's front).")]
+        [SerializeField] private Vector3 viewDirection = new Vector3(0f, 0.2f, 1f);
+        [SerializeField] private float fieldOfView = 30f;
+
+        [Header("Manual placement (fallback when autoFrame=false or bounds missing)")]
         [SerializeField] private Vector3 cameraLocalPosition = new Vector3(0f, 1.6f, 2.5f);
         [SerializeField] private Vector3 cameraLookAtLocal = new Vector3(0f, 1.2f, 0f);
-        [SerializeField] private float fieldOfView = 30f;
 
         [Header("RenderTexture")]
         [SerializeField] private int textureWidth = 512;
@@ -88,22 +96,38 @@ namespace Game.UI
             Texture.useMipMap = false;
             Texture.Create();
 
-            // 2. Camera child of modelRoot so it stays attached to the subject
+            // 2. Camera
             var camGO = new GameObject("KnightPreviewCamera");
             camGO.transform.SetParent(modelRoot.transform, false);
-            camGO.transform.localPosition = cameraLocalPosition;
             previewCamera = camGO.AddComponent<Camera>();
             previewCamera.clearFlags = CameraClearFlags.SolidColor;
             previewCamera.backgroundColor = backgroundColor;
             previewCamera.targetTexture = Texture;
             previewCamera.fieldOfView = fieldOfView;
             previewCamera.nearClipPlane = 0.05f;
-            previewCamera.farClipPlane = 30f;
+            previewCamera.farClipPlane = 1000f;
             previewCamera.depth = -10; // render before any other main camera
 
-            // Aim at lookAt point (relative to modelRoot)
-            Vector3 worldLookAt = modelRoot.transform.TransformPoint(cameraLookAtLocal);
-            camGO.transform.LookAt(worldLookAt);
+            if (autoFrame && TryComputeModelBounds(out var bounds))
+            {
+                // Distance required to fit bounds in the FOV (both axes).
+                float halfFovRad = fieldOfView * 0.5f * Mathf.Deg2Rad;
+                float distY = (bounds.size.y * 0.5f) / Mathf.Tan(halfFovRad);
+                float aspect = (float)textureWidth / Mathf.Max(1, textureHeight);
+                float halfHFovRad = Mathf.Atan(Mathf.Tan(halfFovRad) * aspect);
+                float distX = (bounds.size.x * 0.5f) / Mathf.Tan(halfHFovRad);
+                float distance = Mathf.Max(distX, distY) * framePadding;
+                Vector3 dir = viewDirection.sqrMagnitude > 1e-4f ? viewDirection.normalized : Vector3.back;
+                camGO.transform.position = bounds.center + dir * distance;
+                camGO.transform.LookAt(bounds.center);
+                Debug.Log($"[KnightAvatarPreview] auto-frame: center={bounds.center} size={bounds.size} dist={distance:F2}");
+            }
+            else
+            {
+                camGO.transform.localPosition = cameraLocalPosition;
+                Vector3 worldLookAt = modelRoot.transform.TransformPoint(cameraLookAtLocal);
+                camGO.transform.LookAt(worldLookAt);
+            }
 
             // 3. Optional dedicated light so the subject is well-lit regardless of scene
             if (spawnDedicatedLight)
@@ -118,7 +142,24 @@ namespace Game.UI
                 previewLight.shadows = LightShadows.None;
             }
 
-            Debug.Log($"[KnightAvatarPreview] ready: {textureWidth}x{textureHeight}, FOV {fieldOfView}, lookAt {worldLookAt}");
+            Debug.Log($"[KnightAvatarPreview] ready: {textureWidth}x{textureHeight}, FOV {fieldOfView}");
+        }
+
+        private bool TryComputeModelBounds(out Bounds bounds)
+        {
+            bounds = default;
+            if (modelRoot == null) return false;
+            var renderers = modelRoot.GetComponentsInChildren<Renderer>(true);
+            bool has = false;
+            foreach (var r in renderers)
+            {
+                if (r == null) continue;
+                // SkinnedMeshRenderer.bounds requires the renderer to be enabled to give a valid
+                // value pre-first-frame in some Unity versions; toggle if needed.
+                if (!has) { bounds = r.bounds; has = true; }
+                else bounds.Encapsulate(r.bounds);
+            }
+            return has && bounds.size.sqrMagnitude > 1e-6f;
         }
     }
 }
