@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 
 namespace Game.UI
 {
@@ -47,6 +49,11 @@ namespace Game.UI
         private Light previewLight;
         public RenderTexture Texture { get; private set; }
 
+        // Animation playback
+        private PlayableGraph playableGraph;
+        private AnimationClipPlayable clipPlayable;
+        private float clipDuration;
+
         private void Awake()
         {
             Setup();
@@ -57,6 +64,17 @@ namespace Game.UI
             if (Texture != null) { Texture.Release(); Texture = null; }
             if (previewCamera != null) Destroy(previewCamera.gameObject);
             if (previewLight != null) Destroy(previewLight.gameObject);
+            if (playableGraph.IsValid()) playableGraph.Destroy();
+        }
+
+        private void Update()
+        {
+            // Manual looping for the AnimationClipPlayable.
+            if (playableGraph.IsValid() && clipPlayable.IsValid() && clipDuration > 0f)
+            {
+                double t = clipPlayable.GetTime();
+                if (t >= clipDuration) clipPlayable.SetTime(t - clipDuration);
+            }
         }
 
         private void Setup()
@@ -145,7 +163,44 @@ namespace Game.UI
                 previewLight.shadows = LightShadows.None;
             }
 
+            // 4. Animation
+            SetupAnimation();
+
             Debug.Log($"[KnightAvatarPreview] ready: {textureWidth}x{textureHeight}, FOV {fieldOfView}");
+        }
+
+        private void SetupAnimation()
+        {
+            if (modelRoot == null) return;
+            var animator = modelRoot.GetComponentInChildren<Animator>();
+            if (animator == null)
+            {
+                Debug.Log("[KnightAvatarPreview] no Animator on model — animation skipped");
+                return;
+            }
+            // Look in the loaded FBX for any embedded animation clip(s).
+            var clips = Resources.LoadAll<AnimationClip>("Knight/knight_alert");
+            if (clips == null || clips.Length == 0) clips = Resources.LoadAll<AnimationClip>("Knight/knight");
+            if (clips == null || clips.Length == 0)
+            {
+                Debug.Log("[KnightAvatarPreview] no AnimationClip found in knight_alert / knight FBX");
+                return;
+            }
+            // Prefer the first non-internal clip ("__preview__..." ones are sometimes added by Unity).
+            AnimationClip clip = null;
+            foreach (var c in clips) { if (c != null && !c.name.StartsWith("__preview__")) { clip = c; break; } }
+            if (clip == null) clip = clips[0];
+
+            clipDuration = clip.length;
+            playableGraph = PlayableGraph.Create("KnightAvatarPreview");
+            playableGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+            clipPlayable = AnimationClipPlayable.Create(playableGraph, clip);
+            clipPlayable.SetApplyFootIK(false);
+            clipPlayable.SetSpeed(1.0);
+            var output = AnimationPlayableOutput.Create(playableGraph, "AnimationOutput", animator);
+            output.SetSourcePlayable(clipPlayable);
+            playableGraph.Play();
+            Debug.Log($"[KnightAvatarPreview] playing clip '{clip.name}' length={clipDuration:F2}s isLooping={clip.isLooping}");
         }
 
         private bool TryComputeModelBounds(out Bounds bounds)
