@@ -230,7 +230,28 @@ namespace Game.UI
 
         private static AnimationClip FindAnimationClip()
         {
-            // Everything is now in Resources/Knight/knight.fbx (single merged file).
+            // 1) Dedicated Alert FBX (Meshy AI Animation_Alert_frame_rate_60 baked in).
+            //    Whatever clip is in this FBX IS the alert — return the longest non-stub.
+            var alertClips = Resources.LoadAll<AnimationClip>("Knight/knight_alert");
+            Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight/knight_alert') -> {(alertClips != null ? alertClips.Length : 0)} clips");
+            if (alertClips != null && alertClips.Length > 0)
+            {
+                foreach (var c in alertClips) if (c != null) Debug.Log($"  alert-clip: '{c.name}' length={c.length:F2}");
+                // Pick the longest clip in the alert FBX (skip the T-pose stub if any).
+                AnimationClip best = null;
+                foreach (var c in alertClips)
+                {
+                    if (c == null || c.name.StartsWith("__preview__")) continue;
+                    if (best == null || c.length > best.length) best = c;
+                }
+                if (best != null)
+                {
+                    Debug.Log($"[KnightAvatarPreview] selected '{best.name}' from knight_alert FBX (len={best.length:F2}s)");
+                    return best;
+                }
+            }
+
+            // 2) Character FBX clips.
             var clipsFile = Resources.LoadAll<AnimationClip>("Knight/knight");
             Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight/knight') -> {(clipsFile != null ? clipsFile.Length : 0)} clips");
             if (clipsFile != null)
@@ -240,7 +261,7 @@ namespace Game.UI
                 if (picked != null) return picked;
             }
 
-            // Fallback: search the whole Knight/ folder if the file path lookup returned nothing.
+            // 3) Folder scan.
             var clipsFolder = Resources.LoadAll<AnimationClip>("Knight");
             Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight') -> {(clipsFolder != null ? clipsFolder.Length : 0)} clips");
             if (clipsFolder != null)
@@ -250,7 +271,7 @@ namespace Game.UI
                 if (picked != null) return picked;
             }
 
-            // Last-ditch: untyped enumeration.
+            // 4) Last-ditch: untyped enumeration.
             var all = Resources.LoadAll("Knight");
             Debug.Log($"[KnightAvatarPreview] LoadAll('Knight') (untyped) -> {(all != null ? all.Length : 0)} objects");
             if (all != null)
