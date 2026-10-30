@@ -10,6 +10,14 @@ namespace Game.Core
         public float damageK = 20f;
         public int minDamage = 1;
 
+        [Header("Exp Share")]
+        [Tooltip("Supporters (healed a combatant) within this radius of the kill get a share")]
+        public float expShareRadius = 15f;
+        [Tooltip("Share of the monster's exp given to each supporter (0.25 = 25%)")]
+        public float expShareRatio = 0.25f;
+        [Tooltip("How recent the heal must be (seconds), same as the assist window")]
+        public float expShareSupportWindow = 10f;
+
         [Header("Status Effects")]
         [Tooltip("Seconds after a stun ends during which new stuns are ignored")]
         public float stunImmunitySeconds = 1.5f;

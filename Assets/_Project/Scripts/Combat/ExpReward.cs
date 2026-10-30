@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using Game.Core;
 
 namespace Game.Combat
 {
@@ -54,6 +56,45 @@ namespace Game.Combat
             string killerName = info.lastHitter != null ? info.lastHitter.name : "?";
             string assistStr = assistCount > 0 ? sb.ToString().TrimEnd() : "-";
             Debug.Log($"[ExpReward] {name} killed by {killerName} (+{killerExp}), assists: {assistStr} (+{assistExp} each)");
+
+            ShareWithSupporters(info);
+        }
+
+        /// Heroes who healed someone in this fight, but neither last-hit nor assisted, get a smaller share
+        /// if they are near the kill.
+        private void ShareWithSupporters(HealthComponent.DeathInfo info)
+        {
+            var cfg = BalanceConfig.Instance;
+            int shareExp = Mathf.RoundToInt(exp * cfg.expShareRatio);
+            if (shareExp <= 0) return;
+
+            var combatants = new HashSet<GameObject>();
+            var rewarded = new HashSet<ExpComponent>();
+            AddCombatant(info.lastHitter, combatants, rewarded);
+            if (info.assistContributors != null)
+                foreach (var a in info.assistContributors) AddCombatant(a, combatants, rewarded);
+            if (combatants.Count == 0) return;
+
+            var sb = new StringBuilder();
+            foreach (var supporter in SupportTracker.SupportersOf(combatants, cfg.expShareSupportWindow))
+            {
+                var ec = supporter.GetComponentInParent<ExpComponent>();
+                if (ec == null || rewarded.Contains(ec)) continue;
+                if (Vector3.Distance(ec.transform.position, transform.position) > cfg.expShareRadius) continue;
+                ec.AddExp(shareExp);
+                rewarded.Add(ec);
+                sb.Append(ec.name).Append(' ');
+            }
+            if (sb.Length > 0) Debug.Log($"[ExpReward] {name} shared with supporters: {sb.ToString().TrimEnd()} (+{shareExp} each)");
+        }
+
+        private static void AddCombatant(GameObject go, HashSet<GameObject> combatants, HashSet<ExpComponent> rewarded)
+        {
+            if (go == null) return;
+            var ec = go.GetComponentInParent<ExpComponent>();
+            if (ec == null) return;
+            combatants.Add(ec.gameObject);
+            rewarded.Add(ec);
         }
     }
 }

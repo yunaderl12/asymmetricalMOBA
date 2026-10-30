@@ -171,7 +171,12 @@ namespace Game.Skill
                 if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out var hit, skill.range))
                 {
                     var hp = hit.collider.GetComponentInParent<HealthComponent>();
-                    if (hp != null) { hp.Heal(amount); Debug.Log($"[Skill] Healed {hp.name} for {amount}"); }
+                    if (hp != null)
+                    {
+                        hp.Heal(amount);
+                        SupportTracker.RecordSupport(gameObject, hp.gameObject);
+                        Debug.Log($"[Skill] Healed {hp.name} for {amount}");
+                    }
                     else Debug.Log("[Skill] Heal: no valid target");
                 }
                 else
@@ -189,6 +194,7 @@ namespace Game.Skill
                     var hp = col.GetComponentInParent<HealthComponent>();
                     if (hp == null) continue;
                     hp.Heal(amount);
+                    SupportTracker.RecordSupport(gameObject, hp.gameObject);
                     healed++;
                 }
                 Debug.Log($"[Skill] {skill.skillName} healed {healed} target(s) in area");
