@@ -60,6 +60,13 @@ namespace Game.Monster
             }
         }
 
+        /// Bird's-eye detection: a working spawner reveals heroes inside its detect range.
+        public bool DetectsPosition(Vector3 position)
+        {
+            if (!IsFunctional || data == null) return false;
+            return Vector3.Distance(transform.position, position) <= data.detectRange;
+        }
+
         public bool CanAddMonster(MonsterData m)
         {
             if (m == null || data == null) return false;

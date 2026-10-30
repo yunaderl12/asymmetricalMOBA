@@ -38,7 +38,18 @@ namespace Game.UI
             return _instance;
         }
 
+        [Header("Hero detection")]
+        [SerializeField] private float intrusionWarningSeconds = 3f;
+
         private DemonKingViewSwitcher viewSwitcher;
+        private DemonKingDetect detect;
+        private DemonCastleRegen castle;
+        private readonly List<Spawner> spawners = new List<Spawner>();
+        private Text detectLabel;
+        private Button detectButton;
+        private GameObject warningGO;
+        private Text warningText;
+        private float warningHideAt;
         private GameObject root;
         private RectTransform mapArea;
         private Font font;
@@ -71,6 +82,7 @@ namespace Game.UI
         {
             if (_instance == this) _instance = null;
             if (viewSwitcher != null) viewSwitcher.OnModeChanged -= OnModeChanged;
+            DemonCastleRegen.OnHeroEnteredCastle -= OnHeroEnteredCastle;
         }
 
         private void Start()
@@ -78,6 +90,19 @@ namespace Game.UI
             var dk = GameObject.FindWithTag("DemonKing");
             if (dk != null) viewSwitcher = dk.GetComponent<DemonKingViewSwitcher>();
             if (viewSwitcher != null) viewSwitcher.OnModeChanged += OnModeChanged;
+            if (dk != null)
+            {
+                detect = dk.GetComponent<DemonKingDetect>();
+                if (detect == null) detect = dk.AddComponent<DemonKingDetect>();
+            }
+            castle = FindFirstObjectByType<DemonCastleRegen>();
+            foreach (var go in GameObject.FindGameObjectsWithTag("Spawner"))
+            {
+                var sp = go.GetComponent<Spawner>();
+                if (sp != null) spawners.Add(sp);
+            }
+            // The intrusion warning is for a human Demon King only (shown in TPS too).
+            if (viewSwitcher != null) DemonCastleRegen.OnHeroEnteredCastle += OnHeroEnteredCastle;
 
             if (autoBounds) AutoComputeBounds();
             BuildSpawnerIcons();
@@ -100,6 +125,7 @@ namespace Game.UI
 
         private void Update()
         {
+            if (warningGO != null && warningGO.activeSelf && Time.unscaledTime >= warningHideAt) warningGO.SetActive(false);
             if (root == null || !root.activeSelf) return;
             // Positions follow per-frame for smooth tracking; labels (HP/Cost text)
             // are refreshed on the slower throttle since their string value changes
@@ -114,6 +140,91 @@ namespace Game.UI
             if (Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + refreshInterval;
             RefreshSpawnerLabels();
+            RefreshDetectButton();
+        }
+
+        // --- Hero detection -------------------------------------------------
+
+        /// Heroes are hidden unless a working spawner detects them, the detect skill is active,
+        /// or they are inside the castle.
+        private bool IsHeroVisible(GameObject hero)
+        {
+            if (detect != null && detect.IsActive) return true;
+            if (castle != null && castle.IsHeroInside(hero)) return true;
+            var pos = hero.transform.position;
+            foreach (var sp in spawners)
+                if (sp != null && sp.DetectsPosition(pos)) return true;
+            return false;
+        }
+
+        private void OnDetectClicked()
+        {
+            if (detect == null) return;
+            detect.TryActivate();
+            RefreshDetectButton();
+            RefreshLive();
+        }
+
+        private void RefreshDetectButton()
+        {
+            if (detectLabel == null || detect == null) return;
+            bool ready = detect.CooldownRemaining <= 0f && detect.HasEnoughMp;
+            if (detect.IsActive) detectLabel.text = $"探知中 {detect.ActiveRemaining:F0}s";
+            else if (detect.CooldownRemaining > 0f) detectLabel.text = $"探知 (CT {detect.CooldownRemaining:F0}s)";
+            else detectLabel.text = $"探知 (MP {detect.MpCost})";
+            if (detectButton != null) detectButton.interactable = ready;
+        }
+
+        private void OnHeroEnteredCastle(GameObject hero)
+        {
+            if (warningGO == null) return;
+            warningText.text = "警告: 勇者が魔王城に侵入しました";
+            warningGO.SetActive(true);
+            warningHideAt = Time.unscaledTime + intrusionWarningSeconds;
+        }
+
+        private void BuildDetectButton()
+        {
+            var go = new GameObject("DetectButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+            go.transform.SetParent(root.transform, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(0f, 0f); rt.anchorMax = new Vector2(0f, 0f); rt.pivot = new Vector2(0f, 0f);
+            rt.sizeDelta = new Vector2(220f, 56f); rt.anchoredPosition = new Vector2(24f, 24f);
+            go.GetComponent<Image>().color = new Color(0.35f, 0.15f, 0.45f, 0.95f);
+            detectButton = go.GetComponent<Button>();
+            detectButton.onClick.AddListener(OnDetectClicked);
+
+            var lblGO = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            lblGO.transform.SetParent(go.transform, false);
+            var lRT = (RectTransform)lblGO.transform;
+            lRT.anchorMin = Vector2.zero; lRT.anchorMax = Vector2.one;
+            lRT.offsetMin = Vector2.zero; lRT.offsetMax = Vector2.zero;
+            detectLabel = lblGO.GetComponent<Text>();
+            detectLabel.font = font; detectLabel.fontSize = 20; detectLabel.fontStyle = FontStyle.Bold;
+            detectLabel.alignment = TextAnchor.MiddleCenter; detectLabel.color = Color.white; detectLabel.raycastTarget = false;
+            detectLabel.text = "探知";
+        }
+
+        private void BuildIntrusionWarning(Transform canvas)
+        {
+            warningGO = new GameObject("CastleIntrusionWarning", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            warningGO.transform.SetParent(canvas, false);
+            var rt = (RectTransform)warningGO.transform;
+            rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f); rt.pivot = new Vector2(0.5f, 1f);
+            rt.sizeDelta = new Vector2(560f, 52f); rt.anchoredPosition = new Vector2(0f, -60f);
+            var bg = warningGO.GetComponent<Image>();
+            bg.color = new Color(0.55f, 0.05f, 0.05f, 0.9f);
+            bg.raycastTarget = false;
+
+            var tGO = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            tGO.transform.SetParent(warningGO.transform, false);
+            var tRT = (RectTransform)tGO.transform;
+            tRT.anchorMin = Vector2.zero; tRT.anchorMax = Vector2.one;
+            tRT.offsetMin = Vector2.zero; tRT.offsetMax = Vector2.zero;
+            warningText = tGO.GetComponent<Text>();
+            warningText.font = font; warningText.fontSize = 24; warningText.fontStyle = FontStyle.Bold;
+            warningText.alignment = TextAnchor.MiddleCenter; warningText.color = Color.white; warningText.raycastTarget = false;
+            warningGO.SetActive(false);
         }
 
         private void BuildRoot()
@@ -162,6 +273,9 @@ namespace Game.UI
             tT.color = new Color(1f, 0.85f, 0.4f, 1f);
             tT.text = "俯瞰マップ - スポナーをクリックで操作 / V キーで TPS に戻る";
             tT.raycastTarget = false;
+
+            BuildDetectButton();
+            BuildIntrusionWarning(canvas.transform);
         }
 
         private void AutoComputeBounds()
@@ -337,11 +451,17 @@ namespace Game.UI
                 rt.anchoredPosition = WorldToMap(m.transform.position);
             }
 
-            // Heroes (cyan ellipses)
+            // Heroes (cyan ellipses) — only while detected
             foreach (var p in GameObject.FindGameObjectsWithTag("Player"))
             {
                 if (p == null) continue;
+                if (!IsHeroVisible(p))
+                {
+                    if (liveIcons.TryGetValue(p.transform, out var hidden) && hidden != null) hidden.gameObject.SetActive(false);
+                    continue;
+                }
                 var rt = GetOrCreateLiveIcon(p.transform, new Color(0.3f, 0.85f, 1f, 0.97f), heroIconSize, IconShape.Ellipse);
+                rt.gameObject.SetActive(true);
                 rt.anchoredPosition = WorldToMap(p.transform.position);
             }
 

@@ -23,6 +23,11 @@ namespace Game.Core
         public float stunImmunitySeconds = 1.5f;
         public float dotTickInterval = 1f;
 
+        [Header("Demon King Detect Skill")]
+        public int dkDetectMpCost = 40;
+        public float dkDetectDuration = 5f;
+        public float dkDetectCooldown = 30f;
+
         [Header("Demon King Level")]
         [Tooltip("Monster HP / Atk growth per Demon King level (0.05 = +5%/Lv)")]
         public float monsterStatGrowthPerDkLevel = 0.05f;
