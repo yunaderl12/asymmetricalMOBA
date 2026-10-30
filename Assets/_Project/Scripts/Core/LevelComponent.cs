@@ -32,10 +32,29 @@ namespace Game.Core
 
         private IEnumerator LevelUpRoutine()
         {
-            while (currentLevel < maxLevel)
+            var match = MatchManager.Instance;
+            if (match == null)
             {
-                yield return new WaitForSeconds(secondsPerLevel);
-                LevelUp();
+                // Test scenes without a MatchManager: count from scene start.
+                while (currentLevel < maxLevel)
+                {
+                    yield return new WaitForSeconds(secondsPerLevel);
+                    LevelUp();
+                }
+                yield break;
+            }
+
+            // Count from InMatch start (prep phase excluded), derived from ElapsedInMatch so it never drifts.
+            while (match.CurrentState != MatchManager.MatchState.InMatch)
+            {
+                if (match.CurrentState == MatchManager.MatchState.Finished) yield break;
+                yield return null;
+            }
+            while (currentLevel < maxLevel && match.CurrentState == MatchManager.MatchState.InMatch)
+            {
+                int target = 1 + Mathf.FloorToInt(match.ElapsedInMatch / secondsPerLevel);
+                while (currentLevel < target && currentLevel < maxLevel) LevelUp();
+                yield return null;
             }
         }
     }

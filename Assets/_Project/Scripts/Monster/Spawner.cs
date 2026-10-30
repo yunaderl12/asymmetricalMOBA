@@ -310,9 +310,8 @@ namespace Game.Monster
                     spawnedMonsters.Add(monsterComp);
                 }
 
-                // Per-monster cooldown × global slowdown multiplier (default 5x).
-                float perMonsterCool = dataToSpawn.spwnCool * Mathf.Max(0.01f, data.spawnIntervalMultiplier);
-                if (perMonsterCool < 0.05f) perMonsterCool = data.spawnInterval;
+                // Spawn interval comes only from the monster's own SpwnCool.
+                float perMonsterCool = Mathf.Max(0.05f, dataToSpawn.spwnCool);
                 Debug.Log($"[Spawner] {name} spawned {dataToSpawn.monsterName}, next in {perMonsterCool:F1}s");
 
                 invIndex = (invIndex + 1) % inv.Count;

@@ -20,7 +20,5 @@ MonoBehaviour:
   maxCost: 2
   costPerDkLevel: 1
   inv: 3
-  spawnInterval: 2
-  spawnIntervalMultiplier: 5
   attackRange: 20
   detectRange: 15

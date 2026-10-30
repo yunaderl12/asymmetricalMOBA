@@ -7,6 +7,7 @@ namespace Game.DemonKing
     public class OutsideDebuff : MonoBehaviour
     {
         [SerializeField] private int mpDrainPerSecond = 5;
+        [SerializeField] private int drainDisableLevel = 15;
 
         private ManaComponent mana;
         private LevelComponent level;
@@ -23,13 +24,13 @@ namespace Game.DemonKing
 
         private void Update()
         {
-            if (level != null && level.IsMaxLevel)
+            if (level != null && level.CurrentLevel >= drainDisableLevel)
             {
                 if (currentlyDebuffed)
                 {
                     currentlyDebuffed = false;
                     drainAccumulator = 0f;
-                    Debug.Log("[OutsideDebuff] inactive (max level)");
+                    Debug.Log("[OutsideDebuff] inactive (Lv" + drainDisableLevel + "+)");
                 }
                 return;
             }
