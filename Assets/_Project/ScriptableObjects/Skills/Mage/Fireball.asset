@@ -23,4 +23,7 @@ MonoBehaviour:
   effectValue: 40
   range: 15
   duration: 0
+  statusEffect: 3
+  statusDuration: 3
+  statusPower: 3
   ownerClass: {fileID: 11400000, guid: 5c79a6f114db141968cfd3e07c9edfba, type: 2}

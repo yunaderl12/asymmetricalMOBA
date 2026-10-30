@@ -30,6 +30,7 @@ namespace Game.Core
             Register("vision", "視野リング 表示切替", VisionCmd);
             Register("commands", "デバッグキー一覧 表示切替", CommandsCmd);
             Register("skillup", "スキル [1-5] レベルアップ", SkillUpCmd);
+            Register("status", "状態異常付与 [stun|slow|dot|silence] [秒=3] [self|near=self]", StatusCmd);
         }
 
         public static void Register(string name, string description, CommandHandler handler)
@@ -197,6 +198,45 @@ namespace Game.Core
         private static string CommandsCmd(string[] args)
         {
             return HelpCmd(args);
+        }
+
+        private static string StatusCmd(string[] args)
+        {
+            if (args.Length == 0) return "usage: /debug status [stun|slow|dot|silence] [sec=3] [self|near]";
+            StatusEffectType type;
+            float power = 0f;
+            switch (args[0].ToLowerInvariant())
+            {
+                case "stun": type = StatusEffectType.Stun; break;
+                case "slow": type = StatusEffectType.Slow; power = 0.4f; break;
+                case "dot": type = StatusEffectType.DamageOverTime; power = 5f; break;
+                case "silence": type = StatusEffectType.Silence; break;
+                default: return "unknown status: " + args[0];
+            }
+            float sec = 3f;
+            if (args.Length > 1) float.TryParse(args[1], out sec);
+
+            var hero = FindHero();
+            GameObject target = hero;
+            if (args.Length > 2 && args[2] == "near")
+            {
+                // Nearest monster or Demon King to the hero
+                target = null;
+                float best = float.MaxValue;
+                var candidates = new List<GameObject>(GameObject.FindGameObjectsWithTag("Monster"));
+                var dk = GameObject.FindWithTag("DemonKing");
+                if (dk != null) candidates.Add(dk);
+                foreach (var c in candidates)
+                {
+                    if (c == null || hero == null) continue;
+                    float d = Vector3.Distance(hero.transform.position, c.transform.position);
+                    if (d < best) { best = d; target = c; }
+                }
+            }
+            if (target == null) return "target not found";
+            var sec2 = StatusEffectController.Apply(target, type, sec, power, hero);
+            if (sec2 == null) return "not applied";
+            return type + " -> " + target.name + " (" + sec2.Remaining(type).ToString("F1") + "s)";
         }
 
         private static string SkillUpCmd(string[] args)

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Game.Combat;
 
 namespace Game.Hero
 {
@@ -70,7 +71,8 @@ namespace Game.Hero
                 return;
             }
             HandleLook();
-            HandleMove();
+            if (StatusEffectController.IsStunnedObj(gameObject)) HandleStunnedGravity();
+            else HandleMove();
             HandleClickToRelock();
         }
 
@@ -90,6 +92,13 @@ namespace Game.Hero
             {
                 cameraTransform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
             }
+        }
+
+        private void HandleStunnedGravity()
+        {
+            verticalVelocity += gravity * Time.deltaTime;
+            if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = groundedStickForce;
+            controller.Move(new Vector3(0f, verticalVelocity * Time.deltaTime, 0f));
         }
 
         private void HandleMove()

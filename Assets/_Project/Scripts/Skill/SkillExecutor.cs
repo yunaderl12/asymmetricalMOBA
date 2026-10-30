@@ -60,6 +60,11 @@ namespace Game.Skill
         public void TryCast()
         {
             if (runtime == null) return;
+            if (!StatusEffectController.CanUseSkills(gameObject))
+            {
+                Debug.Log("[Skill] cannot cast while stunned / silenced");
+                return;
+            }
             int idx = runtime.SelectedIndex;
             var skill = runtime.CurrentSkill;
             if (skill == null)
@@ -116,6 +121,7 @@ namespace Game.Skill
                     if (hp != null && hp.gameObject != gameObject)
                     {
                         hp.TakeDamage(dmg, gameObject, ToDamageType(skill.damageType));
+                        ApplySkillStatus(skill, hp);
                     }
                 }
                 ShowBeam(origin, endPoint);
@@ -129,10 +135,17 @@ namespace Game.Skill
                     var hp = col.GetComponentInParent<HealthComponent>();
                     if (hp == null || hp.gameObject == gameObject) continue;
                     hp.TakeDamage(dmg, gameObject, ToDamageType(skill.damageType));
+                    ApplySkillStatus(skill, hp);
                     affected++;
                 }
                 Debug.Log($"[Skill] {skill.skillName} hit {affected} target(s) in area");
             }
+        }
+
+        private void ApplySkillStatus(SkillData skill, HealthComponent target)
+        {
+            if (skill.statusEffect == StatusEffectType.None || target == null || target.IsDead) return;
+            StatusEffectController.Apply(target.gameObject, skill.statusEffect, skill.statusDuration, skill.statusPower, gameObject);
         }
 
         private static DamageType ToDamageType(SkillDamageType t)

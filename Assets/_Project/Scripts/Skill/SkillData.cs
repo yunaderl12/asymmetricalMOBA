@@ -1,5 +1,6 @@
 using UnityEngine;
 using Game.Hero;
+using Game.Combat;
 
 namespace Game.Skill
 {
@@ -20,6 +21,12 @@ namespace Game.Skill
         public float effectValue;
         public float range;
         public float duration;
+
+        [Header("Status Effect (applied to targets hit)")]
+        public StatusEffectType statusEffect = StatusEffectType.None;
+        public float statusDuration;
+        [Tooltip("Slow: speed reduction (0.4 = -40%) / DamageOverTime: damage per tick / others: unused")]
+        public float statusPower;
 
         [Header("Leveling")]
         public float levelGrowthRate = 0.2f;

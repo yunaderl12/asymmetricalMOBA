@@ -29,6 +29,7 @@ namespace Game.Monster
             {
                 int dmg = damagePerTick;
                 var monster = GetComponentInParent<Monster>();
+                if (monster != null && StatusEffectController.IsStunnedObj(monster.gameObject)) return;
                 if (monster != null && monster.CurrentAtk > 0) dmg = monster.CurrentAtk;
                 var attacker = monster != null ? monster.gameObject : gameObject;
                 hp.TakeDamage(dmg, attacker, DamageType.Physical);

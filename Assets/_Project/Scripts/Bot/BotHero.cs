@@ -65,6 +65,7 @@ namespace Game.Bot
         private void Tick()
         {
             if (dead || agent == null || !agent.isOnNavMesh) return;
+            if (StatusEffectController.IsStunnedObj(gameObject)) { agent.SetDestination(transform.position); return; }
 
             float bestDist = float.MaxValue;
             Transform best = null;

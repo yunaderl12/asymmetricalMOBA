@@ -65,6 +65,7 @@ namespace Game.DemonKing
             HandleClickToRelock();
             if (!MovementEnabled) return;
             HandleRotation();
+            if (StatusEffectController.IsStunnedObj(gameObject)) return;
             HandleMove();
         }
 

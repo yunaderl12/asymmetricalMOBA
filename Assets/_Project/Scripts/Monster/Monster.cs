@@ -41,6 +41,7 @@ namespace Game.Monster
         /// HP / Atk multiplier from the Demon King level at spawn time.
         public float LevelMultiplier => levelMultiplier;
         private float levelMultiplier = 1f;
+        private bool wasStunned;
 
         public int Df => data != null ? Mathf.RoundToInt(data.df * (mods != null ? mods.TotalDfMultiplier : 1f)) : 0;
         public int MDf => data != null ? data.mDf : 0;
@@ -163,6 +164,18 @@ namespace Game.Monster
         private void Update()
         {
             if (destroyed || agent == null) return;
+
+            if (StatusEffectController.IsStunnedObj(gameObject))
+            {
+                if (agent.isOnNavMesh) agent.isStopped = true;
+                wasStunned = true;
+                return;
+            }
+            if (wasStunned)
+            {
+                wasStunned = false;
+                if (agent.isOnNavMesh && !atTarget) agent.isStopped = false;
+            }
 
             RefreshHeroRef();
             EvaluateState();

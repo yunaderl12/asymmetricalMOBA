@@ -64,6 +64,7 @@ namespace Game.Hero
         {
             if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (IsAnimLocked()) return;
+            if (StatusEffectController.IsStunnedObj(gameObject)) return;
             if (cooldownTimer > 0f || cameraTransform == null) return;
 
             int mpCost = (classInit != null && classInit.ClassData != null) ? classInit.ClassData.basicAttackMpCost : 0;

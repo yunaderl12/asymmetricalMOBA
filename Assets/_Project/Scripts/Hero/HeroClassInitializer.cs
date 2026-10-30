@@ -35,6 +35,7 @@ namespace Game.Hero
             controller = GetComponent<HeroFPSController>();
             attack = GetComponent<HeroAttack>();
             mods = GetComponent<StatModifierContainer>();
+            if (mods != null) mods.OnModifiersChanged += ApplyMoveSpeed;
 
             if (GameSession.Instance != null)
             {
@@ -58,11 +59,22 @@ namespace Game.Hero
             }
         }
 
+        private void OnDestroy()
+        {
+            if (mods != null) mods.OnModifiersChanged -= ApplyMoveSpeed;
+        }
+
+        /// Base Spd x modifiers (Sprint, PowerItem, Slow, ...).
+        private void ApplyMoveSpeed()
+        {
+            if (controller == null) return;
+            controller.SetMoveSpeed(CurrentSpd * (mods != null ? mods.TotalSpdMultiplier : 1f));
+        }
+
         private void ApplyInitialStats()
         {
             if (health != null) health.SetMaxHP(classData.initialHP);
             if (mana != null) mana.SetMaxMP(classData.initialSP);
-            if (controller != null) controller.SetMoveSpeed(classData.initialSpd);
             if (attack != null) attack.SetDamage(classData.initialAtk);
 
             CurrentAtk = classData.initialAtk;
@@ -70,6 +82,7 @@ namespace Game.Hero
             CurrentDf = classData.initialDf;
             CurrentMDf = classData.initialMDf;
             CurrentSpd = classData.initialSpd;
+            ApplyMoveSpeed();
 
             Debug.Log($"[HeroClass] {classData.className} initialized: HP={classData.initialHP}, SP={classData.initialSP}, Atk={CurrentAtk}, MAtk={CurrentMAtk}, Df={CurrentDf}, MDf={CurrentMDf}, Spd={CurrentSpd}");
         }
@@ -84,7 +97,7 @@ namespace Game.Hero
             CurrentSpd += classData.spdGrowthPerLevel;
 
             if (attack != null) attack.SetDamage(CurrentAtk);
-            if (controller != null) controller.SetMoveSpeed(CurrentSpd);
+            ApplyMoveSpeed();
         }
     }
 }
