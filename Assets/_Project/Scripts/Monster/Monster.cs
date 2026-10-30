@@ -63,12 +63,17 @@ namespace Game.Monster
         private Transform heroTransform;
         private float heroLookupTimer;
         private float chaseRefreshTimer;
+        private MonsterHate hate;
+
+        private bool UsesHate => hate != null && ((data != null && data.useHate) || MonsterHate.ForceAll);
 
         private void Awake()
         {
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<HealthComponent>();
             mods = GetComponent<StatModifierContainer>();
+            hate = GetComponent<MonsterHate>();
+            if (hate == null) hate = gameObject.AddComponent<MonsterHate>();
         }
 
         private void OnEnable()
@@ -216,10 +221,9 @@ namespace Game.Monster
         {
             heroLookupTimer -= Time.deltaTime;
             if (heroGO != null && !heroGO.activeInHierarchy) heroGO = null;
-            if (heroGO != null) return;
-            if (heroLookupTimer > 0f) return;
+            if (heroGO != null && heroLookupTimer > 0f) return;
             heroLookupTimer = heroLookupInterval;
-            heroGO = GameObject.FindWithTag(heroTag);
+            heroGO = SelectHero();
             if (heroGO != null)
             {
                 heroTransform = heroGO.transform;
@@ -230,6 +234,39 @@ namespace Game.Monster
                 heroTransform = null;
                 heroHealth = null;
             }
+        }
+
+        /// Nearest living hero in range. Smart monsters (UsesHate) prefer the hero with the most hate,
+        /// and keep their current target unless another hero's hate exceeds it by hateSwitchRatio.
+        private GameObject SelectHero()
+        {
+            float radius = currentState == BehaviorState.ChasingHero ? deaggroRadius : aggroRadius;
+            bool useHate = UsesHate;
+            GameObject nearest = null, top = null;
+            float nearestDist = float.MaxValue, topHate = 0f;
+            bool currentInRange = false;
+
+            foreach (var go in GameObject.FindGameObjectsWithTag(heroTag))
+            {
+                if (!go.activeInHierarchy) continue;
+                var hc = go.GetComponent<HealthComponent>();
+                if (hc != null && hc.IsDead) continue;
+                float d = Vector3.Distance(transform.position, go.transform.position);
+                if (d > radius) continue;
+                if (go == heroGO) currentInRange = true;
+                if (d < nearestDist) { nearestDist = d; nearest = go; }
+                if (useHate)
+                {
+                    float h = hate.Get(go);
+                    if (h > topHate) { topHate = h; top = go; }
+                }
+            }
+
+            if (top == null) return nearest;
+            if (currentInRange && top != heroGO
+                && topHate < hate.Get(heroGO) * BalanceConfig.Instance.hateSwitchRatio)
+                return heroGO;
+            return top;
         }
 
         private void EvaluateState()

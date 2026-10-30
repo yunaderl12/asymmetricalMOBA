@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -16,9 +17,13 @@ namespace Game.Combat
         private const float MaxKeepSeconds = 30f;
         private static readonly List<Record> records = new List<Record>();
 
-        public static void RecordSupport(GameObject supporter, GameObject recipient)
+        /// (supporter, recipient, amount). Fired for every recorded support; used for monster hate.
+        public static event Action<GameObject, GameObject, int> OnSupport;
+
+        public static void RecordSupport(GameObject supporter, GameObject recipient, int amount = 0)
         {
             if (supporter == null || recipient == null || supporter == recipient) return;
+            OnSupport?.Invoke(supporter, recipient, amount);
             float now = Time.time;
             records.RemoveAll(r => r.supporter == null || r.recipient == null || now - r.time > MaxKeepSeconds);
             records.Add(new Record { supporter = supporter, recipient = recipient, time = now });

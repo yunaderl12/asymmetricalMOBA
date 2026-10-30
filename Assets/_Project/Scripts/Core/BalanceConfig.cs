@@ -36,6 +36,20 @@ namespace Game.Core
         [Tooltip("A warp point can always be set within this radius (m) of StartTown")]
         public float warpTownRadius = 20f;
 
+        [Header("Monster Hate (smart monsters only)")]
+        [Tooltip("Heals cast within this radius (m) of a monster add hate to the healer")]
+        public float hateHealRadius = 10f;
+        [Tooltip("Hate per point healed (damage adds 1 per point)")]
+        public float hateHealRatio = 0.5f;
+        [Tooltip("Fraction of hate lost per second (0.1 = 10%/s)")]
+        public float hateDecayPerSecond = 0.1f;
+        [Tooltip("A hero farther than this (m), or dead, has their hate reset to 0")]
+        public float hateResetDistance = 10f;
+        [Tooltip("Hate added by Taunt to each monster in range")]
+        public float hateTauntAmount = 100f;
+        [Tooltip("A new hero must exceed the current target's hate by this ratio to steal aggro")]
+        public float hateSwitchRatio = 1.1f;
+
         [Header("Demon King Level")]
         [Tooltip("Monster HP / Atk growth per Demon King level (0.05 = +5%/Lv)")]
         public float monsterStatGrowthPerDkLevel = 0.05f;

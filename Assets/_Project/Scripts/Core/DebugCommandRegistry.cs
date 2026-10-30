@@ -32,6 +32,7 @@ namespace Game.Core
             Register("skillup", "スキル [1-5] レベルアップ", SkillUpCmd);
             Register("status", "状態異常付与 [stun|slow|dot|silence] [秒=3] [self|near=self]", StatusCmd);
             Register("warp", "ワープ地点 [info|set|go|clear] (set は範囲無視、go は詠唱なし)", WarpCmd);
+            Register("hate", "ヘイト [info|on|off] (on で全魔物がヘイトを使う、info は最寄りの魔物のヘイト表)", HateCmd);
         }
 
         public static void Register(string name, string description, CommandHandler handler)
@@ -266,6 +267,36 @@ namespace Game.Core
                 default:
                     return "usage: /debug warp [info|set|go|clear]";
             }
+        }
+
+        private static string HateCmd(string[] args)
+        {
+            string mode = args.Length > 0 ? args[0].ToLowerInvariant() : "info";
+            if (mode == "on" || mode == "off")
+            {
+                Game.Monster.MonsterHate.ForceAll = mode == "on";
+                return "hate for all monsters -> " + (Game.Monster.MonsterHate.ForceAll ? "ON" : "OFF");
+            }
+            if (mode != "info") return "usage: /debug hate [info|on|off]";
+
+            var hero = FindHero();
+            if (hero == null) return "hero not found";
+            Game.Monster.MonsterHate nearest = null;
+            float best = float.MaxValue;
+            foreach (var mh in Object.FindObjectsByType<Game.Monster.MonsterHate>(FindObjectsSortMode.None))
+            {
+                float d = Vector3.Distance(hero.transform.position, mh.transform.position);
+                if (d < best) { best = d; nearest = mh; }
+            }
+            if (nearest == null) return "no monster";
+            var sb = new StringBuilder();
+            var m = nearest.GetComponent<Game.Monster.Monster>();
+            bool smart = Game.Monster.MonsterHate.ForceAll || (m != null && m.Data != null && m.Data.useHate);
+            sb.Append(nearest.name).Append(" (useHate=").Append(smart).Append(", d=").Append(best.ToString("F1")).Append("m)");
+            if (nearest.Table.Count == 0) sb.Append(" hate: none");
+            foreach (var kv in nearest.Table)
+                sb.Append(" | ").Append(kv.Key != null ? kv.Key.name : "?").Append(": ").Append(kv.Value.ToString("F0"));
+            return sb.ToString();
         }
 
         private static string SkillUpCmd(string[] args)

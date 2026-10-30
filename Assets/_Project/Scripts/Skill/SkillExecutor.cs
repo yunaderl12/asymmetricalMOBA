@@ -207,7 +207,7 @@ namespace Game.Skill
                     if (hp != null)
                     {
                         hp.Heal(amount);
-                        SupportTracker.RecordSupport(gameObject, hp.gameObject);
+                        SupportTracker.RecordSupport(gameObject, hp.gameObject, amount);
                         Debug.Log($"[Skill] Healed {hp.name} for {amount}");
                     }
                     else Debug.Log("[Skill] Heal: no valid target");
@@ -227,7 +227,7 @@ namespace Game.Skill
                     var hp = col.GetComponentInParent<HealthComponent>();
                     if (hp == null) continue;
                     hp.Heal(amount);
-                    SupportTracker.RecordSupport(gameObject, hp.gameObject);
+                    SupportTracker.RecordSupport(gameObject, hp.gameObject, amount);
                     healed++;
                 }
                 Debug.Log($"[Skill] {skill.skillName} healed {healed} target(s) in area");
@@ -302,15 +302,17 @@ namespace Game.Skill
 
         private void ExecuteTaunt(SkillData skill)
         {
+            // Adds hate only; monsters without hate (MonsterData.useHate off) ignore it.
+            float amount = Game.Core.BalanceConfig.Instance.hateTauntAmount;
             var hits = Physics.OverlapSphere(transform.position, skill.range);
-            int tagged = 0;
+            var done = new System.Collections.Generic.HashSet<Game.Monster.MonsterHate>();
             foreach (var col in hits)
             {
-                if (!col.CompareTag("Enemy") && col.GetComponentInParent<Game.Monster.Monster>() == null) continue;
-                var sm = col.GetComponentInParent<StatModifierContainer>();
-                if (sm != null) { sm.AddOrReplaceModifier(new StatModifier("Taunted", 1f, 1f, 1f)); tagged++; }
+                var mh = col.GetComponentInParent<Game.Monster.MonsterHate>();
+                if (mh == null || !done.Add(mh)) continue;
+                mh.Add(gameObject, amount);
             }
-            Debug.Log($"[Skill] Taunt: marked {tagged} monsters (effect deferred to Phase 9)");
+            Debug.Log($"[Skill] Taunt: +{amount} hate on {done.Count} monster(s)");
         }
 
         private void ExecuteDetect(SkillData skill)

@@ -18,6 +18,9 @@ namespace Game.Monster
         [Tooltip("Demon King level required to place this monster in a spawner")]
         public int unlockDkLevel = 1;
 
+        [Tooltip("Smart monster: targets the hero with the most hate instead of the nearest one")]
+        public bool useHate;
+
         public bool IsUnlockedAt(int dkLevel) => dkLevel >= unlockDkLevel;
         [TextArea(2, 5)] public string description;
     }

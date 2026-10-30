@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Taunt
   m_EditorClassIdentifier: 
   skillName: Taunt
-  description: Taunt nearby monsters for 4s.
+  description: Add large hate to nearby smart monsters (no effect on normal monsters).
   spCost: 15
   cooldown: 10
   effectType: 3
