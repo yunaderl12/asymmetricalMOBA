@@ -47,6 +47,15 @@ namespace Game.Combat
             TakeDamage(amount, null);
         }
 
+        /// Applies the defense formula: attack value is reduced by this object's Df (Physical) or mDf (Magical).
+        public void TakeDamage(int attack, GameObject attacker, DamageType type)
+        {
+            if (IsDead || attack <= 0) return;
+            int dmg = DamageCalculator.Calculate(attack, type, GetComponent<IDefenseSource>());
+            TakeDamage(dmg, attacker);
+        }
+
+        /// Raw damage, no defense applied (debug commands, HP adjustments).
         public void TakeDamage(int amount, GameObject attacker)
         {
             if (IsDead || amount <= 0) return;

@@ -15,6 +15,7 @@ namespace Game.Hero
         public int initialAtk;
         public int initialMAtk;
         public int initialDf;
+        public int initialMDf;
         public float initialSpd;
 
         [Header("Per-Level Growth")]
@@ -23,6 +24,7 @@ namespace Game.Hero
         public int atkGrowthPerLevel;
         public int mAtkGrowthPerLevel;
         public int dfGrowthPerLevel;
+        public int mDfGrowthPerLevel;
         public float spdGrowthPerLevel;
 
         [Header("Skills")]

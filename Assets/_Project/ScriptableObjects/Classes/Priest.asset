@@ -18,12 +18,14 @@ MonoBehaviour:
   initialAtk: 8
   initialMAtk: 10
   initialDf: 6
+  initialMDf: 10
   initialSpd: 5
   hpGrowthPerLevel: 10
   spGrowthPerLevel: 6
   atkGrowthPerLevel: 1
   mAtkGrowthPerLevel: 2
   dfGrowthPerLevel: 1
+  mDfGrowthPerLevel: 1
   spdGrowthPerLevel: 0
   classSkills:
   - {fileID: 11400000, guid: eff64c7b56f94404a874b4c35027ae74, type: 2}

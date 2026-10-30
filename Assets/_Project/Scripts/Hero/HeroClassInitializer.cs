@@ -5,7 +5,7 @@ using Game.Core;
 
 namespace Game.Hero
 {
-    public class HeroClassInitializer : MonoBehaviour
+    public class HeroClassInitializer : MonoBehaviour, IDefenseSource
     {
         [SerializeField] private HeroClassData classData;
         [SerializeField] private SkillData commonSkill;
@@ -15,9 +15,15 @@ namespace Game.Hero
         public int CurrentAtk { get; private set; }
         public int CurrentMAtk { get; private set; }
         public int CurrentDf { get; private set; }
+        public int CurrentMDf { get; private set; }
         public float CurrentSpd { get; private set; }
 
+        // Df buffs (Guard / IronWall / PowerItem) come through StatModifierContainer.
+        public int Df => Mathf.RoundToInt(CurrentDf * (mods != null ? mods.TotalDfMultiplier : 1f));
+        public int MDf => CurrentMDf;
+
         private HealthComponent health;
+        private StatModifierContainer mods;
         private ManaComponent mana;
         private HeroFPSController controller;
         private HeroAttack attack;
@@ -28,6 +34,7 @@ namespace Game.Hero
             mana = GetComponent<ManaComponent>();
             controller = GetComponent<HeroFPSController>();
             attack = GetComponent<HeroAttack>();
+            mods = GetComponent<StatModifierContainer>();
 
             if (GameSession.Instance != null)
             {
@@ -61,9 +68,10 @@ namespace Game.Hero
             CurrentAtk = classData.initialAtk;
             CurrentMAtk = classData.initialMAtk;
             CurrentDf = classData.initialDf;
+            CurrentMDf = classData.initialMDf;
             CurrentSpd = classData.initialSpd;
 
-            Debug.Log($"[HeroClass] {classData.className} initialized: HP={classData.initialHP}, SP={classData.initialSP}, Atk={CurrentAtk}, MAtk={CurrentMAtk}, Df={CurrentDf}, Spd={CurrentSpd}");
+            Debug.Log($"[HeroClass] {classData.className} initialized: HP={classData.initialHP}, SP={classData.initialSP}, Atk={CurrentAtk}, MAtk={CurrentMAtk}, Df={CurrentDf}, MDf={CurrentMDf}, Spd={CurrentSpd}");
         }
 
         public void ApplyLevelGrowth()
@@ -72,6 +80,7 @@ namespace Game.Hero
             CurrentAtk += classData.atkGrowthPerLevel;
             CurrentMAtk += classData.mAtkGrowthPerLevel;
             CurrentDf += classData.dfGrowthPerLevel;
+            CurrentMDf += classData.mDfGrowthPerLevel;
             CurrentSpd += classData.spdGrowthPerLevel;
 
             if (attack != null) attack.SetDamage(CurrentAtk);

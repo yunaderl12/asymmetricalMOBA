@@ -214,7 +214,7 @@ namespace Game.Monster
                 var hp = hit.collider.GetComponentInParent<HealthComponent>();
                 if (hp != null && hp.gameObject == target)
                 {
-                    hp.TakeDamage(data.atk, gameObject);
+                    hp.TakeDamage(data.atk, gameObject, DamageType.Physical);
                 }
             }
 

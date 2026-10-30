@@ -95,7 +95,7 @@ namespace Game.Bot
                     agent.SetDestination(transform.position);
                     if (Time.time - lastAttackTime >= attackInterval)
                     {
-                        hp.TakeDamage(attackDamage, gameObject);
+                        hp.TakeDamage(attackDamage, gameObject, DamageType.Physical);
                         lastAttackTime = Time.time;
                     }
                 }

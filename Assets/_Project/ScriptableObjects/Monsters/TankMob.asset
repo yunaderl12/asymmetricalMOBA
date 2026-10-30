@@ -16,6 +16,7 @@ MonoBehaviour:
   hp: 150
   atk: 10
   df: 3
+  mDf: 0
   spd: 2
   cost: 3
   spwnCool: 4

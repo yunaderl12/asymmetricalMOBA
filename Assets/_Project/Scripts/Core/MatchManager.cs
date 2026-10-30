@@ -117,6 +117,7 @@ namespace Game.Core
                 {
                     startTownHealth = hc;
                     startTownHealth.OnDeath += CheckHeroLoss;
+                    AttachCoreDefense(hc);
                 }
             }
 
@@ -132,9 +133,21 @@ namespace Game.Core
             {
                 demonCastleCoreHealth = castle.GetComponent<HealthComponent>();
                 if (demonCastleCoreHealth == null) demonCastleCoreHealth = castle.GetComponentInChildren<HealthComponent>();
-                if (demonCastleCoreHealth != null) demonCastleCoreHealth.OnDeath += CheckHeroWin;
+                if (demonCastleCoreHealth != null)
+                {
+                    demonCastleCoreHealth.OnDeath += CheckHeroWin;
+                    AttachCoreDefense(demonCastleCoreHealth);
+                }
             }
             Debug.Log($"[MatchManager] Bound. StartTown={(startTownHealth != null)} DK={(demonKingHealth != null)} DemonCastleCore={(demonCastleCoreHealth != null)}");
+        }
+
+        private static void AttachCoreDefense(HealthComponent core)
+        {
+            var def = core.GetComponent<FixedDefense>();
+            if (def == null) def = core.gameObject.AddComponent<FixedDefense>();
+            var cfg = BalanceConfig.Instance;
+            def.Set(cfg.coreDf, cfg.coreMDf);
         }
 
         private void EnterState(MatchState newState)

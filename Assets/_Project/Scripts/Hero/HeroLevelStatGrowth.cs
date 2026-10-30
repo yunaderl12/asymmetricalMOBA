@@ -46,7 +46,7 @@ namespace Game.Hero
 
             int newHP = health != null ? health.MaxHP : -1;
             int newSP = mana != null ? mana.MaxMP : -1;
-            Debug.Log($"[Hero] Lv {newLevel} stat growth: MaxHP={newHP}, MaxSP={newSP}, Atk={classInit.CurrentAtk}, MAtk={classInit.CurrentMAtk}, Df={classInit.CurrentDf}, Spd={classInit.CurrentSpd}");
+            Debug.Log($"[Hero] Lv {newLevel} stat growth: MaxHP={newHP}, MaxSP={newSP}, Atk={classInit.CurrentAtk}, MAtk={classInit.CurrentMAtk}, Df={classInit.CurrentDf}, MDf={classInit.CurrentMDf}, Spd={classInit.CurrentSpd}");
         }
     }
 }

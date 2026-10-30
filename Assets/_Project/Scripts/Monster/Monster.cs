@@ -8,7 +8,7 @@ namespace Game.Monster
 {
     [RequireComponent(typeof(NavMeshAgent))]
     [RequireComponent(typeof(HealthComponent))]
-    public class Monster : MonoBehaviour
+    public class Monster : MonoBehaviour, IDefenseSource
     {
         private enum BehaviorState { FollowingPath, ChasingHero }
 
@@ -37,6 +37,9 @@ namespace Game.Monster
                 return Mathf.Max(0, Mathf.RoundToInt(data.atk * mul));
             }
         }
+
+        public int Df => data != null ? Mathf.RoundToInt(data.df * (mods != null ? mods.TotalDfMultiplier : 1f)) : 0;
+        public int MDf => data != null ? data.mDf : 0;
 
         private NavMeshAgent agent;
         private HealthComponent health;

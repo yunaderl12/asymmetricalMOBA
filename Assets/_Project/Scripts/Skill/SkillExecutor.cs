@@ -115,7 +115,7 @@ namespace Game.Skill
                     var hp = hit.collider.GetComponentInParent<HealthComponent>();
                     if (hp != null && hp.gameObject != gameObject)
                     {
-                        hp.TakeDamage(dmg, gameObject);
+                        hp.TakeDamage(dmg, gameObject, ToDamageType(skill.damageType));
                     }
                 }
                 ShowBeam(origin, endPoint);
@@ -128,10 +128,20 @@ namespace Game.Skill
                 {
                     var hp = col.GetComponentInParent<HealthComponent>();
                     if (hp == null || hp.gameObject == gameObject) continue;
-                    hp.TakeDamage(dmg, gameObject);
+                    hp.TakeDamage(dmg, gameObject, ToDamageType(skill.damageType));
                     affected++;
                 }
                 Debug.Log($"[Skill] {skill.skillName} hit {affected} target(s) in area");
+            }
+        }
+
+        private static DamageType ToDamageType(SkillDamageType t)
+        {
+            switch (t)
+            {
+                case SkillDamageType.Physical: return DamageType.Physical;
+                case SkillDamageType.Magical: return DamageType.Magical;
+                default: return DamageType.True;
             }
         }
 

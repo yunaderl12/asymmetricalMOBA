@@ -9,6 +9,7 @@ namespace Game.Monster
         public int hp;
         public int atk;
         public int df;
+        public int mDf;
         public float spd;
         public int cost;
         public float spwnCool;

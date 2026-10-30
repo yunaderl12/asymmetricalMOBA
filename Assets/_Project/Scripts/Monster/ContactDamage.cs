@@ -31,7 +31,7 @@ namespace Game.Monster
                 var monster = GetComponentInParent<Monster>();
                 if (monster != null && monster.CurrentAtk > 0) dmg = monster.CurrentAtk;
                 var attacker = monster != null ? monster.gameObject : gameObject;
-                hp.TakeDamage(dmg, attacker);
+                hp.TakeDamage(dmg, attacker, DamageType.Physical);
                 nextTickTime[hp] = Time.time + tickInterval;
             }
         }

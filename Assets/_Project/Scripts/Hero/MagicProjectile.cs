@@ -34,7 +34,7 @@ namespace Game.Hero
             var hp = other.GetComponentInParent<HealthComponent>();
             if (hp != null && !hp.IsDead)
             {
-                hp.TakeDamage(damage, owner);
+                hp.TakeDamage(damage, owner, DamageType.Magical);
                 Destroy(gameObject);
             }
         }

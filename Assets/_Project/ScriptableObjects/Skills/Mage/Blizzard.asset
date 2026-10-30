@@ -18,6 +18,7 @@ MonoBehaviour:
   cooldown: 10
   effectType: 0
   damageType: 1
+  damageType: 1
   targetType: 2
   effectValue: 25
   range: 8
