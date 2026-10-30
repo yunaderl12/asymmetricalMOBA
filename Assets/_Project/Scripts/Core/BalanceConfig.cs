@@ -28,6 +28,14 @@ namespace Game.Core
         public float dkDetectDuration = 5f;
         public float dkDetectCooldown = 30f;
 
+        [Header("Warp Point Skill")]
+        [Tooltip("Cast time before moving to the warp point (seconds)")]
+        public float warpCastSeconds = 5f;
+        [Tooltip("Moving farther than this (m, horizontal) during the cast cancels it")]
+        public float warpCancelMoveDistance = 0.5f;
+        [Tooltip("A warp point can always be set within this radius (m) of StartTown")]
+        public float warpTownRadius = 20f;
+
         [Header("Demon King Level")]
         [Tooltip("Monster HP / Atk growth per Demon King level (0.05 = +5%/Lv)")]
         public float monsterStatGrowthPerDkLevel = 0.05f;

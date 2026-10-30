@@ -36,6 +36,12 @@ namespace Game.Skill
         public Color iconColor = new Color(0f, 0f, 0f, 0f); // alpha=0 -> use ownerClass.avatarColor or effectType fallback
         public HeroClassData ownerClass; // null = common skill
 
+        /// Common skills placed under Resources/CommonSkills, offered in the free slot in addition to the lobby's serialized list.
+        public static SkillData[] LoadExtraCommonSkills()
+        {
+            return Resources.LoadAll<SkillData>("CommonSkills");
+        }
+
         public float GetEffectValueAtLevel(int level)
         {
             int lv = Mathf.Clamp(level, 1, maxSkillLevel);

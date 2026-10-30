@@ -72,6 +72,7 @@ namespace Game.Skill
                 Debug.Log("[Skill] No skill in slot " + idx);
                 return;
             }
+            if (skill.skillName == WarpSkillName) { TryWarp(idx, skill); return; }
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
@@ -87,6 +88,38 @@ namespace Game.Skill
 
             float val = runtime.GetCurrentEffectValue(idx);
             Execute(skill, val);
+        }
+
+        public const string WarpSkillName = "WarpPoint";
+
+        /// Warp point skill: setting the point is free; moving costs SP and starts the cooldown only when the cast completes.
+        private void TryWarp(int idx, SkillData skill)
+        {
+            var warp = GetComponent<HeroWarpPoint>();
+            if (warp == null) warp = gameObject.AddComponent<HeroWarpPoint>();
+            if (warp.IsCasting)
+            {
+                Debug.Log("[Skill] WarpPoint already casting");
+                return;
+            }
+            if (!warp.HasPoint)
+            {
+                warp.TrySetPoint();
+                return;
+            }
+            if (!runtime.CanCast(idx))
+            {
+                float cd = runtime.GetCooldownRemaining(idx);
+                Debug.Log($"[Skill] WarpPoint on cooldown or low SP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
+                return;
+            }
+            warp.BeginCast(() =>
+            {
+                if (mana != null) mana.TryUseMana(skill.spCost);
+                runtime.StartCooldown(idx);
+                runtime.NotifyCast(idx);
+                if (regen != null) regen.NotifyActed();
+            });
         }
 
         private void Execute(SkillData skill, float effectValue)

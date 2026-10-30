@@ -306,6 +306,7 @@ namespace Game.UI
                 }
             }
             if (commonSkills != null) foreach (var s in commonSkills) if (s != null) list.Add(s);
+            foreach (var s in SkillData.LoadExtraCommonSkills()) if (s != null && !list.Contains(s)) list.Add(s);
             return list;
         }
 

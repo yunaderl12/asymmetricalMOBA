@@ -31,6 +31,7 @@ namespace Game.Core
             Register("commands", "デバッグキー一覧 表示切替", CommandsCmd);
             Register("skillup", "スキル [1-5] レベルアップ", SkillUpCmd);
             Register("status", "状態異常付与 [stun|slow|dot|silence] [秒=3] [self|near=self]", StatusCmd);
+            Register("warp", "ワープ地点 [info|set|go|clear] (set は範囲無視、go は詠唱なし)", WarpCmd);
         }
 
         public static void Register(string name, string description, CommandHandler handler)
@@ -237,6 +238,34 @@ namespace Game.Core
             var sec2 = StatusEffectController.Apply(target, type, sec, power, hero);
             if (sec2 == null) return "not applied";
             return type + " -> " + target.name + " (" + sec2.Remaining(type).ToString("F1") + "s)";
+        }
+
+        private static string WarpCmd(string[] args)
+        {
+            var hero = FindHero();
+            if (hero == null) return "hero not found";
+            var warp = hero.GetComponent<HeroWarpPoint>();
+            if (warp == null) warp = hero.AddComponent<HeroWarpPoint>();
+            string mode = args.Length > 0 ? args[0].ToLowerInvariant() : "info";
+            switch (mode)
+            {
+                case "set":
+                    warp.TrySetPoint(true);
+                    return "warp point set at " + warp.Point;
+                case "go":
+                    return warp.WarpNow() ? "warped to " + warp.Point : "no warp point";
+                case "clear":
+                    warp.ClearPoint();
+                    return "warp point cleared";
+                case "info":
+                    float progress, limit;
+                    bool ok = HeroWarpPoint.IsInWarpableArea(hero.transform.position, out progress, out limit);
+                    string limitText = float.IsNegativeInfinity(limit) ? "none" : limit.ToString("F1");
+                    return "here warpable=" + ok + " (progress " + progress.ToString("F1") + "m / destroyed-spawner limit " + limitText
+                        + ") point=" + (warp.HasPoint ? warp.Point.ToString() : "none");
+                default:
+                    return "usage: /debug warp [info|set|go|clear]";
+            }
         }
 
         private static string SkillUpCmd(string[] args)
