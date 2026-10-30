@@ -15,6 +15,10 @@ namespace Game.Monster
         public float spwnCool;
         public int maxSpwn;
         public int exp;
+        [Tooltip("Demon King level required to place this monster in a spawner")]
+        public int unlockDkLevel = 1;
+
+        public bool IsUnlockedAt(int dkLevel) => dkLevel >= unlockDkLevel;
         [TextArea(2, 5)] public string description;
     }
 }

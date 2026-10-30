@@ -10,6 +10,10 @@ namespace Game.Core
         public float damageK = 20f;
         public int minDamage = 1;
 
+        [Header("Demon King Level")]
+        [Tooltip("Monster HP / Atk growth per Demon King level (0.05 = +5%/Lv)")]
+        public float monsterStatGrowthPerDkLevel = 0.05f;
+
         [Header("Cores")]
         public int coreDf = 30;
         public int coreMDf = 30;

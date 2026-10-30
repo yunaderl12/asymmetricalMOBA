@@ -54,13 +54,7 @@ namespace Game.Monster
             get
             {
                 if (data == null) return 0;
-                int dkLevel = 1;
-                var dkGO = GameObject.FindWithTag("DemonKing");
-                if (dkGO != null)
-                {
-                    var lc = dkGO.GetComponent<Game.Core.LevelComponent>();
-                    if (lc != null) dkLevel = lc.CurrentLevel;
-                }
+                int dkLevel = DemonKingLevel.Current;
                 int growth = Mathf.Max(0, dkLevel - 1) * Mathf.Max(0, data.costPerDkLevel);
                 return data.maxCost + growth;
             }
@@ -69,12 +63,13 @@ namespace Game.Monster
         public bool CanAddMonster(MonsterData m)
         {
             if (m == null || data == null) return false;
+            if (!m.IsUnlockedAt(DemonKingLevel.Current)) return false;
             return (MaxCost - CurrentCost) >= m.cost;
         }
 
         public bool AddToInv(MonsterData m)
         {
-            if (!CanAddMonster(m)) { Debug.Log($"[Spawner] {name} cannot add {(m != null ? m.name : "null")}: cost {CurrentCost}/{MaxCost}, required {(m != null ? m.cost : 0)}"); return false; }
+            if (!CanAddMonster(m)) { Debug.Log($"[Spawner] {name} cannot add {(m != null ? m.name : "null")}: cost {CurrentCost}/{MaxCost}, required {(m != null ? m.cost : 0)}, unlock Lv{(m != null ? m.unlockDkLevel : 0)} (DK Lv{DemonKingLevel.Current})"); return false; }
             inv.Add(m);
             Debug.Log($"[Spawner] {name} added {m.monsterName} (cost {CurrentCost}/{MaxCost})");
             return true;
@@ -115,6 +110,10 @@ namespace Game.Monster
             Game.Core.VisionRing.Create(transform, data.attackRange, new Color(1f, 0f, 0.3f, 0.8f));
 
             TryResolveInvFromDeck();
+
+            int dkLevel = DemonKingLevel.Current;
+            int lockedCount = inv.RemoveAll(m => m != null && !m.IsUnlockedAt(dkLevel));
+            if (lockedCount > 0) Debug.LogWarning($"[Spawner] {name} dropped {lockedCount} monster(s) not yet unlocked at DK Lv{dkLevel}.");
 
             if (inv.Count > data.inv)
             {

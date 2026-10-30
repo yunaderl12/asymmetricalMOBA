@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using Game.Monster;
+using Game.Core;
 
 namespace Game.UI
 {
@@ -144,6 +145,7 @@ namespace Game.UI
             if (gridContent == null) return;
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
+            int dkLevel = DemonKingLevel.Current;
             var combined = new List<MonsterData>();
             if (includeEmptyOption) combined.Add(null);
             if (candidates != null) foreach (var c in candidates) if (c != null) combined.Add(c);
@@ -154,6 +156,8 @@ namespace Game.UI
                 int row = i / columns;
                 int col = i % columns;
                 bool overCost = (md != null && maxCost > 0 && md.cost > maxCost);
+                bool locked = (md != null && !md.IsUnlockedAt(dkLevel));
+                bool disabled = overCost || locked;
 
                 var go = new GameObject("Cand_" + (md != null ? md.name : "Empty"), typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
                 go.transform.SetParent(gridContent, false);
@@ -163,7 +167,7 @@ namespace Game.UI
                 rt.anchoredPosition = new Vector2(col * (cellSize.x + cellGap.x), -(row * (cellSize.y + cellGap.y)));
                 var img = go.GetComponent<Image>();
                 if (buttonSprite != null) { img.sprite = buttonSprite; img.type = Image.Type.Sliced; }
-                if (overCost) img.color = new Color(0.18f, 0.18f, 0.2f, 0.6f);
+                if (disabled) img.color = new Color(0.18f, 0.18f, 0.2f, 0.6f);
                 else img.color = md != null ? new Color(0.3f, 0.15f, 0.18f, 0.95f) : new Color(0.2f, 0.2f, 0.22f, 0.95f);
 
                 var lblGO = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
@@ -173,17 +177,18 @@ namespace Game.UI
                 lr.offsetMin = Vector2.zero; lr.offsetMax = Vector2.zero;
                 var lt = lblGO.GetComponent<Text>();
                 lt.font = font; lt.fontSize = 20; lt.fontStyle = FontStyle.Bold; lt.alignment = TextAnchor.MiddleCenter;
-                lt.color = overCost ? new Color(0.7f, 0.7f, 0.7f, 1f) : Color.white;
+                lt.color = disabled ? new Color(0.7f, 0.7f, 0.7f, 1f) : Color.white;
                 if (md != null)
                 {
                     string costStr = "Cost " + md.cost;
-                    if (overCost) costStr += " (上限超)";
+                    if (locked) costStr += " (魔王Lv" + md.unlockDkLevel + "で解禁)";
+                    else if (overCost) costStr += " (上限超)";
                     lt.text = md.monsterName + "\n" + costStr;
                 }
                 else lt.text = "(空)";
 
                 var btn = go.GetComponent<Button>();
-                btn.interactable = !overCost;
+                btn.interactable = !disabled;
                 MonsterData captured = md;
                 btn.onClick.AddListener(() => OnCandidateClicked(captured));
                 spawnedButtons.Add(go);

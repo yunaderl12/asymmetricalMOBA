@@ -34,9 +34,13 @@ namespace Game.Monster
             {
                 if (data == null) return 0;
                 float mul = mods != null ? mods.TotalAtkMultiplier : 1f;
-                return Mathf.Max(0, Mathf.RoundToInt(data.atk * mul));
+                return Mathf.Max(0, Mathf.RoundToInt(data.atk * levelMultiplier * mul));
             }
         }
+
+        /// HP / Atk multiplier from the Demon King level at spawn time.
+        public float LevelMultiplier => levelMultiplier;
+        private float levelMultiplier = 1f;
 
         public int Df => data != null ? Mathf.RoundToInt(data.df * (mods != null ? mods.TotalDfMultiplier : 1f)) : 0;
         public int MDf => data != null ? data.mDf : 0;
@@ -115,8 +119,9 @@ namespace Game.Monster
         private void ApplyData()
         {
             if (data == null) return;
+            levelMultiplier = DemonKingLevel.MonsterStatMultiplier(DemonKingLevel.Current);
             ApplySpeed();
-            if (health != null) health.SetMaxHP(data.hp);
+            if (health != null) health.SetMaxHP(Mathf.RoundToInt(data.hp * levelMultiplier));
             var expReward = GetComponent<ExpReward>();
             if (expReward != null) expReward.Exp = data.exp;
         }
