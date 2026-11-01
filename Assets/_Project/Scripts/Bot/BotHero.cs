@@ -22,6 +22,7 @@ namespace Game.Bot
         [SerializeField] private GameObject bodyVisual;
 
         private NavMeshAgent agent;
+        private CharacterModelAnimator modelAnim;
         private HealthComponent health;
         private Vector3 homePosition;
         private float lastAttackTime;
@@ -52,10 +53,21 @@ namespace Game.Bot
         {
             if (classData != null && health != null) health.SetMaxHP(classData.initialHP);
             if (health != null) health.OnDeath += OnDeath;
+            AttachModel();
             var st = GameObject.FindWithTag("StartTown");
             homePosition = st != null ? st.transform.position : transform.position;
             InvokeRepeating(nameof(Tick), 0.1f, 0.2f);
         }
+
+        private void AttachModel()
+        {
+            if (classData == null || string.IsNullOrEmpty(classData.modelPath)) return;
+            modelAnim = gameObject.AddComponent<CharacterModelAnimator>();
+            modelAnim.Configure(classData.modelPath, classData.modelMaterialPath, 1f, false, false);
+        }
+
+        // The model hides Body itself and plays its own death / respawn, so leave Body alone.
+        private bool UsesModel => modelAnim != null && modelAnim.HasModel;
 
         private void OnDestroy()
         {
@@ -98,6 +110,7 @@ namespace Game.Bot
                     {
                         hp.TakeDamage(attackDamage, gameObject, DamageType.Physical);
                         lastAttackTime = Time.time;
+                        if (modelAnim != null) modelAnim.PlayAttack();
                     }
                 }
             }
@@ -121,7 +134,7 @@ namespace Game.Bot
         private void OnDeath()
         {
             dead = true;
-            if (bodyVisual != null) bodyVisual.SetActive(false);
+            if (bodyVisual != null && !UsesModel) bodyVisual.SetActive(false);
             if (agent != null && agent.isOnNavMesh) agent.isStopped = true;
             StartCoroutine(RespawnAfter());
         }
@@ -137,7 +150,7 @@ namespace Game.Bot
                 if (agent.isOnNavMesh) agent.isStopped = false;
             }
             if (health != null) health.ResetHealth();
-            if (bodyVisual != null) bodyVisual.SetActive(true);
+            if (bodyVisual != null && !UsesModel) bodyVisual.SetActive(true);
             dead = false;
             state = BotState.Idle;
         }

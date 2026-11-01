@@ -58,6 +58,12 @@ namespace Game.Core
         public int coreDf = 30;
         public int coreMDf = 30;
 
+        [Header("Demon King Model")]
+        [Tooltip("Resources path of the Demon King model. Empty = no model (capsule body).")]
+        public string demonKingModelPath = "DemonKing/demonking";
+        [Tooltip("Scale of the Demon King model (heroes use 1)")]
+        public float demonKingModelScale = 1.1f;
+
         private static BalanceConfig instance;
 
         public static BalanceConfig Instance

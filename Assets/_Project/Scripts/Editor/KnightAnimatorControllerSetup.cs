@@ -124,7 +124,7 @@ namespace Game.Hero.EditorTools
             // Default state = Idle (so the controller boots into the alert pose).
             if (stateRefs.TryGetValue("Idle", out var idle)) sm.defaultState = idle;
 
-            // Trigger parameters (one per state). HeroKnightAnimator fires these.
+            // Trigger parameters (one per state). CharacterModelAnimator fires these.
             foreach (var s in States)
             {
                 controller.AddParameter("Trig_" + s.state, AnimatorControllerParameterType.Trigger);

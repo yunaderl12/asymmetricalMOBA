@@ -45,6 +45,11 @@ namespace Game.DemonKing
             if (inputs == null) inputs = new DemonKingInputActions();
         }
 
+        private void Start()
+        {
+            Game.Hero.CharacterModelAnimator.AttachDemonKingModel(gameObject);
+        }
+
         private void OnEnable()
         {
             if (inputs == null) inputs = new DemonKingInputActions();

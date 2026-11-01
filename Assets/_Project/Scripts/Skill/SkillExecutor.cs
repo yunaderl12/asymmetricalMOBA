@@ -52,8 +52,8 @@ namespace Game.Skill
         private void OnSkillCastPerformed(InputAction.CallbackContext _)
         {
             if (Game.UI.ConsoleUI.IsConsoleActive) return;
-            var knight = GetComponent<Game.Hero.HeroKnightAnimator>();
-            if (knight != null && knight.IsRespawnAnimPlaying) return;
+            var modelAnim = GetComponent<Game.Hero.CharacterModelAnimator>();
+            if (modelAnim != null && modelAnim.IsRespawnAnimPlaying) return;
             TryCast();
         }
 

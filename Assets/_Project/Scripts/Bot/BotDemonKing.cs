@@ -11,5 +11,10 @@ namespace Game.Bot
         {
             health = GetComponent<HealthComponent>();
         }
+
+        private void Start()
+        {
+            Game.Hero.CharacterModelAnimator.AttachDemonKingModel(gameObject);
+        }
     }
 }

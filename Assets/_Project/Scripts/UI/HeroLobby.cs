@@ -24,8 +24,8 @@ namespace Game.UI
         [SerializeField] private string userName = "ユーザー名";
 
         [Header("3D Class Previews (optional)")]
-        [Tooltip("Knight preview component in the scene. When Swordsman is selected, its RenderTexture is shown in the avatar area instead of the flat ellipse.")]
-        [SerializeField] private KnightAvatarPreview knightPreview;
+        [Tooltip("Model preview component in the scene. Shows the selected class's model (HeroClassData.modelPath) in the avatar area instead of the flat ellipse.")]
+        [SerializeField] private CharacterAvatarPreview modelPreview;
 
         private int selectedClassIndex = 0;
         private readonly SkillData[] currentSkills = new SkillData[5];
@@ -58,14 +58,13 @@ namespace Game.UI
             }
 
             BuildOverlayUI();
-            // Auto-spawn a KnightAvatarPreview if the Inspector reference is blank.
-            // Pairs with KnightAvatarPreview's Resources.Load fallback so the lobby
-            // works out of the box without manual scene wiring.
-            if (knightPreview == null)
+            // Auto-spawn a CharacterAvatarPreview if the Inspector reference is blank,
+            // so the lobby works out of the box without manual scene wiring.
+            if (modelPreview == null)
             {
-                var pvGO = new GameObject("KnightAvatarPreview_Auto");
-                knightPreview = pvGO.AddComponent<KnightAvatarPreview>();
-                Debug.Log("[HeroLobby] auto-spawned KnightAvatarPreview");
+                var pvGO = new GameObject("CharacterAvatarPreview_Auto");
+                modelPreview = pvGO.AddComponent<CharacterAvatarPreview>();
+                Debug.Log("[HeroLobby] auto-spawned CharacterAvatarPreview");
             }
             InitSkillsForClass();
             if (settingsPanel != null)
@@ -318,15 +317,9 @@ namespace Game.UI
             {
                 avatarView.SetAvatarColor(cls.avatarColor);
                 avatarView.SetClassName(cls.className);
-                // Show 3D Knight preview when Swordsman is selected; revert to flat oval otherwise.
-                bool isSwordsman = cls.className == "Swordsman";
-                bool hasPreview = knightPreview != null;
-                bool hasTex = hasPreview && knightPreview.Texture != null;
-                Debug.Log($"[HeroLobby] RefreshAvatar class='{cls.className}' isSwordsman={isSwordsman} knightPreview={(hasPreview ? "ok" : "NULL")} texture={(hasTex ? "ok" : "NULL")}");
-                if (isSwordsman && hasTex)
-                    avatarView.SetAvatar3D(knightPreview.Texture);
-                else
-                    avatarView.SetAvatar3D(null);
+                // Show the class's 3D model when it has one; revert to flat oval otherwise.
+                bool shown = modelPreview != null && modelPreview.ShowModel(cls.modelPath, cls.modelMaterialPath);
+                avatarView.SetAvatar3D(shown ? modelPreview.Texture : null);
             }
             avatarView.SetSkills(currentSkills, GetCurrentClassColor());
         }

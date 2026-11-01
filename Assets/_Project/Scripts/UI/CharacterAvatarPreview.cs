@@ -5,20 +5,19 @@ using UnityEngine.Playables;
 namespace Game.UI
 {
     /// <summary>
-    /// Renders a 3D model (e.g. the Knight FBX) into a RenderTexture so the lobby UI
-    /// can show it via a RawImage. Drop a Knight prefab/instance into the scene at
-    /// any out-of-view location (e.g. far x=200), assign it to <see cref="modelRoot"/>,
-    /// add this component on a separate GameObject, and reference Texture from your
-    /// avatar UI.
+    /// Renders a 3D character model into a RenderTexture so the lobby UI can show it
+    /// via a RawImage. Call <see cref="ShowModel"/> with a Resources path (e.g. the
+    /// selected class's HeroClassData.modelPath); the model is spawned out of view
+    /// (x=200) and plays the Knight alert clip (all models share the Knight skeleton).
     ///
     /// This avoids changing the lobby canvas mode — the avatar UI stays in
     /// ScreenSpaceOverlay and just shows the off-screen camera's output as a 2D image.
     /// </summary>
-    public class KnightAvatarPreview : MonoBehaviour
+    public class CharacterAvatarPreview : MonoBehaviour
     {
         [Header("Subject")]
-        [Tooltip("The 3D model GameObject (Knight prefab / FBX instance). Place it off-screen in the scene.")]
-        [SerializeField] private GameObject modelRoot;
+        [Tooltip("Where the model is spawned (keep it out of view of the lobby camera).")]
+        [SerializeField] private Vector3 stagePosition = new Vector3(200f, 0f, 0f);
 
         [Header("Camera framing")]
         [Tooltip("When true, the camera is positioned automatically so the model fits the texture. Disable to use the manual values below.")]
@@ -45,6 +44,9 @@ namespace Game.UI
         [SerializeField] private Vector3 lightEulerAngles = new Vector3(40f, -30f, 0f);
         [SerializeField] private float lightIntensity = 1.4f;
 
+        private GameObject modelRoot;
+        private string currentModelPath;
+        private string currentMaterialPath;
         private Camera previewCamera;
         private Light previewLight;
         public RenderTexture Texture { get; private set; }
@@ -65,6 +67,53 @@ namespace Game.UI
             if (previewCamera != null) Destroy(previewCamera.gameObject);
             if (previewLight != null) Destroy(previewLight.gameObject);
             if (playableGraph.IsValid()) playableGraph.Destroy();
+            if (modelRoot != null) Destroy(modelRoot);
+        }
+
+        /// <summary>
+        /// Swaps the previewed model. materialPath (optional) overrides every renderer's material.
+        /// Returns false when the model could not be loaded (the caller can fall back to the flat avatar).
+        /// </summary>
+        public bool ShowModel(string modelPath, string materialPath)
+        {
+            if (Texture == null || string.IsNullOrEmpty(modelPath)) return false;
+            if (modelRoot != null && modelPath == currentModelPath && materialPath == currentMaterialPath) return true;
+
+            var prefab = Resources.Load<GameObject>(modelPath);
+            if (prefab == null)
+            {
+                Debug.LogWarning($"[CharacterAvatarPreview] Could not load Resources/{modelPath}");
+                return false;
+            }
+            if (playableGraph.IsValid()) playableGraph.Destroy();
+            if (modelRoot != null) Destroy(modelRoot);
+
+            modelRoot = Instantiate(prefab, stagePosition, Quaternion.identity);
+            modelRoot.name = "Preview (" + prefab.name + ")";
+            currentModelPath = modelPath;
+            currentMaterialPath = materialPath;
+            if (!string.IsNullOrEmpty(materialPath))
+            {
+                var mat = Resources.Load<Material>(materialPath);
+                if (mat != null)
+                {
+                    foreach (var r in modelRoot.GetComponentsInChildren<Renderer>(true))
+                    {
+                        var mats = new Material[r.sharedMaterials.Length];
+                        for (int i = 0; i < mats.Length; i++) mats[i] = mat;
+                        r.sharedMaterials = mats;
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"[CharacterAvatarPreview] Resources/{materialPath} not found");
+                }
+            }
+
+            FrameCamera();
+            SetupAnimation();
+            Debug.Log($"[CharacterAvatarPreview] showing '{modelPath}'");
+            return true;
         }
 
         private float lastProgressLog;
@@ -78,51 +127,21 @@ namespace Game.UI
                 if (Time.unscaledTime - lastProgressLog > 2f)
                 {
                     lastProgressLog = Time.unscaledTime;
-                    Debug.Log($"[KnightAvatarPreview] clipPlayable.GetTime={t:F2}/{clipDuration:F2}s graphPlaying={playableGraph.IsPlaying()}");
+                    Debug.Log($"[CharacterAvatarPreview] clipPlayable.GetTime={t:F2}/{clipDuration:F2}s graphPlaying={playableGraph.IsPlaying()}");
                 }
             }
         }
 
         private void Setup()
         {
-            // Single FBX now holds mesh + every animation merged together.
-            if (modelRoot == null)
-            {
-                var prefab = Resources.Load<GameObject>("Knight/knight");
-                if (prefab == null)
-                {
-                    Debug.LogWarning("[KnightAvatarPreview] Could not load Resources/Knight/knight — is the FBX in a Resources folder?");
-                    return;
-                }
-                modelRoot = Instantiate(prefab, new Vector3(200f, 0f, 0f), Quaternion.identity);
-                modelRoot.name = "Knight_Auto (" + prefab.name + ")";
-                // Apply KnightMat to all renderers so the textures show up.
-                var mat = Resources.Load<Material>("Knight/KnightMat");
-                if (mat != null)
-                {
-                    foreach (var r in modelRoot.GetComponentsInChildren<Renderer>(true))
-                    {
-                        var mats = new Material[r.sharedMaterials.Length];
-                        for (int i = 0; i < mats.Length; i++) mats[i] = mat;
-                        r.sharedMaterials = mats;
-                    }
-                    Debug.Log("[KnightAvatarPreview] applied KnightMat to auto-loaded Knight");
-                }
-                else
-                {
-                    Debug.LogWarning("[KnightAvatarPreview] KnightMat not found in Resources/Knight/");
-                }
-            }
-
             // 1. RenderTexture
             Texture = new RenderTexture(textureWidth, textureHeight, 24, RenderTextureFormat.ARGB32);
             Texture.antiAliasing = antiAliasing;
             Texture.useMipMap = false;
             Texture.Create();
 
-            // 2. Camera
-            var camGO = new GameObject("KnightPreviewCamera");
-            camGO.transform.SetParent(modelRoot.transform, false);
+            // 2. Camera (placed by FrameCamera once a model is shown)
+            var camGO = new GameObject("CharacterPreviewCamera");
             previewCamera = camGO.AddComponent<Camera>();
             previewCamera.clearFlags = CameraClearFlags.SolidColor;
             previewCamera.backgroundColor = backgroundColor;
@@ -132,6 +151,25 @@ namespace Game.UI
             previewCamera.farClipPlane = 1000f;
             previewCamera.depth = -10; // render before any other main camera
 
+            // 3. Optional dedicated light so the subject is well-lit regardless of scene
+            if (spawnDedicatedLight)
+            {
+                var lightGO = new GameObject("CharacterPreviewLight");
+                lightGO.transform.position = stagePosition;
+                lightGO.transform.eulerAngles = lightEulerAngles;
+                previewLight = lightGO.AddComponent<Light>();
+                previewLight.type = LightType.Directional;
+                previewLight.intensity = lightIntensity;
+                previewLight.color = Color.white;
+                previewLight.shadows = LightShadows.None;
+            }
+
+            Debug.Log($"[CharacterAvatarPreview] ready: {textureWidth}x{textureHeight}, FOV {fieldOfView}");
+        }
+
+        private void FrameCamera()
+        {
+            var camT = previewCamera.transform;
             if (autoFrame && TryComputeModelBounds(out var bounds))
             {
                 // Distance required to fit bounds in the FOV (both axes).
@@ -142,34 +180,14 @@ namespace Game.UI
                 float distX = (bounds.size.x * 0.5f) / Mathf.Tan(halfHFovRad);
                 float distance = Mathf.Max(distX, distY) * framePadding;
                 Vector3 dir = viewDirection.sqrMagnitude > 1e-4f ? viewDirection.normalized : Vector3.back;
-                camGO.transform.position = bounds.center + dir * distance;
-                camGO.transform.LookAt(bounds.center);
-                Debug.Log($"[KnightAvatarPreview] auto-frame: center={bounds.center} size={bounds.size} dist={distance:F2}");
+                camT.position = bounds.center + dir * distance;
+                camT.LookAt(bounds.center);
             }
             else
             {
-                camGO.transform.localPosition = cameraLocalPosition;
-                Vector3 worldLookAt = modelRoot.transform.TransformPoint(cameraLookAtLocal);
-                camGO.transform.LookAt(worldLookAt);
+                camT.position = modelRoot.transform.TransformPoint(cameraLocalPosition);
+                camT.LookAt(modelRoot.transform.TransformPoint(cameraLookAtLocal));
             }
-
-            // 3. Optional dedicated light so the subject is well-lit regardless of scene
-            if (spawnDedicatedLight)
-            {
-                var lightGO = new GameObject("KnightPreviewLight");
-                lightGO.transform.SetParent(modelRoot.transform, false);
-                lightGO.transform.localEulerAngles = lightEulerAngles;
-                previewLight = lightGO.AddComponent<Light>();
-                previewLight.type = LightType.Directional;
-                previewLight.intensity = lightIntensity;
-                previewLight.color = Color.white;
-                previewLight.shadows = LightShadows.None;
-            }
-
-            // 4. Animation
-            SetupAnimation();
-
-            Debug.Log($"[KnightAvatarPreview] ready: {textureWidth}x{textureHeight}, FOV {fieldOfView}");
         }
 
         private void SetupAnimation()
@@ -179,7 +197,7 @@ namespace Game.UI
             if (animator == null)
             {
                 // Dump hierarchy + components so we can see what the Instantiate actually produced.
-                Debug.LogWarning($"[KnightAvatarPreview] no Animator found on '{modelRoot.name}'. Dumping hierarchy:");
+                Debug.LogWarning($"[CharacterAvatarPreview] no Animator found on '{modelRoot.name}'. Dumping hierarchy:");
                 foreach (var t in modelRoot.GetComponentsInChildren<Transform>(true))
                 {
                     string comps = "";
@@ -192,16 +210,14 @@ namespace Game.UI
                 }
                 // Add one. PlayableGraph still drives an empty Animator if no controller is set.
                 animator = modelRoot.AddComponent<Animator>();
-                var avatars = Resources.LoadAll<Avatar>("Knight/knight");
-                if (avatars == null || avatars.Length == 0) avatars = Resources.LoadAll<Avatar>("Knight");
-                if (avatars != null && avatars.Length > 0) { animator.avatar = avatars[0]; Debug.Log($"[KnightAvatarPreview] added Animator with avatar '{avatars[0].name}'"); }
-                else Debug.Log("[KnightAvatarPreview] added Animator (no Avatar found in Resources/Knight)");
+                var avatars = Resources.LoadAll<Avatar>(currentModelPath);
+                if (avatars != null && avatars.Length > 0) animator.avatar = avatars[0];
             }
 
             AnimationClip clip = FindAnimationClip();
             if (clip == null)
             {
-                Debug.LogWarning("[KnightAvatarPreview] no AnimationClip found anywhere under Resources/Knight/");
+                Debug.LogWarning("[CharacterAvatarPreview] no AnimationClip found anywhere under Resources/Knight/");
                 return;
             }
 
@@ -214,10 +230,10 @@ namespace Game.UI
             animator.applyRootMotion = false;
             animator.updateMode = AnimatorUpdateMode.UnscaledTime;
             animator.enabled = true;
-            Debug.Log($"[KnightAvatarPreview] animator pre-play: avatar={(animator.avatar != null ? animator.avatar.name : "NULL")} isHuman={animator.isHuman} hasController={(animator.runtimeAnimatorController != null)}");
+            Debug.Log($"[CharacterAvatarPreview] animator pre-play: avatar={(animator.avatar != null ? animator.avatar.name : "NULL")} isHuman={animator.isHuman} hasController={(animator.runtimeAnimatorController != null)}");
 
             clipDuration = clip.length;
-            playableGraph = PlayableGraph.Create("KnightAvatarPreview");
+            playableGraph = PlayableGraph.Create("CharacterAvatarPreview");
             playableGraph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
             clipPlayable = AnimationClipPlayable.Create(playableGraph, clip);
             clipPlayable.SetApplyFootIK(false);
@@ -225,7 +241,7 @@ namespace Game.UI
             var output = AnimationPlayableOutput.Create(playableGraph, "AnimationOutput", animator);
             output.SetSourcePlayable(clipPlayable);
             playableGraph.Play();
-            Debug.Log($"[KnightAvatarPreview] playing clip '{clip.name}' length={clipDuration:F2}s isLooping={clip.isLooping}");
+            Debug.Log($"[CharacterAvatarPreview] playing clip '{clip.name}' length={clipDuration:F2}s isLooping={clip.isLooping}");
         }
 
         private static AnimationClip FindAnimationClip()
@@ -233,7 +249,7 @@ namespace Game.UI
             // 1) Dedicated Alert FBX (Meshy AI Animation_Alert_frame_rate_60 baked in).
             //    Whatever clip is in this FBX IS the alert — return the longest non-stub.
             var alertClips = Resources.LoadAll<AnimationClip>("Knight/knight_alert");
-            Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight/knight_alert') -> {(alertClips != null ? alertClips.Length : 0)} clips");
+            Debug.Log($"[CharacterAvatarPreview] LoadAll<AnimationClip>('Knight/knight_alert') -> {(alertClips != null ? alertClips.Length : 0)} clips");
             if (alertClips != null && alertClips.Length > 0)
             {
                 foreach (var c in alertClips) if (c != null) Debug.Log($"  alert-clip: '{c.name}' length={c.length:F2}");
@@ -246,14 +262,14 @@ namespace Game.UI
                 }
                 if (best != null)
                 {
-                    Debug.Log($"[KnightAvatarPreview] selected '{best.name}' from knight_alert FBX (len={best.length:F2}s)");
+                    Debug.Log($"[CharacterAvatarPreview] selected '{best.name}' from knight_alert FBX (len={best.length:F2}s)");
                     return best;
                 }
             }
 
             // 2) Character FBX clips.
             var clipsFile = Resources.LoadAll<AnimationClip>("Knight/knight");
-            Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight/knight') -> {(clipsFile != null ? clipsFile.Length : 0)} clips");
+            Debug.Log($"[CharacterAvatarPreview] LoadAll<AnimationClip>('Knight/knight') -> {(clipsFile != null ? clipsFile.Length : 0)} clips");
             if (clipsFile != null)
             {
                 foreach (var c in clipsFile) if (c != null) Debug.Log($"  clip: '{c.name}' length={c.length:F2}");
@@ -263,7 +279,7 @@ namespace Game.UI
 
             // 3) Folder scan.
             var clipsFolder = Resources.LoadAll<AnimationClip>("Knight");
-            Debug.Log($"[KnightAvatarPreview] LoadAll<AnimationClip>('Knight') -> {(clipsFolder != null ? clipsFolder.Length : 0)} clips");
+            Debug.Log($"[CharacterAvatarPreview] LoadAll<AnimationClip>('Knight') -> {(clipsFolder != null ? clipsFolder.Length : 0)} clips");
             if (clipsFolder != null)
             {
                 foreach (var c in clipsFolder) if (c != null) Debug.Log($"  folder-clip: '{c.name}' length={c.length:F2}");
@@ -273,7 +289,7 @@ namespace Game.UI
 
             // 4) Last-ditch: untyped enumeration.
             var all = Resources.LoadAll("Knight");
-            Debug.Log($"[KnightAvatarPreview] LoadAll('Knight') (untyped) -> {(all != null ? all.Length : 0)} objects");
+            Debug.Log($"[CharacterAvatarPreview] LoadAll('Knight') (untyped) -> {(all != null ? all.Length : 0)} objects");
             if (all != null)
             {
                 foreach (var o in all)
@@ -298,7 +314,7 @@ namespace Game.UI
             if (clips == null || clips.Length == 0) return null;
 
             // Dump every clip we found with its length so we can see what the FBX exposed.
-            var concat = new System.Text.StringBuilder("[KnightAvatarPreview] all clips:");
+            var concat = new System.Text.StringBuilder("[CharacterAvatarPreview] all clips:");
             for (int i = 0; i < clips.Length; i++)
             {
                 var c = clips[i];
@@ -314,7 +330,7 @@ namespace Game.UI
                 if (c == null) continue;
                 if (c.name.IndexOf("Alert_frame_rate_60", System.StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    Debug.Log($"[KnightAvatarPreview] selected '{c.name}' (exact 'Alert_frame_rate_60' match, len={c.length:F2}s)");
+                    Debug.Log($"[CharacterAvatarPreview] selected '{c.name}' (exact 'Alert_frame_rate_60' match, len={c.length:F2}s)");
                     return c;
                 }
             }
@@ -327,7 +343,7 @@ namespace Game.UI
                     if (c == null) continue;
                     if (c.name.IndexOf(p, System.StringComparison.OrdinalIgnoreCase) >= 0)
                     {
-                        Debug.Log($"[KnightAvatarPreview] selected '{c.name}' (matched preference '{p}', len={c.length:F2}s)");
+                        Debug.Log($"[CharacterAvatarPreview] selected '{c.name}' (matched preference '{p}', len={c.length:F2}s)");
                         return c;
                     }
                 }
@@ -343,7 +359,7 @@ namespace Game.UI
             }
             if (longest != null)
             {
-                Debug.Log($"[KnightAvatarPreview] selected '{longest.name}' (longest useful clip, len={longest.length:F2}s)");
+                Debug.Log($"[CharacterAvatarPreview] selected '{longest.name}' (longest useful clip, len={longest.length:F2}s)");
                 return longest;
             }
 

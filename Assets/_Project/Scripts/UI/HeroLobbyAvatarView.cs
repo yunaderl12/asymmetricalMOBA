@@ -30,7 +30,7 @@ namespace Game.UI
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             // AvatarOval: anchored to the LEFT half of the screen (anchor 0.25, 1).
-            // Fills most of the left half vertically so the 3D Knight reads at a glance.
+            // Fills most of the left half vertically so the 3D model reads at a glance.
             var ovalGO = new GameObject("AvatarOval", typeof(RectTransform), typeof(CanvasRenderer));
             ovalGO.transform.SetParent(root, false);
             var oRT = (RectTransform)ovalGO.transform;
@@ -41,7 +41,7 @@ namespace Game.UI
             avatarOval.color = new Color(1f, 0.15f, 0.15f, 1f);
             avatarOval.raycastTarget = false;
 
-            // RawImage overlay for an optional 3D render (Knight via KnightAvatarPreview).
+            // RawImage overlay for an optional 3D render (via CharacterAvatarPreview).
             // Sized slightly larger than the oval so the model isn't cropped to the oval
             // shape, but anchored to the same area so it visually replaces the avatar.
             var imgGO = new GameObject("Avatar3D", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
@@ -126,7 +126,7 @@ namespace Game.UI
         }
 
         /// <summary>
-        /// Show a live 3D preview (e.g. from KnightAvatarPreview.Texture). Pass null to
+        /// Show a live 3D preview (e.g. from CharacterAvatarPreview.Texture). Pass null to
         /// fall back to the flat-coloured EllipseGraphic.
         /// </summary>
         public void SetAvatar3D(Texture tex)

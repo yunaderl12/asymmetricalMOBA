@@ -25,7 +25,7 @@ namespace Game.Hero
 
         private CharacterController controller;
         private HeroInputActions inputs;
-        private HeroKnightAnimator knightAnim; // lazily cached (added at runtime by HeroClassInitializer)
+        private CharacterModelAnimator modelAnim; // lazily cached (added at runtime by HeroClassInitializer)
 
         private float pitch;
         private float verticalVelocity;
@@ -33,8 +33,8 @@ namespace Game.Hero
 
         private bool IsAnimLocked()
         {
-            if (knightAnim == null) knightAnim = GetComponent<HeroKnightAnimator>();
-            return knightAnim != null && knightAnim.IsRespawnAnimPlaying;
+            if (modelAnim == null) modelAnim = GetComponent<CharacterModelAnimator>();
+            return modelAnim != null && modelAnim.IsRespawnAnimPlaying;
         }
 
         private void Awake()

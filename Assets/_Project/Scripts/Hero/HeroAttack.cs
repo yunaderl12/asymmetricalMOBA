@@ -25,12 +25,12 @@ namespace Game.Hero
         private float cooldownTimer;
         private HeroRegen regen;
         private HeroClassInitializer classInit;
-        private HeroKnightAnimator knightAnim;
+        private CharacterModelAnimator modelAnim;
 
         private bool IsAnimLocked()
         {
-            if (knightAnim == null) knightAnim = GetComponent<HeroKnightAnimator>();
-            return knightAnim != null && knightAnim.IsRespawnAnimPlaying;
+            if (modelAnim == null) modelAnim = GetComponent<CharacterModelAnimator>();
+            return modelAnim != null && modelAnim.IsRespawnAnimPlaying;
         }
 
         private void Awake()

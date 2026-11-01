@@ -36,3 +36,5 @@ MonoBehaviour:
   basicAttackMpCost: 0
   regenMultiplier: 2
   avatarColor: {r: 1, g: 0.15, b: 0.15, a: 1}
+  modelPath: Knight/knight
+  modelMaterialPath: Knight/KnightMat

@@ -51,11 +51,12 @@ namespace Game.Hero
 
             ApplyInitialStats();
 
-            // Visual avatar: only Swordsman has the Knight model for now.
-            if (classData.className == "Swordsman" && GetComponent<HeroKnightAnimator>() == null)
+            // Visual avatar from the class data (driven by local input, hidden from the own FPS camera).
+            if (!string.IsNullOrEmpty(classData.modelPath) && GetComponent<CharacterModelAnimator>() == null)
             {
-                gameObject.AddComponent<HeroKnightAnimator>();
-                Debug.Log("[HeroClass] added HeroKnightAnimator (Swordsman)");
+                var anim = gameObject.AddComponent<CharacterModelAnimator>();
+                anim.Configure(classData.modelPath, classData.modelMaterialPath, 1f, true, true);
+                Debug.Log($"[HeroClass] added CharacterModelAnimator ({classData.className}: {classData.modelPath})");
             }
         }
 

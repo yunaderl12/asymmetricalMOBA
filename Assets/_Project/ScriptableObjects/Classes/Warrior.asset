@@ -36,3 +36,5 @@ MonoBehaviour:
   basicAttackMpCost: 0
   regenMultiplier: 2
   avatarColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
+  modelPath: Warrior/warrior
+  modelMaterialPath: 

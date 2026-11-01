@@ -37,5 +37,11 @@ namespace Game.Hero
 
         [Header("Lobby Visual")]
         public Color avatarColor = new Color(1f, 0.15f, 0.15f, 1f);
+
+        [Header("Model")]
+        [Tooltip("Resources path of the character model (e.g. Knight/knight). Empty = no model (capsule body).")]
+        public string modelPath;
+        [Tooltip("Resources path of a material applied to every renderer (e.g. Knight/KnightMat). Empty = keep the FBX materials.")]
+        public string modelMaterialPath;
     }
 }
