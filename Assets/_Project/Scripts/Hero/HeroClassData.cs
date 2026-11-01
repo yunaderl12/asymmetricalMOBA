@@ -37,6 +37,10 @@ namespace Game.Hero
 
         [Header("Lobby Visual")]
         public Color avatarColor = new Color(1f, 0.15f, 0.15f, 1f);
+        [Tooltip("Full-body image shown large in the lobby settings panel. Empty = coloured oval.")]
+        public Sprite portrait;
+        [Tooltip("Round icon for the lobby class list. Empty = coloured circle.")]
+        public Sprite icon;
 
         [Header("Model")]
         [Tooltip("Resources path of the character model (e.g. Knight/knight). Empty = no model (capsule body).")]

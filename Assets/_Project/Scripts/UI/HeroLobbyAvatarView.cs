@@ -10,6 +10,7 @@ namespace Game.UI
         private EllipseGraphic avatarOval;
         private RawImage avatar3D; // shown instead of avatarOval when SetAvatar3D(tex) provides a texture
         private DiamondGraphic[] skillPentagons;
+        private Text[] skillNameTexts;
         private Text userNameText;
         private Text classNameText;
 
@@ -35,8 +36,9 @@ namespace Game.UI
             ovalGO.transform.SetParent(root, false);
             var oRT = (RectTransform)ovalGO.transform;
             oRT.anchorMin = new Vector2(0.25f, 1f); oRT.anchorMax = new Vector2(0.25f, 1f); oRT.pivot = new Vector2(0.5f, 1f);
-            oRT.sizeDelta = new Vector2(700f, 880f);
-            oRT.anchoredPosition = new Vector2(0f, -80f);
+            // Sized so the class name and the skill pentagon below still fit in 1080.
+            oRT.sizeDelta = new Vector2(600f, 720f);
+            oRT.anchoredPosition = new Vector2(0f, -60f);
             avatarOval = ovalGO.AddComponent<EllipseGraphic>();
             avatarOval.color = new Color(1f, 0.15f, 0.15f, 1f);
             avatarOval.raycastTarget = false;
@@ -97,14 +99,32 @@ namespace Game.UI
             var hRT = (RectTransform)holderGO.transform;
             hRT.anchorMin = new Vector2(0.25f, 1f); hRT.anchorMax = new Vector2(0.25f, 1f); hRT.pivot = new Vector2(0.5f, 0.5f);
             hRT.sizeDelta = new Vector2(280f, 280f);
-            hRT.anchoredPosition = new Vector2(0f, -1010f);
+            hRT.anchoredPosition = new Vector2(0f, -955f);
 
             // 5 diamonds, all sharing the same position & pivot (bottom-center).
             // Rotating each by i*72° around that shared bottom vertex produces a 5-petal pentagon.
+            // Petal i is skill slot i; its name sits just past the petal tip.
             skillPentagons = new DiamondGraphic[5];
-            float diamondSize = 100f;
+            skillNameTexts = new Text[5];
+            float diamondSize = 80f;
             for (int i = 0; i < 5; i++)
             {
+                float rad = i * 72f * Mathf.Deg2Rad;
+                var tipDir = new Vector2(-Mathf.Sin(rad), Mathf.Cos(rad));
+                var nGO = new GameObject("SkillName_" + i, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+                nGO.transform.SetParent(holderGO.transform, false);
+                var nRT = (RectTransform)nGO.transform;
+                nRT.anchorMin = new Vector2(0.5f, 0.5f); nRT.anchorMax = new Vector2(0.5f, 0.5f);
+                nRT.pivot = new Vector2(0.5f - tipDir.x * 0.5f, 0.5f - tipDir.y * 0.5f); // grow away from the pentagon
+                nRT.sizeDelta = new Vector2(140f, 22f);
+                nRT.anchoredPosition = tipDir * (diamondSize + 6f);
+                var nT = nGO.GetComponent<Text>();
+                nT.font = font; nT.fontSize = 16; nT.fontStyle = FontStyle.Bold;
+                nT.alignment = tipDir.x < -0.3f ? TextAnchor.MiddleRight : tipDir.x > 0.3f ? TextAnchor.MiddleLeft : TextAnchor.MiddleCenter;
+                nT.color = Color.white; nT.raycastTarget = false;
+                nGO.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.8f);
+                skillNameTexts[i] = nT;
+
                 var pGO = new GameObject("Diamond_" + i, typeof(RectTransform), typeof(CanvasRenderer));
                 pGO.transform.SetParent(holderGO.transform, false);
                 var pRT = (RectTransform)pGO.transform;
@@ -152,23 +172,21 @@ namespace Game.UI
         }
 
         /// <summary>
-        /// Color slots 0..3 with currentClassColor, slot 4 with skill.EffectiveIconColor.
+        /// Color slots 0..3 with currentClassColor, slot 4 with skill.EffectiveIconColor,
+        /// and label every petal with its skill name.
         /// </summary>
         public void SetSkills(SkillData[] skills, Color currentClassColor)
         {
             if (skillPentagons == null || skills == null) return;
             for (int i = 0; i < skillPentagons.Length; i++)
             {
-                if (skillPentagons[i] == null) continue;
-                if (i < 4)
+                var s = i < skills.Length ? skills[i] : null;
+                if (skillPentagons[i] != null)
                 {
-                    skillPentagons[i].color = currentClassColor;
+                    if (i < 4) skillPentagons[i].color = currentClassColor;
+                    else skillPentagons[i].color = s != null ? s.EffectiveIconColor() : new Color(0.4f, 0.4f, 0.4f, 1f);
                 }
-                else
-                {
-                    var s = i < skills.Length ? skills[i] : null;
-                    skillPentagons[i].color = s != null ? s.EffectiveIconColor() : new Color(0.4f, 0.4f, 0.4f, 1f);
-                }
+                if (skillNameTexts != null && skillNameTexts[i] != null) skillNameTexts[i].text = s != null ? s.skillName : "-";
             }
         }
 

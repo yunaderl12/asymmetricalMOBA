@@ -36,5 +36,7 @@ MonoBehaviour:
   basicAttackMpCost: 2
   regenMultiplier: 2
   avatarColor: {r: 0.7, g: 0.2, b: 0.95, a: 1}
+  portrait: {fileID: 21300000, guid: 2406c800fcdd14824a5c31e75f57d8ed, type: 3}
+  icon: {fileID: 21300000, guid: 7960fbb7e84414bd680daf7fcfff60ac, type: 3}
   modelPath: Mage/mage
   modelMaterialPath: 

@@ -16,9 +16,14 @@ namespace Game.UI
         public Action<int> OnSlotSelectedForReplace;
         public Action<SkillData> OnAvailableSkillPicked;
 
+        private static readonly Color SelectedOutlineColor = new Color(1f, 0.85f, 0.2f, 1f);
+
         private RectTransform root;
         private EllipseGraphic currentClassFill;
+        private Image currentClassPortrait;
         private Text currentClassNameText;
+        private Text noticeText;
+        private float noticeHideAt;
         private List<EllipseGraphic> carouselFills = new List<EllipseGraphic>();
         private List<DiamondGraphic> slotGraphics = new List<DiamondGraphic>();
         private List<Text> slotLabels = new List<Text>();
@@ -102,6 +107,17 @@ namespace Game.UI
             currentClassFill.color = new Color(1f, 0.15f, 0.15f, 1f);
             currentClassFill.raycastTarget = false;
 
+            // Class portrait (HeroClassData.portrait) drawn over the oval; the oval hides when a portrait exists.
+            var cpGO = new GameObject("Portrait", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            cpGO.transform.SetParent(ccGO.transform, false);
+            var cpRT = (RectTransform)cpGO.transform;
+            cpRT.anchorMin = Vector2.zero; cpRT.anchorMax = Vector2.one;
+            cpRT.offsetMin = Vector2.zero; cpRT.offsetMax = Vector2.zero;
+            currentClassPortrait = cpGO.GetComponent<Image>();
+            currentClassPortrait.preserveAspect = true;
+            currentClassPortrait.raycastTarget = false;
+            cpGO.SetActive(false);
+
             // Current class name below big oval
             var cnGO = MakeText(root, "CurClassName", font, 18, FontStyle.Bold, "Swordsman");
             var cnRT = (RectTransform)cnGO.transform;
@@ -125,6 +141,20 @@ namespace Game.UI
             for (int i = 0; i < 5; i++)
             {
                 int captured = i;
+
+                // Selection outline: a slightly larger yellow diamond created as an earlier
+                // sibling so it renders behind the slot (a child would render on top).
+                var outGO = new GameObject("Outline_" + i, typeof(RectTransform), typeof(CanvasRenderer));
+                outGO.transform.SetParent(root, false);
+                var oRT = (RectTransform)outGO.transform;
+                oRT.anchorMin = new Vector2(0.5f, 1f); oRT.anchorMax = new Vector2(0.5f, 1f); oRT.pivot = new Vector2(0.5f, 0.5f);
+                oRT.sizeDelta = new Vector2(pentSize + 16f, pentSize + 16f);
+                oRT.anchoredPosition = new Vector2(pentStartX + i * pentSpacing, -300f);
+                var outG = outGO.AddComponent<DiamondGraphic>();
+                outG.color = SelectedOutlineColor; outG.raycastTarget = false;
+                outGO.SetActive(false);
+                outlineHosts.Add(outGO);
+
                 var sGO = new GameObject("Slot_" + i, typeof(RectTransform), typeof(CanvasRenderer));
                 sGO.transform.SetParent(root, false);
                 var sRT = (RectTransform)sGO.transform;
@@ -138,37 +168,25 @@ namespace Game.UI
                 pg.raycastTarget = true;
                 slotGraphics.Add(pg);
 
-                // Outline (slightly larger diamond behind, white, initially disabled)
-                var outGO = new GameObject("Outline", typeof(RectTransform), typeof(CanvasRenderer));
-                outGO.transform.SetParent(sGO.transform, false);
-                var oRT = (RectTransform)outGO.transform;
-                oRT.anchorMin = Vector2.zero; oRT.anchorMax = Vector2.one;
-                oRT.offsetMin = new Vector2(-6f, -6f); oRT.offsetMax = new Vector2(6f, 6f);
-                var outG = outGO.AddComponent<DiamondGraphic>();
-                outG.color = Color.white; outG.raycastTarget = false;
-                outGO.transform.SetSiblingIndex(0); // render behind the slot diamond
-                outGO.SetActive(false);
-                outlineHosts.Add(outGO);
-
                 // Label below
                 var lblGO = MakeText(root, "SlotLbl_" + i, font, 11, FontStyle.Bold, "");
                 var lRT = (RectTransform)lblGO.transform;
                 lRT.anchorMin = new Vector2(0.5f, 1f); lRT.anchorMax = new Vector2(0.5f, 1f); lRT.pivot = new Vector2(0.5f, 1f);
                 lRT.sizeDelta = new Vector2(pentSize + 32f, 24f);
-                lRT.anchoredPosition = new Vector2(pentStartX + i * pentSpacing, -300f - pentSize / 2f - 4f);
+                lRT.anchoredPosition = new Vector2(pentStartX + i * pentSpacing, -300f - pentSize / 2f - 10f); // clears the selection outline's bottom tip
                 var lt = lblGO.GetComponent<Text>();
                 lt.alignment = TextAnchor.UpperCenter; lt.color = Color.white;
                 slotLabels.Add(lt);
 
+                // All slots are clickable so locked ones can explain themselves (HeroLobby decides).
                 var btn = sGO.AddComponent<Button>();
                 btn.targetGraphic = pg;
-                btn.interactable = (i == 4); // only slot 5 is interactive
                 slotButtons.Add(btn);
                 btn.onClick.AddListener(() =>
                 {
-                    selectedSlot = captured;
+                    selectedSlot = selectedSlot == captured ? -1 : captured;
                     RefreshOutlines();
-                    OnSlotSelectedForReplace?.Invoke(captured);
+                    OnSlotSelectedForReplace?.Invoke(selectedSlot);
                 });
 
                 // Hover-to-tooltip (1s)
@@ -177,6 +195,15 @@ namespace Game.UI
                 hover.data = null; // SetSkillSet fills this
                 slotHoverTriggers.Add(hover);
             }
+
+            // Notice line under the slots (e.g. "slots 1-4 are locked")
+            var ntGO = MakeText(root, "Notice", font, 14, FontStyle.Bold, "");
+            var ntRT = (RectTransform)ntGO.transform;
+            ntRT.anchorMin = new Vector2(0f, 1f); ntRT.anchorMax = new Vector2(1f, 1f); ntRT.pivot = new Vector2(0.5f, 1f);
+            ntRT.sizeDelta = new Vector2(-32f, 22f); ntRT.anchoredPosition = new Vector2(0f, -358f);
+            noticeText = ntGO.GetComponent<Text>();
+            noticeText.alignment = TextAnchor.MiddleCenter;
+            noticeText.color = SelectedOutlineColor;
 
             // Divider line
             var divGO = new GameObject("Divider", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -187,7 +214,7 @@ namespace Game.UI
             divGO.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.45f, 0.7f);
 
             // Available header
-            var avHGO = MakeText(root, "AvailHeader", font, 14, FontStyle.Normal, "他クラス + 共通スキル (クリックでスロット 5 と入替)");
+            var avHGO = MakeText(root, "AvailHeader", font, 14, FontStyle.Normal, "他クラス + 共通スキル（5枠目を選んでからクリックで入れ替え）");
             var ahRT = (RectTransform)avHGO.transform;
             ahRT.anchorMin = new Vector2(0f, 1f); ahRT.anchorMax = new Vector2(1f, 1f); ahRT.pivot = new Vector2(0f, 1f);
             ahRT.sizeDelta = new Vector2(-32f, 22f); ahRT.anchoredPosition = new Vector2(16f, -405f);
@@ -257,6 +284,18 @@ namespace Game.UI
                 var fEll = fGO.AddComponent<EllipseGraphic>();
                 fEll.color = c.avatarColor; fEll.raycastTarget = false;
                 carouselFills.Add(fEll);
+                if (c.icon != null)
+                {
+                    // Class icon (HeroClassData.icon) replaces the coloured circle.
+                    var iGO = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                    iGO.transform.SetParent(fGO.transform, false);
+                    var iRT = (RectTransform)iGO.transform;
+                    iRT.anchorMin = Vector2.zero; iRT.anchorMax = Vector2.one;
+                    iRT.offsetMin = Vector2.zero; iRT.offsetMax = Vector2.zero;
+                    var iImg = iGO.GetComponent<Image>();
+                    iImg.sprite = c.icon; iImg.preserveAspect = true; iImg.raycastTarget = false;
+                    fEll.enabled = false;
+                }
 
                 var nameGO = MakeText(bGO.transform, "Name", Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"), 12, FontStyle.Bold, c.className);
                 var nRT = (RectTransform)nameGO.transform;
@@ -271,8 +310,30 @@ namespace Game.UI
         public void SetCurrentClass(HeroClassData cls)
         {
             if (cls == null) return;
-            if (currentClassFill != null) currentClassFill.color = cls.avatarColor;
+            if (currentClassFill != null)
+            {
+                currentClassFill.color = cls.avatarColor;
+                currentClassFill.enabled = cls.portrait == null;
+            }
+            if (currentClassPortrait != null)
+            {
+                currentClassPortrait.sprite = cls.portrait;
+                currentClassPortrait.gameObject.SetActive(cls.portrait != null);
+            }
             if (currentClassNameText != null) currentClassNameText.text = cls.className;
+        }
+
+        /// Shows a short message under the skill slots for a few seconds.
+        public void ShowNotice(string message, float seconds = 2.5f)
+        {
+            if (noticeText == null) return;
+            noticeText.text = message;
+            noticeHideAt = Time.unscaledTime + seconds;
+        }
+
+        private void Update()
+        {
+            if (noticeText != null && noticeText.text.Length > 0 && Time.unscaledTime >= noticeHideAt) noticeText.text = "";
         }
 
         /// <summary>

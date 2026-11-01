@@ -36,5 +36,7 @@ MonoBehaviour:
   basicAttackMpCost: 0
   regenMultiplier: 2
   avatarColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
+  portrait: {fileID: 21300000, guid: 048eb0adc621a4ea4a7de2d1abe34b4a, type: 3}
+  icon: {fileID: 21300000, guid: 2875d728a71f64bb2a943993fe59954b, type: 3}
   modelPath: Warrior/warrior
   modelMaterialPath: 

@@ -261,13 +261,17 @@ namespace Game.UI
             }
         }
 
+        // slotIdx = -1 when the selected slot was clicked again (deselect).
         private void OnSlotSelectedForReplace(int slotIdx)
         {
-            if (slotIdx < 4)
+            if (slotIdx >= 0 && slotIdx < 4)
             {
-                Debug.Log("[HeroLobby] slots 1-4 are locked to current class");
                 selectedSlot = -1;
-                if (settingsPanel != null) settingsPanel.ClearSelectedSlot();
+                if (settingsPanel != null)
+                {
+                    settingsPanel.ClearSelectedSlot();
+                    settingsPanel.ShowNotice("スロット1〜4はクラス専用のため変更できません");
+                }
                 return;
             }
             selectedSlot = slotIdx;
@@ -278,19 +282,21 @@ namespace Game.UI
             if (s == null) return;
             if (selectedSlot != 4)
             {
-                Debug.Log("[HeroLobby] no slot selected (only slot 5 is changeable)");
+                if (settingsPanel != null) settingsPanel.ShowNotice("先に5枠目のスキルを選んでください");
                 return;
             }
             currentSkills[4] = s;
             RefreshAvatar();
             if (settingsPanel != null)
             {
+                // Slot 5 stays selected so another skill can be tried right away.
                 settingsPanel.SetSkillSet(currentSkills, GetCurrentClassColor());
-                settingsPanel.ClearSelectedSlot();
+                settingsPanel.PopulateAvailable(BuildAvailableSkillList());
             }
-            selectedSlot = -1;
         }
 
+        // Skills that can go into slot 5. The one currently equipped is left out, so a swap
+        // puts the old skill back into the list.
         public List<SkillData> BuildAvailableSkillList()
         {
             var list = new List<SkillData>();
@@ -304,8 +310,9 @@ namespace Game.UI
                     foreach (var s in c.classSkills) if (s != null) list.Add(s);
                 }
             }
-            if (commonSkills != null) foreach (var s in commonSkills) if (s != null) list.Add(s);
+            if (commonSkills != null) foreach (var s in commonSkills) if (s != null && !list.Contains(s)) list.Add(s);
             foreach (var s in SkillData.LoadExtraCommonSkills()) if (s != null && !list.Contains(s)) list.Add(s);
+            list.RemoveAll(s => System.Array.IndexOf(currentSkills, s) >= 0);
             return list;
         }
 

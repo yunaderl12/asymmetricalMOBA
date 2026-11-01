@@ -36,5 +36,7 @@ MonoBehaviour:
   basicAttackMpCost: 0
   regenMultiplier: 2
   avatarColor: {r: 1, g: 0.15, b: 0.15, a: 1}
+  portrait: {fileID: 21300000, guid: 6b31cb0a64c2d4f898c27c450af9c6cf, type: 3}
+  icon: {fileID: 21300000, guid: aecdec309d92845a2a13c7fa599630c4, type: 3}
   modelPath: Knight/knight
   modelMaterialPath: Knight/KnightMat

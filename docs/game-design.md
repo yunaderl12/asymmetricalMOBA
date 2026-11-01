@@ -296,6 +296,9 @@ Y < -10 で「Backspace でリスポーン」表示。Backspace キーで StartT
 - **シーン一覧（Build Settings 順）**
   - Title: 勇者/魔王 選択
   - HeroLobby: 勇者ロビー（クラス + スキル設定）
+    - 設定パネル: クラスの全身画像（HeroClassData.portrait）とクラス一覧の丸アイコン（HeroClassData.icon）。未設定なら色付きの楕円/丸で表示。現在の画像は 3D モデルから作った仮画像（Tools/Characters/Generate Class Portraits）で、正式イラストは同じ欄に差し替える
+    - スキル5枠: 枠をクリックすると黄色の外枠で選択表示。5枠目を選んだ状態で下の一覧のスキルをクリックすると入れ替わり、外したスキルは一覧に戻る。1〜4枠目はクリックすると「クラス専用のため変更できません」と表示
+    - 選んだ5スキルは、画面左下の 3D モデル下の五角形に色とスキル名で反映（1〜4枠はクラス色、5枠目はスキル色）
   - DemonLobby: 魔王ロビー（デッキ + スポナー初期設定）
   - MatchLobby: マッチング待機（HeroPanel / DemonPanel）
   - MainStage: 本戦
