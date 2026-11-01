@@ -71,9 +71,15 @@ namespace Game.DemonKing
             {
                 // Place the camera at the SPAWNER'S TOP (renderer bounds), not high above.
                 // Falls back to spawner.position + 3.5m if no renderer is found.
+                // Only visible renderers count: the original box renderer is disabled
+                // when the low-poly model is used, and its bounds put the camera at ground level.
                 float topY = sp.transform.position.y + 3.5f;
-                var rend = sp.GetComponentInChildren<Renderer>();
-                if (rend != null) topY = rend.bounds.max.y + 0.5f;
+                float maxY = float.NegativeInfinity;
+                foreach (var rend in sp.GetComponentsInChildren<Renderer>())
+                {
+                    if (rend.enabled) maxY = Mathf.Max(maxY, rend.bounds.max.y);
+                }
+                if (!float.IsNegativeInfinity(maxY)) topY = maxY + 0.5f;
                 spawnerOverheadPlainCamera.transform.position = new Vector3(
                     sp.transform.position.x,
                     topY,

@@ -211,7 +211,7 @@ namespace Game.UI
             warningGO.transform.SetParent(canvas, false);
             var rt = (RectTransform)warningGO.transform;
             rt.anchorMin = new Vector2(0.5f, 1f); rt.anchorMax = new Vector2(0.5f, 1f); rt.pivot = new Vector2(0.5f, 1f);
-            rt.sizeDelta = new Vector2(560f, 52f); rt.anchoredPosition = new Vector2(0f, -60f);
+            rt.sizeDelta = new Vector2(560f, 52f); rt.anchoredPosition = new Vector2(0f, -124f);
             var bg = warningGO.GetComponent<Image>();
             bg.color = new Color(0.55f, 0.05f, 0.05f, 0.9f);
             bg.raycastTarget = false;
@@ -267,7 +267,8 @@ namespace Game.UI
             titleGO.transform.SetParent(root.transform, false);
             var tRT = (RectTransform)titleGO.transform;
             tRT.anchorMin = new Vector2(0.5f, 1f); tRT.anchorMax = new Vector2(0.5f, 1f); tRT.pivot = new Vector2(0.5f, 1f);
-            tRT.sizeDelta = new Vector2(900f, 32f); tRT.anchoredPosition = new Vector2(0f, -16f);
+            // Below the top bar / match timer (MatchTimerCanvas draws above this canvas).
+            tRT.sizeDelta = new Vector2(900f, 32f); tRT.anchoredPosition = new Vector2(0f, -84f);
             var tT = titleGO.GetComponent<Text>();
             tT.font = font; tT.fontSize = 18; tT.fontStyle = FontStyle.Bold; tT.alignment = TextAnchor.MiddleCenter;
             tT.color = new Color(1f, 0.85f, 0.4f, 1f);

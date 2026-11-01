@@ -42,10 +42,13 @@ namespace Game.UI
         private void LateUpdate()
         {
             if (!billboard) return;
-            if (camTransform == null) camTransform = FindCameraTransform();
+            // Re-acquire when the active camera changes (e.g. Demon King TPS <-> overhead).
+            if (camTransform == null || !camTransform.gameObject.activeInHierarchy) camTransform = FindCameraTransform();
             if (camTransform == null) return;
 
-            transform.LookAt(camTransform);
+            // Match the camera's rotation instead of LookAt: a UI canvas faces -forward,
+            // so LookAt(camera) showed the text mirrored.
+            transform.rotation = camTransform.rotation;
         }
 
         private static Transform FindCameraTransform()

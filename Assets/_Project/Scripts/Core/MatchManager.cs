@@ -188,6 +188,7 @@ namespace Game.Core
             if (GameSession.Instance != null)
             {
                 GameSession.Instance.LastWinner = w;
+                GameSession.Instance.LastMatchStats = null; // don't carry over the previous match's stats
                 var hero = GameObject.FindWithTag("Player");
                 if (hero != null)
                 {

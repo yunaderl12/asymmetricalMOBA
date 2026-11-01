@@ -29,10 +29,12 @@ namespace Game.UI
         private string buffer = "";
         private bool textInputSubscribed;
         private int suppressOpenFrame = -1;
+        private Graphic chatLogBackground;
 
         private void Awake()
         {
             Instance = this;
+            if (chatLogPanel != null) chatLogBackground = chatLogPanel.GetComponent<Graphic>();
             if (inputPanel != null) inputPanel.SetActive(false);
             if (inputField != null) { inputField.readOnly = true; inputField.interactable = false; }
         }
@@ -66,6 +68,8 @@ namespace Game.UI
             }
 
             UpdateChatFade();
+            // The log background only shows while typing or while there are messages.
+            if (chatLogBackground != null) chatLogBackground.enabled = IsActive || entries.Count > 0;
         }
 
         private void OpenInput(string prefix)

@@ -86,7 +86,8 @@ namespace Game.UI
                 int total = botCount; // 4 BOT visible; human +1 implied
                 int readyCount = 0;
                 if (GameSession.Instance != null) foreach (var b in GameSession.Instance.CurrentMatchBots) if (b.isReady) readyCount++;
-                readyButtonLabel.text = "準備完了 (" + readyCount + "/" + total + " Ready)";
+                // Kept short: "(n/n Ready)" overflowed the button (best fit mis-measures the fallback Japanese glyphs).
+                readyButtonLabel.text = "準備完了 (" + readyCount + "/" + total + ")";
             }
             else
             {

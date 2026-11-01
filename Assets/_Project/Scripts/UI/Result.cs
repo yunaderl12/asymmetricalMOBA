@@ -19,7 +19,10 @@ namespace Game.UI
             if (returnToLobbyButton != null)
                 returnToLobbyButton.onClick.AddListener(OnReturnClicked);
 
+            // Stats are only recorded for a human hero (StatTracker). Hide the placeholder otherwise.
             var session = GameSession.Instance;
+            if (statsText != null && (session == null || session.LastMatchStats == null))
+                statsText.gameObject.SetActive(false);
             if (session != null)
             {
                 if (winnerText != null)
