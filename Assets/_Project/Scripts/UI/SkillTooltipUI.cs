@@ -78,7 +78,7 @@ namespace Game.UI
         {
             if (s == null) { Hide(); return; }
             if (nameText != null) nameText.text = s.skillName;
-            if (costText != null) costText.text = $"MP {s.spCost}   CD {s.cooldown:F0}s";
+            if (costText != null) costText.text = $"SP {s.spCost}   CT {s.cooldown:0.#}s";
             if (descText != null) descText.text = string.IsNullOrEmpty(s.description) ? "(説明なし)" : s.description;
             gameObject.SetActive(true);
             transform.SetAsLastSibling();

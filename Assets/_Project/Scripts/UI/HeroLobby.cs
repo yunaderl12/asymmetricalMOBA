@@ -282,7 +282,7 @@ namespace Game.UI
             if (s == null) return;
             if (selectedSlot != 4)
             {
-                if (settingsPanel != null) settingsPanel.ShowNotice("先に5枠目のスキルを選んでください");
+                if (settingsPanel != null) settingsPanel.ShowNotice("入れ替えるときは先に5枠目を選んでください");
                 return;
             }
             currentSkills[4] = s;

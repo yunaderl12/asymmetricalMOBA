@@ -35,6 +35,8 @@ namespace Game.UI
         private int selectedSlot = -1;
         private GameObject clickOutsideBackdrop;
         private SkillTooltipUI tooltipUI;
+        private SkillDetailView detailView;
+        private HeroClassData shownClass;
         private readonly List<SkillHoverTrigger> slotHoverTriggers = new List<SkillHoverTrigger>();
 
         public static HeroLobbySettingsPanel Create(RectTransform parent)
@@ -186,6 +188,7 @@ namespace Game.UI
                 {
                     selectedSlot = selectedSlot == captured ? -1 : captured;
                     RefreshOutlines();
+                    if (detailView != null) detailView.Show(slotHoverTriggers[captured].data);
                     OnSlotSelectedForReplace?.Invoke(selectedSlot);
                 });
 
@@ -214,7 +217,7 @@ namespace Game.UI
             divGO.GetComponent<Image>().color = new Color(0.4f, 0.4f, 0.45f, 0.7f);
 
             // Available header
-            var avHGO = MakeText(root, "AvailHeader", font, 14, FontStyle.Normal, "他クラス + 共通スキル（5枠目を選んでからクリックで入れ替え）");
+            var avHGO = MakeText(root, "AvailHeader", font, 14, FontStyle.Normal, "他クラス + 共通スキル（クリックで詳細表示。5枠目を選んでいるときは入れ替え）");
             var ahRT = (RectTransform)avHGO.transform;
             ahRT.anchorMin = new Vector2(0f, 1f); ahRT.anchorMax = new Vector2(1f, 1f); ahRT.pivot = new Vector2(0f, 1f);
             ahRT.sizeDelta = new Vector2(-32f, 22f); ahRT.anchoredPosition = new Vector2(16f, -405f);
@@ -228,6 +231,12 @@ namespace Game.UI
             availableGrid.anchorMin = new Vector2(0.5f, 1f); availableGrid.anchorMax = new Vector2(0.5f, 1f); availableGrid.pivot = new Vector2(0.5f, 1f);
             availableGrid.sizeDelta = new Vector2(560f, 360f);
             availableGrid.anchoredPosition = new Vector2(0f, -460f);
+
+            // Detail of the last clicked skill, in the free space under the grid (3 rows end near -740).
+            detailView = SkillDetailView.Create(root, font);
+            var dtRT = (RectTransform)detailView.transform;
+            dtRT.anchorMin = new Vector2(0.5f, 1f); dtRT.anchorMax = new Vector2(0.5f, 1f); dtRT.pivot = new Vector2(0.5f, 1f);
+            dtRT.sizeDelta = new Vector2(880f, 160f); dtRT.anchoredPosition = new Vector2(0f, -760f);
 
             // Close hint at bottom
             var hintGO = MakeText(root, "Hint", font, 12, FontStyle.Italic, "Esc キーでパネルを閉じる");
@@ -321,6 +330,9 @@ namespace Game.UI
                 currentClassPortrait.gameObject.SetActive(cls.portrait != null);
             }
             if (currentClassNameText != null) currentClassNameText.text = cls.className;
+            // A class change swaps slots 1-4, so the shown detail may no longer be equipped.
+            if (cls != shownClass && detailView != null) detailView.Show(null);
+            shownClass = cls;
         }
 
         /// Shows a short message under the skill slots for a few seconds.
@@ -395,7 +407,11 @@ namespace Game.UI
                 var btn = go.AddComponent<Button>();
                 btn.targetGraphic = pg;
                 var captured = s;
-                btn.onClick.AddListener(() => OnAvailableSkillPicked?.Invoke(captured));
+                btn.onClick.AddListener(() =>
+                {
+                    if (detailView != null) detailView.Show(captured);
+                    OnAvailableSkillPicked?.Invoke(captured);
+                });
 
                 // Hover-to-tooltip (1s)
                 var hover = go.AddComponent<SkillHoverTrigger>();
