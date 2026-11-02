@@ -35,8 +35,14 @@ namespace Game.Combat
             int assistExp = exp / 2;
 
             ExpComponent killerEC = null;
-            if (info.lastHitter != null) killerEC = info.lastHitter.GetComponentInParent<ExpComponent>();
-            if (killerEC != null) killerEC.AddExp(killerExp);
+            // 塔など経験値を持たない相手が倒したときは、最後に攻撃した勇者に入る。
+            var killer = info.lastHitter != null && info.lastHitter.GetComponentInParent<ExpComponent>() != null ? info.lastHitter : health.LastAttackerWith<ExpComponent>();
+            if (killer != null) killerEC = killer.GetComponentInParent<ExpComponent>();
+            if (killerEC != null)
+            {
+                killerEC.AddExp(killerExp);
+                Game.Skill.ExpOrbBurst.Spawn(transform.position + Vector3.up, killerEC.transform, killerExp);
+            }
 
             var sb = new StringBuilder();
             int assistCount = 0;
@@ -53,7 +59,7 @@ namespace Game.Combat
                 }
             }
 
-            string killerName = info.lastHitter != null ? info.lastHitter.name : "?";
+            string killerName = killer != null ? killer.name : (info.lastHitter != null ? info.lastHitter.name : "?");
             string assistStr = assistCount > 0 ? sb.ToString().TrimEnd() : "-";
             Debug.Log($"[ExpReward] {name} killed by {killerName} (+{killerExp}), assists: {assistStr} (+{assistExp} each)");
 

@@ -79,6 +79,17 @@ namespace Game.Combat
             }
         }
 
+        /// 直近の攻撃者のうち、T を持つ者で最後に攻撃した相手（アシスト時間内）。いなければ null。
+        public GameObject LastAttackerWith<T>() where T : Component
+        {
+            for (int i = recentDamages.Count - 1; i >= 0; i--)
+            {
+                var attacker = recentDamages[i].attacker;
+                if (attacker != null && attacker.GetComponentInParent<T>() != null) return attacker;
+            }
+            return null;
+        }
+
         private DeathInfo BuildDeathInfo()
         {
             GameObject lastHitter = recentDamages.Count > 0 ? recentDamages[recentDamages.Count - 1].attacker : null;

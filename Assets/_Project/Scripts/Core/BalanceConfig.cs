@@ -36,6 +36,16 @@ namespace Game.Core
         [Tooltip("A warp point can always be set within this radius (m) of StartTown")]
         public float warpTownRadius = 20f;
 
+        [Header("Archer Tower")]
+        [Tooltip("Enemies inside this radius get shot (m)")]
+        public float archerTowerRange = 22f;
+        [Tooltip("Physical attack value of one arrow")]
+        public int archerTowerDamage = 15;
+        [Tooltip("Seconds between shots of one tower")]
+        public float archerTowerInterval = 1.5f;
+        [Tooltip("Arrow flight speed (m/s)")]
+        public float archerArrowSpeed = 32f;
+
         [Header("Blizzard Skill")]
         [Tooltip("How fast the line of ice spikes runs along the ground (m/s)")]
         public float blizzardSpikeSpeed = 40f;
@@ -50,7 +60,7 @@ namespace Game.Core
         [Tooltip("Time to fly from the hover point down to StartTown (seconds)")]
         public float teleportTravelSeconds = 2.5f;
         [Tooltip("Minimum height of the hover point above the ground (m); longer flights go higher")]
-        public float teleportArcHeight = 30f;
+        public float teleportArcHeight = 20f;
         [Tooltip("Hero stays locked after landing (seconds)")]
         public float teleportLandingSeconds = 0.3f;
 

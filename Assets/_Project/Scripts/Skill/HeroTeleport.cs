@@ -24,7 +24,7 @@ namespace Game.Skill
         private const float WindUpSquash = 0.4f;
         private const float StretchThin = 0.12f;
         private const float StretchTall = 3.5f;
-        private const float ArcHeightPerDistance = 0.2f;
+        private const float ArcHeightPerDistance = 0.133f;
         private const float ChargeSquash = 0.3f;
         private const float FinalSquashSeconds = 0.5f;
         private const float WindUpRingSeconds = 1f;

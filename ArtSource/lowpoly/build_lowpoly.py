@@ -1,6 +1,7 @@
 # Builds the placeholder low-poly environment (StartTown / DemonCastle / meadow field) and exports FBX for Unity.
 # Run headless:
-#   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P ArtSource/lowpoly/build_lowpoly.py -- "<repo root>"
+#   /Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup -P ArtSource/lowpoly/build_lowpoly.py -- "<repo root>" [only.fbx]
+# Giving only.fbx exports just that model and leaves the other FBX files and the .blend untouched.
 # Coordinates: Blender (x, y, z) = Unity (x, z, y) before import. Each model has Marker_PlusX / Marker_PlusZ
 # empties so the Unity placer can fix any axis flip from the FBX conversion.
 import bpy
@@ -12,6 +13,7 @@ import sys
 from mathutils import Matrix, Vector, noise
 
 ROOT = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else os.getcwd()
+ONLY = sys.argv[sys.argv.index("--") + 2] if "--" in sys.argv and len(sys.argv) > sys.argv.index("--") + 2 else None
 OUT_FBX = os.path.join(ROOT, "Assets", "_Project", "Art", "LowPoly")
 OUT_SRC = os.path.join(ROOT, "ArtSource", "lowpoly")
 os.makedirs(OUT_FBX, exist_ok=True)
@@ -645,10 +647,72 @@ def build_castle():
     return col, root
 
 
+# ================================================================ ARCHER TOWER
+def build_archer_tower():
+    """Stands at the town gate. Tower_Archer turns toward its target (origin on the tower axis, faces +x).
+    Tower_Arrow is the template each shot clones (points along +x)."""
+    rng = random.Random(41)
+    col, root = new_model("LP_ArcherTower")
+    g = Group("Tower_Body", rng)
+
+    floor = 6.2
+    g.cyl(P["stone_dark"], (0, 0, 0), 2.0, 0.7, n=8, r2=1.7)
+    g.cyl(P["stone"], (0, 0, 0.7), 1.65, floor - 0.7, n=8, r2=1.35, jitter=0.02)
+    for z in (2.4, 4.2):
+        g.cyl(P["stone_dark"], (0, 0, z), 1.62 - z * 0.05, 0.16, n=8)
+    g.box(P["wood_dark"], (1.6, 0, 1.1), (0.14, 1.0, 2.2))
+    # Platform with a low wall
+    g.cyl(P["wood"], (0, 0, floor - 0.25), 2.1, 0.25, n=8)
+    for i in range(8):
+        a = i * math.pi / 4 + math.pi / 8
+        g.box(P["stone"], (math.cos(a) * 1.95, math.sin(a) * 1.95, floor + 0.3), (0.5, 0.5, 0.65), rotz=a)
+    # Roof on four posts
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            g.cyl(P["wood_dark"], (sx * 1.35, sy * 1.35, floor), 0.1, 2.9, n=6)
+    g.cone(P["roof_b"], (0, 0, floor + 2.9), 2.7, 1.9, n=8)
+    g.cone(P["flower_y"], (0, 0, floor + 4.75), 0.14, 0.4, n=6)
+    # Banners
+    for sy in (-1, 1):
+        g.box(P["flag_blue"], (0, sy * 1.5, 4.9), (0.9, 0.06, 1.6))
+    g.build(root, col)
+
+    a = Group("Tower_Archer", rng)
+    a.box(P["wood_dark"], (0, -0.14, 0.3), (0.2, 0.2, 0.6))
+    a.box(P["wood_dark"], (0, 0.14, 0.3), (0.2, 0.2, 0.6))
+    a.cyl(P["flag_blue"], (0, 0, 0.55), 0.34, 0.75, n=8, r2=0.26)
+    a.ico(P["plaster"], (0, 0, 1.55), 0.27, sub=1)
+    a.cone(P["roof_b"], (-0.02, 0, 1.58), 0.34, 0.5, n=8)
+    a.box(P["plaster"], (0.32, 0.18, 1.12), (0.65, 0.12, 0.12))
+    a.box(P["plaster"], (0.32, -0.18, 1.12), (0.65, 0.12, 0.12))
+    # Bow: a shallow arc of short sticks in the x-z plane, then the string.
+    points = [(0.62 + 0.26 * math.cos(t), 1.12 + 0.72 * math.sin(t)) for t in [math.radians(d) for d in range(-90, 91, 30)]]
+    for (x0, z0), (x1, z1) in zip(points, points[1:]):
+        a.box(P["wood_dark"], ((x0 + x1) / 2, 0, (z0 + z1) / 2), (max(abs(x1 - x0), 0.07), 0.07, max(abs(z1 - z0), 0.07)))
+    a.box(P["flower_w"], (0.62, 0, 1.12), (0.02, 0.02, 1.44))
+    archer = a.build(root, col)
+    archer.location = (0, 0, floor)
+
+    r = Group("Tower_Arrow", rng)
+    r.box(P["wood"], (0, 0, 0), (1.5, 0.07, 0.07))
+    r.box(P["stone_dark"], (0.8, 0, 0), (0.16, 0.13, 0.13))
+    r.box(P["stone_dark"], (0.92, 0, 0), (0.1, 0.06, 0.06))
+    r.box(P["flower_w"], (-0.66, 0, 0), (0.24, 0.24, 0.02))
+    r.box(P["flower_w"], (-0.66, 0, 0), (0.24, 0.02, 0.24))
+    r.build(root, col)
+
+    add_markers(col, root, 10.0, 10.0)
+    return col, root
+
+
 # ================================================================ main
-models = [(build_field(), "LP_Field.fbx"), (build_town(), "LP_StartTown.fbx"), (build_castle(), "LP_DemonCastle.fbx")]
+models = [(build_field(), "LP_Field.fbx"), (build_town(), "LP_StartTown.fbx"), (build_castle(), "LP_DemonCastle.fbx"), (build_archer_tower(), "LP_ArcherTower.fbx")]
 for (col, root), fn in models:
-    export(col, root, fn)
+    if ONLY is None or fn == ONLY:
+        export(col, root, fn)
+if ONLY is not None:
+    print("LOWPOLY_DONE")
+    sys.exit(0)
 
 # Lay the models out like the stage for the .blend preview (FBX export above used local origins).
 for (col, root), fn in models:
