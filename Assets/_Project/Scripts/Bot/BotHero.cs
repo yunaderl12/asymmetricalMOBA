@@ -54,8 +54,9 @@ namespace Game.Bot
             if (classData != null && health != null) health.SetMaxHP(classData.initialHP);
             if (health != null) health.OnDeath += OnDeath;
             AttachModel();
-            var st = GameObject.FindWithTag("StartTown");
-            homePosition = st != null ? st.transform.position : transform.position;
+            // スポーン地点（町の地面）を家にする。町の中心はコアの箱の内側で、
+            // そこへワープするとコアの上の NavMesh に乗って降りられなくなる。
+            homePosition = transform.position;
             InvokeRepeating(nameof(Tick), 0.1f, 0.2f);
         }
 
