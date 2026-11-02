@@ -24,6 +24,7 @@ namespace Game.Skill
         private Game.Hero.HeroRegen regen;
         private FireballCast fireball;
         private HeroTeleport teleport;
+        private BlizzardCast blizzard;
 
         private void Awake()
         {
@@ -64,6 +65,7 @@ namespace Game.Skill
             if (runtime == null) return;
             if (fireball != null && fireball.IsCasting) return;
             if (teleport != null && teleport.IsBusy) return;
+            if (blizzard != null && blizzard.IsPosing) return;
             if (!StatusEffectController.CanUseSkills(gameObject))
             {
                 Debug.Log("[Skill] cannot cast while stunned / silenced");
@@ -79,6 +81,7 @@ namespace Game.Skill
             if (skill.skillName == WarpSkillName) { TryWarp(idx, skill); return; }
             if (skill.skillName == FireballSkillName) { TryFireball(idx, skill); return; }
             if (skill.skillName == TeleportSkillName) { TryTeleport(idx, skill); return; }
+            if (skill.skillName == BlizzardSkillName) { TryBlizzard(idx, skill); return; }
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
@@ -160,6 +163,59 @@ namespace Game.Skill
                     hp.TakeDamage(dmg, gameObject, ToDamageType(skill.damageType));
                     ApplySkillStatus(skill, hp);
                 });
+        }
+
+        public const string BlizzardSkillName = "Blizzard";
+
+        /// 狙った地面へ氷を走らせる。SPとクールタイムは放つ瞬間に消費し、ダメージは氷が届いた瞬間に入る。
+        private void TryBlizzard(int idx, SkillData skill)
+        {
+            if (fireball != null && fireball.IsPosing) return;
+            if (!runtime.CanCast(idx))
+            {
+                float cd = runtime.GetCooldownRemaining(idx);
+                Debug.Log($"[Skill] Blizzard on cooldown or low SP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
+                return;
+            }
+            if (blizzard == null) blizzard = GetComponent<BlizzardCast>();
+            if (blizzard == null) blizzard = gameObject.AddComponent<BlizzardCast>();
+
+            int dmg = 0;
+            blizzard.BeginCast(skill, cameraTransform,
+                () =>
+                {
+                    if (!runtime.CanCast(idx)) return false;
+                    if (mana != null) mana.TryUseMana(skill.spCost);
+                    runtime.StartCooldown(idx);
+                    runtime.NotifyCast(idx);
+                    if (regen != null) regen.NotifyActed();
+                    dmg = Mathf.RoundToInt(runtime.GetCurrentEffectValue(idx));
+                    Debug.Log($"[Skill] Blizzard released (dmg={dmg})");
+                    return true;
+                },
+                () => skill.GetDurationAtLevel(runtime.GetSkillLevel(idx)),
+                point =>
+                {
+                    if (this == null) return;
+                    int hitCount = HitArea(skill, point, dmg);
+                    Debug.Log($"[Skill] Blizzard hit {hitCount} target(s)");
+                    if (hitCount > 0 && GetComponent<HumanHeroMarker>() != null) HitStop.Play(skill.hitStopSeconds);
+                });
+        }
+
+        // 着弾点の範囲にいる敵へ。味方と自分は巻き込まない。
+        private int HitArea(SkillData skill, Vector3 point, int dmg)
+        {
+            var damaged = new System.Collections.Generic.HashSet<HealthComponent>();
+            foreach (var col in Physics.OverlapSphere(point, skill.areaRadius, ~0, QueryTriggerInteraction.Collide))
+            {
+                var hp = col.GetComponentInParent<HealthComponent>();
+                if (hp == null || hp.IsDead || hp.CompareTag("Player") || hp.gameObject == gameObject || !damaged.Add(hp)) continue;
+                hp.TakeDamage(dmg, gameObject, ToDamageType(skill.damageType));
+                ApplySkillStatus(skill, hp);
+                ImpactPunch.Play(hp.gameObject, hp.transform.position - point);
+            }
+            return damaged.Count;
         }
 
         public const string TeleportSkillName = "Teleport";

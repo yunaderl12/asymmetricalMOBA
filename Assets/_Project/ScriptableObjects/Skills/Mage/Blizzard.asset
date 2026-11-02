@@ -13,18 +13,25 @@ MonoBehaviour:
   m_Name: Blizzard
   m_EditorClassIdentifier: 
   skillName: Blizzard
-  description: AoE magical ice storm.
+  description: Ice spikes race to the aimed spot and burst. Leaves slippery ice that
+    lasts longer at higher levels.
   spCost: 30
   cooldown: 10
   effectType: 0
   damageType: 1
   targetType: 2
   effectValue: 25
-  range: 8
-  duration: 0
+  range: 20
+  duration: 6
+  durationPerLevel: 2
+  areaRadius: 5
   statusEffect: 2
   statusDuration: 3
   statusPower: 0.4
+  castTime: 0.6
+  projectileSpeed: 28
+  castLocksMovement: 1
+  hitStopSeconds: 0.06
   levelGrowthRate: 0.2
   maxSkillLevel: 5
   iconColor: {r: 0, g: 0, b: 0, a: 0}

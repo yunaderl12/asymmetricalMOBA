@@ -21,6 +21,7 @@ namespace Game.DemonKing
         private float pitch;
 
         private CharacterController controller;
+        private Vector3 slipVelocity;
         private StatModifierContainer mods;
         private DemonKingInputActions inputs;
         private float verticalVelocity;
@@ -104,7 +105,7 @@ namespace Game.DemonKing
                 verticalVelocity += gravity * Time.deltaTime;
             }
 
-            var motion = horizontal;
+            var motion = Game.Skill.IceField.ApplySlip(transform.position, horizontal, ref slipVelocity);
             motion.y = verticalVelocity;
             controller.Move(motion * Time.deltaTime);
         }

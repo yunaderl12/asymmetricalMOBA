@@ -36,6 +36,12 @@ namespace Game.Core
         [Tooltip("A warp point can always be set within this radius (m) of StartTown")]
         public float warpTownRadius = 20f;
 
+        [Header("Blizzard Skill")]
+        [Tooltip("How fast the line of ice spikes runs along the ground (m/s)")]
+        public float blizzardSpikeSpeed = 40f;
+        [Tooltip("On ice, how quickly speed can change (m/s^2). Lower is more slippery. Applies to heroes, the demon king, monsters and bots.")]
+        public float iceAcceleration = 3f;
+
         [Header("Teleport Skill")]
         [Tooltip("Time to climb straight up from the ground to the hover point (seconds)")]
         public float teleportRiseSeconds = 1.6f;

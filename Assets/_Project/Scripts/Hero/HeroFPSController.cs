@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Game.Combat;
+using Game.Skill;
 
 namespace Game.Hero
 {
@@ -36,6 +37,7 @@ namespace Game.Hero
 
         private float pitch;
         private float verticalVelocity;
+        private Vector3 slipVelocity;
         private bool cursorLocked;
         private Vector3 cameraBaseLocalPosition;
         private Vector3 cameraKickPosition;
@@ -126,7 +128,9 @@ namespace Game.Hero
         {
             verticalVelocity += gravity * Time.deltaTime;
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = groundedStickForce;
-            controller.Move(new Vector3(0f, verticalVelocity * Time.deltaTime, 0f));
+            Vector3 motion = IceField.ApplySlip(transform.position, Vector3.zero, ref slipVelocity);
+            motion.y = verticalVelocity;
+            controller.Move(motion * Time.deltaTime);
         }
 
         private void HandleMove()
@@ -147,7 +151,7 @@ namespace Game.Hero
                 verticalVelocity += gravity * Time.deltaTime;
             }
 
-            Vector3 motion = horizontal;
+            Vector3 motion = IceField.ApplySlip(transform.position, horizontal, ref slipVelocity);
             motion.y = verticalVelocity;
             controller.Move(motion * Time.deltaTime);
         }

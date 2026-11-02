@@ -21,6 +21,10 @@ namespace Game.Skill
         public float effectValue;
         public float range;
         public float duration;
+        [Tooltip("Added to duration per skill level above 1 (seconds)")]
+        public float durationPerLevel;
+        [Tooltip("Radius of the effect around the targeted point (m). range is how far the point can be.")]
+        public float areaRadius;
 
         [Header("Status Effect (applied to targets hit)")]
         public StatusEffectType statusEffect = StatusEffectType.None;
@@ -58,6 +62,12 @@ namespace Game.Skill
         {
             int lv = Mathf.Clamp(level, 1, maxSkillLevel);
             return effectValue * (1f + (lv - 1) * levelGrowthRate);
+        }
+
+        public float GetDurationAtLevel(int level)
+        {
+            int lv = Mathf.Clamp(level, 1, maxSkillLevel);
+            return duration + (lv - 1) * durationPerLevel;
         }
 
         public Color EffectiveIconColor()
