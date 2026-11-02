@@ -22,10 +22,7 @@ namespace Game.Monster
         [Header("Refs")]
         [SerializeField] private Transform attackOrigin;
         [SerializeField] private GameObject monsterPrefab;
-        [SerializeField] private MeshRenderer bodyRenderer;
-        [SerializeField] private Material destroyedMaterial;
-        [SerializeField] private LineRenderer attackLine;
-        [SerializeField] private float attackLineDuration = 0.15f;
+        [SerializeField] private SpawnerTowerVisual towerVisual;
 
         [Header("Spawn Limit")]
         [SerializeField] private int maxConcurrentMonsters = 2;
@@ -177,18 +174,44 @@ namespace Game.Monster
         }
 
         private float attackCooldownTimer;
+        private bool charging;
+        private float chargeTimer;
 
         private void Update()
         {
             if (!IsFunctional || data == null) return;
             if (attackCooldownTimer > 0f) attackCooldownTimer -= Time.deltaTime;
+            if (charging)
+            {
+                UpdateCharge();
+                return;
+            }
             if (attackCooldownTimer > 0f) return;
+            if (FindClosestPlayerInRange() == null) return;
 
-            var target = FindClosestPlayerInRange();
-            if (target == null) return;
-
-            Shoot(target);
+            charging = true;
+            chargeTimer = 0f;
             attackCooldownTimer = data.cool;
+            if (towerVisual != null) towerVisual.SetCharge(0f);
+        }
+
+        // 溜め終わった時点で一番近い勇者を狙う。範囲から誰もいなくなっていたら撃たない。
+        private void UpdateCharge()
+        {
+            chargeTimer += Time.deltaTime;
+            float duration = Mathf.Max(0.01f, data.attackChargeSeconds);
+            if (towerVisual != null) towerVisual.SetCharge(chargeTimer / duration);
+            if (chargeTimer < duration) return;
+
+            charging = false;
+            var target = FindClosestPlayerInRange();
+            if (target == null)
+            {
+                if (towerVisual != null) towerVisual.Cancel();
+                return;
+            }
+            if (towerVisual != null) towerVisual.Release();
+            Shoot(target);
         }
 
         private GameObject FindClosestPlayerInRange()
@@ -207,8 +230,6 @@ namespace Game.Monster
             return closest;
         }
 
-        private Coroutine activeAttackLineRoutine;
-
         private void Shoot(GameObject target)
         {
             if (attackOrigin == null) return;
@@ -217,7 +238,7 @@ namespace Game.Monster
             Debug.DrawRay(origin, dir * data.attackRange, Color.yellow, 0.2f);
 
             Vector3 endPoint = origin + dir * data.attackRange;
-            if (Physics.Raycast(origin, dir, out var hit, data.attackRange))
+            if (TryFindLaserHit(origin, dir, out var hit))
             {
                 endPoint = hit.point;
                 var hp = hit.collider.GetComponentInParent<HealthComponent>();
@@ -226,22 +247,22 @@ namespace Game.Monster
                     hp.TakeDamage(data.atk, gameObject, DamageType.Physical);
                 }
             }
-
-            if (attackLine != null)
-            {
-                attackLine.SetPosition(0, origin);
-                attackLine.SetPosition(1, endPoint);
-                attackLine.enabled = true;
-                if (activeAttackLineRoutine != null) StopCoroutine(activeAttackLineRoutine);
-                activeAttackLineRoutine = StartCoroutine(HideAttackLineAfter(attackLineDuration));
-            }
+            SpawnerLaser.Spawn(origin, endPoint);
         }
 
-        private IEnumerator HideAttackLineAfter(float delay)
+        // 高い水晶から撃つので、自分の塔と味方の魔物はすり抜ける。
+        private bool TryFindLaserHit(Vector3 origin, Vector3 dir, out RaycastHit nearest)
         {
-            yield return new WaitForSeconds(delay);
-            if (attackLine != null) attackLine.enabled = false;
-            activeAttackLineRoutine = null;
+            nearest = default;
+            float best = float.MaxValue;
+            foreach (var hit in Physics.RaycastAll(origin, dir, data.attackRange))
+            {
+                if (hit.distance >= best || hit.transform.IsChildOf(transform)) continue;
+                if (hit.collider.GetComponentInParent<Monster>() != null) continue;
+                best = hit.distance;
+                nearest = hit;
+            }
+            return best < float.MaxValue;
         }
 
         public void OnSpawnedMonsterDestroyed(Monster m)
@@ -365,8 +386,8 @@ namespace Game.Monster
         {
             IsFunctional = false;
             StopAllCoroutines();
-            activeAttackLineRoutine = null;
-            if (attackLine != null) attackLine.enabled = false;
+            charging = false;
+            if (towerVisual != null) towerVisual.SetDestroyed();
             // まだ魔物が出ていないポータルは閉じる。
             foreach (var portal in activePortals)
             {
@@ -374,10 +395,6 @@ namespace Game.Monster
             }
             activePortals.Clear();
             pendingSpawns.Clear();
-            if (bodyRenderer != null && destroyedMaterial != null)
-            {
-                bodyRenderer.material = destroyedMaterial;
-            }
             Debug.Log($"[Spawner] {name} destroyed. spawnedMonsters surviving: {spawnedMonsters.Count}");
         }
     }
