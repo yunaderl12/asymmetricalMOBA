@@ -20,6 +20,9 @@ namespace Game.UI
 
         private void Start()
         {
+            HealthBarGraphic.Adopt(hpFillImage);
+            HealthBarGraphic.Adopt(mpFillImage);
+
             var go = GameObject.FindWithTag(targetTag);
             if (go == null)
             {

@@ -49,6 +49,7 @@ namespace Game.UI
                 };
                 if (b.health != null) b.health.OnHPChanged += (cur, max) => Refresh(b);
                 if (b.level != null) b.level.OnLevelChanged += lv => Refresh(b);
+                HealthBarGraphic.Adopt(b.hpFill);
                 bindings.Add(b);
                 Refresh(b);
             }

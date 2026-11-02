@@ -98,6 +98,7 @@ namespace Game.UI
             fRT.offsetMin = new Vector2(2f, 2f); fRT.offsetMax = new Vector2(-2f, -2f);
             var fImg = fillGO.GetComponent<Image>(); if (uiSprite != null) { fImg.sprite = uiSprite; fImg.type = Image.Type.Filled; }
             fImg.fillMethod = Image.FillMethod.Horizontal; fImg.color = new Color(0.5f, 0.8f, 0.4f, 1f); fImg.fillAmount = 1f;
+            HealthBarGraphic.Adopt(fImg);
 
             return new Row { go = go, nameLabel = nT, fill = fImg };
         }

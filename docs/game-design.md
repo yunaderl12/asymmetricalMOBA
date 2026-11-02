@@ -364,6 +364,8 @@ Y < -10 で「Backspace でリスポーン」表示。Backspace キーで StartT
 | MatchTimerUI | マッチ残り時間 | 常時 |
 | MatchResultUI | 勝敗大表示 | 試合終了時 |
 | RespawnCountdownUI | リスポーンカウントダウン | 勇者死亡時 |
+| DamageNumberDisplay | 自分が与えたダメージの数字。相手の頭上にぴょんと跳ねて0.8秒で消える。最大HPの25%以上は大きなオレンジで表示（いずれも仮値）。ボットや塔が与えた分は出さない | 自分の攻撃が当たったとき |
+| HealthBarUI | 敵味方の頭上のHPバー。枠付きの丸いバーで25%ごとに刻みがあり、減った分は淡い色で少し残ってから追いつく。HUDのバー（拠点HP、自分のHP・SP・経験値、他の勇者、スポナー一覧、魔王のHP・MP）も同じ見た目 | 常時（魔物の出現中と死亡後は非表示） |
 | PowerItemNotifierUI | PowerItem 出現/取得通知 | イベント時 |
 | FallRespawnPrompt | 落下リスポーン案内 | 落下時 |
 | SkillWheel | スキル選択ホイール | SHIFT長押し |

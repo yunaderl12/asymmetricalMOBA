@@ -21,6 +21,8 @@ namespace Game.UI
 
         private void Start()
         {
+            HealthBarGraphic.Adopt(startTownFill);
+            HealthBarGraphic.Adopt(demonKingFill);
             BindStartTown();
             BindDemonKing();
             UpdateStartTown();

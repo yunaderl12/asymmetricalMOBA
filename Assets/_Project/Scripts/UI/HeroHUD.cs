@@ -35,6 +35,10 @@ namespace Game.UI
 
         private void Start()
         {
+            HealthBarGraphic.Adopt(hpFillImage);
+            HealthBarGraphic.Adopt(mpFillImage);
+            HealthBarGraphic.Adopt(expFillImage);
+
             // Not for the demon king side of the match.
             if (GameSession.Instance != null && GameSession.Instance.CurrentRole == GameSession.PlayerRole.DemonKing)
             {
