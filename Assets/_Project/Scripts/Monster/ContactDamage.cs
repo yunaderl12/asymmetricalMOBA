@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using Game.Combat;
+using Game.Hero;
 
 namespace Game.Monster
 {
@@ -34,6 +35,8 @@ namespace Game.Monster
                 var attacker = monster != null ? monster.gameObject : gameObject;
                 hp.TakeDamage(dmg, attacker, DamageType.Physical);
                 nextTickTime[hp] = Time.time + tickInterval;
+                var model = attacker.GetComponent<CharacterModelAnimator>();
+                if (model != null) model.PlayAttack();
             }
         }
 

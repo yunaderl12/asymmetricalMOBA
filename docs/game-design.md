@@ -227,7 +227,8 @@ Y < -10 で「Backspace でリスポーン」表示。Backspace キーで StartT
 - **ターゲット選択**: 基本は範囲内（10m）で最も近い勇者を追う。ヘイト値による標的の変化は一部の賢い魔物（MonsterData の useHate）だけが持つ。現在の3種類はいずれも持たない
 - **ヘイト値**: 賢い魔物は範囲内でヘイト最大の勇者を追い、全員0なら最も近い勇者を追う。今の標的のヘイトを1.1倍（仮）超えたら標的が変わる。増える条件: その魔物に与えたダメージ1につき+1、魔物の近く（仮10m）で味方を回復すると回復量×0.5（仮）。減る条件: 毎秒10%（仮）ずつ減る。死亡または10m（仮）より離れるとその勇者のヘイトは0
 - **Taunt**: 範囲内の魔物にヘイト+100（仮）を加算する。ヘイトを持たない普通の魔物には効果なし
-- **接触ダメージ**: 同じ魔物から 1秒に1回のみ
+- **接触ダメージ**: 同じ魔物から 1秒に1回のみ。当たるたびに攻撃アニメーションを再生する
+- **見た目（MonsterData.modelPath）**: 指定があれば Knight スケルトンのモデルを表示し、走り・攻撃は勇者と共通のクリップ（仮）を使う。未指定なら prefab の Body のまま。現在は BasicMob のみゴブリン（Goblin/goblin、modelScale 0.8 は仮）で、TankMob / FlyingMob は未差し替え
 - **StartTown 到達時の挙動**: `agent.isStopped=true` で停止。Destroy せず、接触ダメージで継続的にコアを削る
 - **指揮官オーラ被付与**: 魔王半径10m 内で強化
 - **FlyingMob ContactDamage 範囲**: 地上のコアに届くよう 6m に拡大（通常半径 1.5m）
@@ -278,7 +279,7 @@ Y < -10 で「Backspace でリスポーン」表示。Backspace キーで StartT
 
 #### その他
 
-- NavMesh: 200×120 全域に焼かれ、岩・拠点柱・コアを除外
+- NavMesh: 200×120 全域に焼かれ、岩・拠点柱・コア・まちと魔王城の建物を除外。建物（Town_Buildings / Castle_Buildings）には MeshCollider があり、勇者も魔物も通り抜けられない。まちへは東側の門（フェンスの切れ目）、魔王城へは西側の城門からのみ入れる。建物を変えたら Tools/LowPoly/Add Building Colliders And Rebake NavMesh で焼き直す
 - カメラ: Hero/DemonKing 子 Camera（TPS）、BirdsEyeCamera（俯瞰用、orthographic）
 
 ## 4. 試合の流れ

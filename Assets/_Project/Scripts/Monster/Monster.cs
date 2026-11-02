@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using Game.Combat;
 using Game.Core;
+using Game.Hero;
 
 namespace Game.Monster
 {
@@ -74,6 +75,14 @@ namespace Game.Monster
             mods = GetComponent<StatModifierContainer>();
             hate = GetComponent<MonsterHate>();
             if (hate == null) hate = gameObject.AddComponent<MonsterHate>();
+            // Trigger events need a Rigidbody on one side. The town core has none, so without this
+            // ContactDamage never hit it (heroes worked only because CharacterController counts).
+            if (GetComponent<Rigidbody>() == null)
+            {
+                var rb = gameObject.AddComponent<Rigidbody>();
+                rb.isKinematic = true;
+                rb.useGravity = false;
+            }
         }
 
         private void OnEnable()
@@ -108,6 +117,7 @@ namespace Game.Monster
             SpawnedBy = spawner;
             initialized = true;
             ApplyData();
+            AttachModel();
 
             remainingWaypoints.Clear();
             if (waypoints != null)
@@ -130,6 +140,14 @@ namespace Game.Monster
             if (health != null) health.SetMaxHP(Mathf.RoundToInt(data.hp * levelMultiplier));
             var expReward = GetComponent<ExpReward>();
             if (expReward != null) expReward.Exp = data.exp;
+        }
+
+        /// Replaces the prefab's Body shape with MonsterData.modelPath; run / attack clips come from the shared Knight controller.
+        private void AttachModel()
+        {
+            if (data == null || string.IsNullOrEmpty(data.modelPath) || GetComponent<CharacterModelAnimator>() != null) return;
+            var anim = gameObject.AddComponent<CharacterModelAnimator>();
+            anim.Configure(data.modelPath, data.modelMaterialPath, data.modelScale, false, false, false);
         }
 
         private void ApplySpeed()

@@ -40,6 +40,8 @@ namespace Game.Hero
         // false: BOT や魔王（実際の移動量で状態を決め、HP の復活で復帰する）。
         [SerializeField] private bool driveFromInput = true;
         [SerializeField] private float moveThreshold = 0.3f;
+        // false for crowds (monsters) so state changes do not flood the console.
+        [SerializeField] private bool logStates = true;
 
         [Header("Attack")]
         [SerializeField] private float attackClipDuration = 0.6f;
@@ -112,8 +114,9 @@ namespace Game.Hero
         /// Must be called right after AddComponent (before Start).
         /// hideFromOwnCamera: move the model to avatarLayerName so the local FPS camera skips it.
         /// </summary>
-        public void Configure(string modelPath, string materialPath, float scale, bool driveFromInput, bool hideFromOwnCamera)
+        public void Configure(string modelPath, string materialPath, float scale, bool driveFromInput, bool hideFromOwnCamera, bool logStates = true)
         {
+            this.logStates = logStates;
             this.modelPath = modelPath;
             this.materialPath = materialPath;
             modelScale = scale;
@@ -230,7 +233,7 @@ namespace Game.Hero
                 return;
             }
             animator.runtimeAnimatorController = controller;
-            Debug.Log("[CharacterModelAnimator] assigned controller '" + controller.name + "'");
+            if (logStates) Debug.Log("[CharacterModelAnimator] assigned controller '" + controller.name + "'");
         }
 
         private void Update()
@@ -284,7 +287,7 @@ namespace Game.Hero
             if (s == currentState) return;
             currentState = s;
             FireTrigger(s);
-            Debug.Log("[CharacterModelAnimator] state -> " + s);
+            if (logStates) Debug.Log("[CharacterModelAnimator] state -> " + s);
         }
 
         private void FireTrigger(AnimState s)

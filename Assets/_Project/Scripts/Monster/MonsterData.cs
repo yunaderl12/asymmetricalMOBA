@@ -23,5 +23,12 @@ namespace Game.Monster
 
         public bool IsUnlockedAt(int dkLevel) => dkLevel >= unlockDkLevel;
         [TextArea(2, 5)] public string description;
+
+        [Header("Model")]
+        [Tooltip("Resources path of the model on the Knight skeleton (e.g. Goblin/goblin). Empty = keep the prefab's Body shape.")]
+        public string modelPath;
+        [Tooltip("Resources path of a material applied to every renderer. Empty = keep the FBX materials.")]
+        public string modelMaterialPath;
+        public float modelScale = 1f;
     }
 }

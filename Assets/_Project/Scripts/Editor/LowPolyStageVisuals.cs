@@ -2,16 +2,22 @@ using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using Unity.AI.Navigation;
+using Unity.AI.Navigation.Editor;
 
 namespace Game.Editor
 {
     /// Places the Blender low-poly placeholder models (Art/LowPoly/*.fbx, built by ArtSource/lowpoly/build_lowpoly.py)
-    /// on MainStage and hides the old box renderers. Colliders, cores and triggers are left untouched, and the
-    /// models get no colliders, so gameplay and the NavMesh do not change.
+    /// on MainStage and hides the old box renderers. Old colliders, cores and triggers are left untouched. The town and
+    /// castle buildings get MeshColliders and the NavMesh is rebaked, so heroes and monsters go around them and enter
+    /// through the gates (ground and glow meshes stay walk-through).
     public static class LowPolyStageVisuals
     {
         private const string RootName = "LowPolyVisuals";
         private const string ModelDir = "Assets/_Project/Art/LowPoly/";
+
+        // Mesh objects inside the models that block movement.
+        private static readonly string[] SolidMeshes = { "Town_Buildings", "Castle_Buildings" };
 
         // Old placeholder objects whose MeshRenderer is replaced by the models.
         private static readonly string[] HiddenRoots = { "Ground", "Rocks", "Walls" };
@@ -48,9 +54,56 @@ namespace Game.Editor
                 hidden++;
             }
 
+            AddBuildingColliders(root);
             EditorSceneManager.MarkSceneDirty(root.scene);
             Selection.activeGameObject = root;
             Debug.Log($"[LowPoly] placed models, hid {hidden} placeholder renderer(s). Save the scene to keep it.");
+            RebakeNavMesh();
+        }
+
+        [MenuItem("Tools/LowPoly/Add Building Colliders And Rebake NavMesh")]
+        public static void AddBuildingCollidersMenu()
+        {
+            var root = GameObject.Find(RootName);
+            if (root == null)
+            {
+                Debug.LogWarning("[LowPoly] " + RootName + " not found; run Apply MainStage Visuals first");
+                return;
+            }
+            AddBuildingColliders(root);
+            EditorSceneManager.MarkSceneDirty(root.scene);
+            RebakeNavMesh();
+        }
+
+        private static void AddBuildingColliders(GameObject root)
+        {
+            int added = 0;
+            foreach (var mf in root.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (System.Array.IndexOf(SolidMeshes, mf.gameObject.name) < 0) continue;
+                var mc = mf.GetComponent<MeshCollider>();
+                if (mc == null)
+                {
+                    mc = Undo.AddComponent<MeshCollider>(mf.gameObject);
+                    added++;
+                }
+                mc.sharedMesh = mf.sharedMesh;
+            }
+            Debug.Log($"[LowPoly] building colliders: added {added}");
+        }
+
+        /// The surfaces collect physics colliders, so the new building colliders cut the walkable area.
+        /// Baking runs in the background and writes the scene's NavMesh asset when it finishes.
+        private static void RebakeNavMesh()
+        {
+            var surfaces = Object.FindObjectsByType<NavMeshSurface>(FindObjectsSortMode.None);
+            if (surfaces.Length == 0)
+            {
+                Debug.LogWarning("[LowPoly] no NavMeshSurface in the scene; NavMesh not rebaked");
+                return;
+            }
+            NavMeshAssetManager.instance.StartBakingSurfaces(surfaces);
+            Debug.Log($"[LowPoly] rebaking {surfaces.Length} NavMesh surface(s)");
         }
 
         [MenuItem("Tools/LowPoly/Remove MainStage Visuals")]
