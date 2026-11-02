@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using Game.Core;
+using Game.Hero;
 
 namespace Game.Combat
 {
@@ -29,6 +30,16 @@ namespace Game.Combat
             if (health != null) health.OnDeathDetailed -= OnDeathDetailed;
         }
 
+        // 倒れて離散するモデルは、離散した地点から粒を飛ばす。
+        private void SpawnOrbs(Transform target, int amount)
+        {
+            var modelAnim = GetComponent<CharacterModelAnimator>();
+            if (modelAnim != null && modelAnim.ModelRoot != null)
+                modelAnim.DeathScattered += point => Game.Skill.ExpOrbBurst.Spawn(point, target, amount);
+            else
+                Game.Skill.ExpOrbBurst.Spawn(transform.position + Vector3.up, target, amount);
+        }
+
         private void OnDeathDetailed(HealthComponent.DeathInfo info)
         {
             int killerExp = exp;
@@ -41,7 +52,7 @@ namespace Game.Combat
             if (killerEC != null)
             {
                 killerEC.AddExp(killerExp);
-                Game.Skill.ExpOrbBurst.Spawn(transform.position + Vector3.up, killerEC.transform, killerExp);
+                SpawnOrbs(killerEC.transform, killerExp);
             }
 
             var sb = new StringBuilder();

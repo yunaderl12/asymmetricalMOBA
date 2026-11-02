@@ -53,6 +53,8 @@ namespace Game.Monster
         private HealthComponent health;
         private StatModifierContainer mods;
         private Transform targetTransform;
+        private const float DeathDestroyMargin = 0.1f;
+
         private bool destroyed;
         private bool initialized;
 
@@ -150,6 +152,7 @@ namespace Game.Monster
             if (data == null || string.IsNullOrEmpty(data.modelPath) || GetComponent<CharacterModelAnimator>() != null) return;
             var anim = gameObject.AddComponent<CharacterModelAnimator>();
             anim.Configure(data.modelPath, data.modelMaterialPath, data.modelScale, false, false, false);
+            anim.ConfigureDeath(data.deathFallSeconds, data.deathHoldSeconds, data.deathParticleCount);
         }
 
         private void ApplySpeed()
@@ -339,7 +342,21 @@ namespace Game.Monster
         private void OnDied()
         {
             destroyed = true;
-            Destroy(gameObject);
+            if (SpawnedBy != null) SpawnedBy.OnSpawnedMonsterDestroyed(this);
+
+            var modelAnim = GetComponent<CharacterModelAnimator>();
+            if (IsEmerging || modelAnim == null || modelAnim.ModelRoot == null)
+            {
+                Destroy(gameObject);
+                return;
+            }
+
+            // 倒れて離散するまで残すが、もう動かず、攻撃せず、攻撃も受けない。
+            if (agent != null) agent.enabled = false;
+            foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;
+            var bar = transform.Find("HealthBar");
+            if (bar != null) bar.gameObject.SetActive(false);
+            Destroy(gameObject, modelAnim.DeathSequenceSeconds + DeathDestroyMargin);
         }
 
         private void OnDestroy()

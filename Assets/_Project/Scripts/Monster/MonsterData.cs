@@ -30,5 +30,13 @@ namespace Game.Monster
         [Tooltip("Resources path of a material applied to every renderer. Empty = keep the FBX materials.")]
         public string modelMaterialPath;
         public float modelScale = 1f;
+
+        [Header("Death (models only; a monster without a model vanishes at once)")]
+        [Tooltip("Seconds of the fall before it lies still.")]
+        public float deathFallSeconds = 1f;
+        [Tooltip("Seconds it lies still before scattering.")]
+        public float deathHoldSeconds = 0.2f;
+        [Tooltip("Particles in the scatter.")]
+        public int deathParticleCount = 50;
     }
 }

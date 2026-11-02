@@ -104,6 +104,11 @@ namespace Game.Hero
         private Material[][] originalMaterials;
         private Vector3 lastPosition;
         private bool wasDead;
+        private float dyingFallSeconds;
+        private static Material sharedParticleMaterial;
+
+        /// 離散した瞬間に一度だけ呼ばれる。引数は離散した地点。
+        public event System.Action<Vector3> DeathScattered;
         private Material whiteFlashMaterial;
         private Coroutine deathSequenceRoutine;
 
@@ -135,6 +140,19 @@ namespace Game.Hero
             if (!hideFromOwnCamera) avatarLayerName = "";
             if (!driveFromInput) inputs?.Hero.Disable();
         }
+
+        /// 倒れる速さと離散の量を変える（魔物用）。fallSeconds は倒れきるまでの秒数。
+        public void ConfigureDeath(float fallSeconds, float holdSeconds, int particleCount)
+        {
+            dyingFallSeconds = fallSeconds;
+            dyingHoldAfterFreeze = holdSeconds;
+            deathParticleBurstCount = particleCount;
+        }
+
+        /// HPが0になってから離散するまでの秒数。
+        public float DeathSequenceSeconds => FallSeconds + dyingHoldAfterFreeze + whiteHoldDuration;
+
+        private float FallSeconds => dyingFallSeconds > 0f ? dyingFallSeconds : dyingFreezeAt;
 
         /// Adds the Demon King model from BalanceConfig (driven by movement, visible to every camera).
         public static CharacterModelAnimator AttachDemonKingModel(GameObject go)
@@ -232,6 +250,7 @@ namespace Game.Hero
         private void OnDestroy()
         {
             inputs?.Dispose();
+            if (whiteFlashMaterial != null) Destroy(whiteFlashMaterial);
         }
 
         private void Start()
@@ -386,10 +405,10 @@ namespace Game.Hero
         private IEnumerator DeathSequence()
         {
             // 念のため、前回フリーズしたままになっていた場合のリセット
-            if (animator != null) animator.speed = 1f;
+            if (animator != null) animator.speed = dyingFreezeAt / FallSeconds;
 
             // Phase 1: Dying クリップを「倒れた」フレームまで再生
-            yield return new WaitForSeconds(dyingFreezeAt);
+            yield return new WaitForSeconds(FallSeconds);
 
             // Phase 2: アニメーターを止めて死亡ポーズで固める。
             // (loopTime=0 でも dying_backwards の最終フレームが立ち姿に戻るため、
@@ -406,12 +425,26 @@ namespace Game.Hero
             yield return new WaitForSeconds(whiteHoldDuration);
 
             // Phase 6: 光弾として拡散・蒸散し、アバターは消す
-            Vector3 spawnPos = (model != null ? model.transform.position : transform.position)
-                               + Vector3.up * deathParticleVerticalOffset;
+            Vector3 spawnPos = CorpsePosition();
             SpawnDeathParticles(spawnPos);
             if (model != null) model.SetActive(false);
 
+            var scattered = DeathScattered;
+            DeathScattered = null;
+            scattered?.Invoke(spawnPos);
+
             deathSequenceRoutine = null;
+        }
+
+        // 倒れると腰は足元からずれるので、倒れた体のある場所から散らす。
+        private Vector3 CorpsePosition()
+        {
+            if (model != null)
+            {
+                foreach (var t in model.GetComponentsInChildren<Transform>(true))
+                    if (t.name == "Hips") return t.position;
+            }
+            return (model != null ? model.transform.position : transform.position) + Vector3.up * deathParticleVerticalOffset;
         }
 
         private void RestoreOriginalMaterials()
@@ -494,6 +527,8 @@ namespace Game.Hero
             var go = new GameObject("CharacterDeathParticles");
             go.transform.position = position;
             var ps = go.AddComponent<ParticleSystem>();
+            // AddComponent 直後は再生中で、そのまま duration を変えるとエラーになる。
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
             var main = ps.main;
             main.duration = 0.3f;
@@ -545,6 +580,7 @@ namespace Game.Hero
 
         private Material GetOrCreateParticleMaterial()
         {
+            if (sharedParticleMaterial != null) return sharedParticleMaterial;
             var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
             if (shader == null) shader = Shader.Find("Particles/Standard Unlit");
             if (shader == null) shader = Shader.Find("Particles/Additive");
@@ -556,6 +592,7 @@ namespace Game.Hero
             // URP Particles/Unlit を半透明・加算合成寄りに寄せる試み。
             if (mat.HasProperty("_Surface")) mat.SetFloat("_Surface", 1f);   // 1 = Transparent
             if (mat.HasProperty("_Blend")) mat.SetFloat("_Blend", 1f);       // 1 = Additive
+            sharedParticleMaterial = mat;
             return mat;
         }
 
