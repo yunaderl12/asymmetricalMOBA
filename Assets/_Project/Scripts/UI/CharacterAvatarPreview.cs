@@ -25,6 +25,8 @@ namespace Game.UI
         [SerializeField] private bool autoFrame = true;
         [Tooltip("Extra space around the model when auto-framing (1.0 = exact fit; 1.3 = 30% padding).")]
         [SerializeField] private float framePadding = 1.35f;
+        [Tooltip("Margin when the model including held items must still fit the texture width.")]
+        [SerializeField] private float frameWidthPadding = 1.05f;
         [Tooltip("Direction the camera looks FROM in model space (e.g. (0,0,1) looks toward -Z; the model's front).")]
         [SerializeField] private Vector3 viewDirection = new Vector3(0f, 0.2f, 1f);
         [SerializeField] private float fieldOfView = 30f;
@@ -34,7 +36,8 @@ namespace Game.UI
         [SerializeField] private Vector3 cameraLookAtLocal = new Vector3(0f, 1.2f, 0f);
 
         [Header("RenderTexture")]
-        [SerializeField] private int textureWidth = 512;
+        [Tooltip("Keep the aspect of the lobby's Avatar3D rect (600x720) or the model gets stretched.")]
+        [SerializeField] private int textureWidth = 640;
         [SerializeField] private int textureHeight = 768;
         [SerializeField] private Color backgroundColor = new Color(0f, 0f, 0f, 0f);
         [SerializeField] private int antiAliasing = 4;
@@ -48,6 +51,7 @@ namespace Game.UI
         private GameObject modelRoot;
         private string currentModelPath;
         private string currentMaterialPath;
+        private bool firstSubmeshIsBody;
         private Camera previewCamera;
         private Light previewLight;
         public RenderTexture Texture { get; private set; }
@@ -112,6 +116,9 @@ namespace Game.UI
                     Debug.LogWarning($"[CharacterAvatarPreview] Resources/{materialPath} not found");
                 }
             }
+
+            // rig_tripo のモデルは最初のサブメッシュが本体で、残りは持ち物。
+            firstSubmeshIsBody = boneFit != null;
 
             // 手に持つ物が広がるTポーズではなく、実際に見せるポーズの大きさで画面に収める。
             var poseClip = FindAnimationClip();
@@ -179,18 +186,19 @@ namespace Game.UI
         private void FrameCamera()
         {
             var camT = previewCamera.transform;
-            if (autoFrame && TryComputeModelBounds(out var bounds))
+            if (autoFrame && TryComputeModelBounds(out var bounds, out var bodyBounds))
             {
-                // Distance required to fit bounds in the FOV (both axes).
+                // 大きさは本体の高さで揃える。持ち物は横幅からはみ出さない範囲でだけカメラを引く。
                 float halfFovRad = fieldOfView * 0.5f * Mathf.Deg2Rad;
-                float distY = (bounds.size.y * 0.5f) / Mathf.Tan(halfFovRad);
+                float distY = (bodyBounds.size.y * 0.5f) / Mathf.Tan(halfFovRad) * framePadding;
                 float aspect = (float)textureWidth / Mathf.Max(1, textureHeight);
                 float halfHFovRad = Mathf.Atan(Mathf.Tan(halfFovRad) * aspect);
-                float distX = (bounds.size.x * 0.5f) / Mathf.Tan(halfHFovRad);
-                float distance = Mathf.Max(distX, distY) * framePadding;
+                float distX = (bounds.size.x * 0.5f) / Mathf.Tan(halfHFovRad) * frameWidthPadding;
+                float distance = Mathf.Max(distX, distY);
+                Vector3 center = new Vector3(bounds.center.x, bodyBounds.center.y, bounds.center.z);
                 Vector3 dir = viewDirection.sqrMagnitude > 1e-4f ? viewDirection.normalized : Vector3.back;
-                camT.position = bounds.center + dir * distance;
-                camT.LookAt(bounds.center);
+                camT.position = center + dir * distance;
+                camT.LookAt(center);
             }
             else
             {
@@ -383,32 +391,51 @@ namespace Game.UI
             return null;
         }
 
-        private bool TryComputeModelBounds(out Bounds bounds)
+        /// bounds: 持ち物を含む全体 / body: 本体だけ（持ち物を分けられないモデルは全体と同じ）。
+        private bool TryComputeModelBounds(out Bounds bounds, out Bounds body)
         {
             bounds = default;
+            body = default;
             if (modelRoot == null) return false;
-            var renderers = modelRoot.GetComponentsInChildren<Renderer>(true);
-            bool has = false;
-            foreach (var r in renderers)
+            bool has = false, hasBody = false;
+            foreach (var r in modelRoot.GetComponentsInChildren<Renderer>(true))
             {
                 if (r == null) continue;
-                Bounds b = r is SkinnedMeshRenderer skinned ? PosedBounds(skinned) : r.bounds;
-                if (!has) { bounds = b; has = true; }
-                else bounds.Encapsulate(b);
+                Bounds whole = r.bounds;
+                Bounds bodyPart = whole;
+                bool isBody = !firstSubmeshIsBody;
+                if (r is SkinnedMeshRenderer skinned)
+                {
+                    MeasurePosed(skinned, firstSubmeshIsBody, out whole, out bodyPart);
+                    isBody = true;
+                }
+                if (!has) { bounds = whole; has = true; }
+                else bounds.Encapsulate(whole);
+                if (!isBody) continue;
+                if (!hasBody) { body = bodyPart; hasBody = true; }
+                else body.Encapsulate(bodyPart);
             }
+            if (!hasBody) body = bounds;
             return has && bounds.size.sqrMagnitude > 1e-6f;
         }
 
         // SkinnedMeshRenderer.bounds はポーズを反映しないので、今の姿勢を焼いて測る。
-        private static Bounds PosedBounds(SkinnedMeshRenderer skinned)
+        private static void MeasurePosed(SkinnedMeshRenderer skinned, bool firstSubmeshOnly, out Bounds whole, out Bounds body)
         {
             var baked = new Mesh();
             skinned.BakeMesh(baked, true);
-            var result = new Bounds(skinned.transform.position, Vector3.zero);
             var vertices = baked.vertices;
-            for (int i = 0; i < vertices.Length; i++) result.Encapsulate(skinned.transform.TransformPoint(vertices[i]));
+            var t = skinned.transform;
+            whole = new Bounds(t.TransformPoint(vertices[0]), Vector3.zero);
+            for (int i = 1; i < vertices.Length; i++) whole.Encapsulate(t.TransformPoint(vertices[i]));
+            body = whole;
+            if (firstSubmeshOnly && baked.subMeshCount > 1)
+            {
+                var indices = baked.GetIndices(0);
+                body = new Bounds(t.TransformPoint(vertices[indices[0]]), Vector3.zero);
+                foreach (int index in indices) body.Encapsulate(t.TransformPoint(vertices[index]));
+            }
             Destroy(baked);
-            return result;
         }
     }
 }
