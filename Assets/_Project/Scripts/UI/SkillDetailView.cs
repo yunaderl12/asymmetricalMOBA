@@ -89,6 +89,7 @@ namespace Game.UI
             nameText.text = s.skillName;
             ownerText.text = s.ownerClass != null ? s.ownerClass.className + " 専用" : "共通スキル";
             statsText.text = $"消費SP {s.spCost}　　CT {Num(s.cooldown)}秒　　射程 {(s.range > 0f ? Num(s.range) + "m" : "-")}　　効果時間 {(s.duration > 0f ? Num(s.duration) + "秒" : "-")}";
+            if (s.castTime > 0f) statsText.text += $"　　溜め {Num(s.castTime)}秒";
             effectText.text = EffectLine(s);
             descText.text = string.IsNullOrEmpty(s.description) ? "(説明なし)" : s.description;
         }

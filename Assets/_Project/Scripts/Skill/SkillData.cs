@@ -28,6 +28,16 @@ namespace Game.Skill
         [Tooltip("Slow: speed reduction (0.4 = -40%) / DamageOverTime: damage per tick / others: unused")]
         public float statusPower;
 
+        [Header("Charged Projectile (Fireball)")]
+        [Tooltip("Seconds the hero charges before release. 0 = no charge.")]
+        public float castTime;
+        [Tooltip("Flight speed (m/s). The projectile fizzles out after travelling range metres.")]
+        public float projectileSpeed = 28f;
+        [Tooltip("Hero cannot move while charging (aiming is still allowed).")]
+        public bool castLocksMovement = true;
+        [Tooltip("Hit-stop on impact for the local player (real seconds). 0 = none.")]
+        public float hitStopSeconds = 0.06f;
+
         [Header("Leveling")]
         public float levelGrowthRate = 0.2f;
         public int maxSkillLevel = 5;

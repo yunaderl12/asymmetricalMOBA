@@ -30,7 +30,7 @@ namespace Game.Hero
         private bool IsAnimLocked()
         {
             if (modelAnim == null) modelAnim = GetComponent<CharacterModelAnimator>();
-            return modelAnim != null && modelAnim.IsRespawnAnimPlaying;
+            return modelAnim != null && (modelAnim.IsRespawnAnimPlaying || modelAnim.CastLocked);
         }
 
         private void Awake()

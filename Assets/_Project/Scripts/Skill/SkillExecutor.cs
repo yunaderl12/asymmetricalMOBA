@@ -22,6 +22,7 @@ namespace Game.Skill
         private HeroInputActions inputs;
         private Coroutine activeBeamRoutine;
         private Game.Hero.HeroRegen regen;
+        private FireballCast fireball;
 
         private void Awake()
         {
@@ -60,6 +61,7 @@ namespace Game.Skill
         public void TryCast()
         {
             if (runtime == null) return;
+            if (fireball != null && fireball.IsCasting) return;
             if (!StatusEffectController.CanUseSkills(gameObject))
             {
                 Debug.Log("[Skill] cannot cast while stunned / silenced");
@@ -73,6 +75,7 @@ namespace Game.Skill
                 return;
             }
             if (skill.skillName == WarpSkillName) { TryWarp(idx, skill); return; }
+            if (skill.skillName == FireballSkillName) { TryFireball(idx, skill); return; }
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
@@ -120,6 +123,40 @@ namespace Game.Skill
                 runtime.NotifyCast(idx);
                 if (regen != null) regen.NotifyActed();
             });
+        }
+
+        public const string FireballSkillName = "Fireball";
+
+        /// 溜めてから放つスキル。SPとクールタイムは放った瞬間に消費するので、中断されたら消費しない。
+        private void TryFireball(int idx, SkillData skill)
+        {
+            if (!runtime.CanCast(idx))
+            {
+                float cd = runtime.GetCooldownRemaining(idx);
+                Debug.Log($"[Skill] Fireball on cooldown or low SP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
+                return;
+            }
+            if (fireball == null) fireball = GetComponent<FireballCast>();
+            if (fireball == null) fireball = gameObject.AddComponent<FireballCast>();
+
+            int dmg = 0;
+            fireball.BeginCast(skill, cameraTransform,
+                () =>
+                {
+                    if (!runtime.CanCast(idx)) return false;
+                    if (mana != null) mana.TryUseMana(skill.spCost);
+                    runtime.StartCooldown(idx);
+                    runtime.NotifyCast(idx);
+                    if (regen != null) regen.NotifyActed();
+                    dmg = Mathf.RoundToInt(runtime.GetCurrentEffectValue(idx));
+                    Debug.Log($"[Skill] {skill.skillName} released (dmg={dmg})");
+                    return true;
+                },
+                hp =>
+                {
+                    hp.TakeDamage(dmg, gameObject, ToDamageType(skill.damageType));
+                    ApplySkillStatus(skill, hp);
+                });
         }
 
         private void Execute(SkillData skill, float effectValue)

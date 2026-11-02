@@ -88,6 +88,9 @@ namespace Game.Hero
         /// </summary>
         public bool IsRespawnAnimPlaying => respawning;
         public bool HasModel => model != null;
+        public Transform ModelRoot => model != null ? model.transform : null;
+        /// 溜め中。基本攻撃と移動アニメーションを止める。
+        public bool CastLocked { get; set; }
 
         private GameObject model;
         private Animator animator;
@@ -103,6 +106,14 @@ namespace Game.Hero
         private bool wasDead;
         private Material whiteFlashMaterial;
         private Coroutine deathSequenceRoutine;
+
+        // 溜めの構えの強さ（Animator の結果に LateUpdate で上乗せする）
+        private const float CastLeanDegrees = 20f;
+        private float castLean;
+        private float castReach;
+        private Vector3 castHoldPoint;
+        private bool castBonesCached;
+        private Transform spineLower, spineUpper, leftArm, leftForeArm, leftHand, rightArm, rightForeArm, rightHand;
 
         private static readonly string[] TriggerNames =
         {
@@ -140,6 +151,63 @@ namespace Game.Hero
         {
             if (health != null && health.IsDead) return;
             attackTimer = attackClipDuration;
+        }
+
+        /// lean: -1 で後ろへ反り、+1 で前へ踏み込む / reach: 両手を holdPoint へ向ける強さ（0〜1）。
+        public void SetCastPose(float lean, float reach, Vector3 holdPoint)
+        {
+            castLean = lean;
+            castReach = reach;
+            castHoldPoint = holdPoint;
+        }
+
+        private void LateUpdate()
+        {
+            if (model == null || animator == null) return;
+            if (castLean == 0f && castReach == 0f) return;
+            if (health != null && health.IsDead) return;
+            CacheCastBones();
+
+            Quaternion lean = Quaternion.AngleAxis(castLean * CastLeanDegrees * 0.5f, transform.right);
+            if (spineLower != null) spineLower.rotation = lean * spineLower.rotation;
+            if (spineUpper != null) spineUpper.rotation = lean * spineUpper.rotation;
+
+            AimArm(leftArm, leftForeArm, leftHand, -transform.right);
+            AimArm(rightArm, rightForeArm, rightHand, transform.right);
+        }
+
+        private void AimArm(Transform arm, Transform foreArm, Transform hand, Vector3 side)
+        {
+            if (arm == null || foreArm == null || hand == null) return;
+            // 肘は少し外・下へ開き、手先は火球を挟むように向ける。
+            AimBone(arm, foreArm, castHoldPoint + side * 0.22f - transform.up * 0.12f);
+            AimBone(foreArm, hand, castHoldPoint + side * 0.06f);
+        }
+
+        private void AimBone(Transform bone, Transform child, Vector3 target)
+        {
+            Quaternion delta = Quaternion.FromToRotation(child.position - bone.position, target - bone.position);
+            bone.rotation = Quaternion.Slerp(Quaternion.identity, delta, castReach) * bone.rotation;
+        }
+
+        private void CacheCastBones()
+        {
+            if (castBonesCached) return;
+            castBonesCached = true;
+            foreach (var t in model.GetComponentsInChildren<Transform>(true))
+            {
+                switch (t.name)
+                {
+                    case "Spine01": spineLower = t; break;
+                    case "Spine": spineUpper = t; break;
+                    case "LeftArm": leftArm = t; break;
+                    case "LeftForeArm": leftForeArm = t; break;
+                    case "LeftHand": leftHand = t; break;
+                    case "RightArm": rightArm = t; break;
+                    case "RightForeArm": rightForeArm = t; break;
+                    case "RightHand": rightHand = t; break;
+                }
+            }
         }
 
         private void Awake()
@@ -244,7 +312,7 @@ namespace Game.Hero
                 respawnAnimTimer -= Time.deltaTime;
                 if (respawnAnimTimer <= 0f) respawning = false;
             }
-            if (driveFromInput && inputs.Hero.Attack.WasPerformedThisFrame() && !(health != null && health.IsDead))
+            if (driveFromInput && !CastLocked && inputs.Hero.Attack.WasPerformedThisFrame() && !(health != null && health.IsDead))
             {
                 attackTimer = attackClipDuration;
             }
@@ -274,6 +342,7 @@ namespace Game.Hero
             // Fall4 用タイマーがセットされ、その間 Respawning ステートを優先する。
             if (health != null && health.IsDead) return AnimState.Dying;
             if (respawning) return AnimState.Respawning;
+            if (CastLocked) return AnimState.Idle;
             if (attackTimer > 0f) return AnimState.Attacking;
             Vector2 move = ReadMove();
             if (move.y > 0.1f) return AnimState.Forward;

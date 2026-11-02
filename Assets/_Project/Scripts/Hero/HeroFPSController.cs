@@ -22,6 +22,10 @@ namespace Game.Hero
         public float MoveSpeed => moveSpeed;
         public void SetMoveSpeed(float value) { moveSpeed = value; }
         public bool LookEnabled { get; set; } = true;
+        /// 溜め中など、視点だけ動かせて移動できない状態。
+        public bool MovementLocked { get; set; }
+        /// カメラの揺れを含まない照準方向。
+        public Vector3 AimForward => transform.rotation * Quaternion.Euler(pitch, 0f, 0f) * Vector3.forward;
 
         private CharacterController controller;
         private HeroInputActions inputs;
@@ -30,6 +34,10 @@ namespace Game.Hero
         private float pitch;
         private float verticalVelocity;
         private bool cursorLocked;
+        private Vector3 cameraBaseLocalPosition;
+        private Vector3 cameraKickPosition;
+        private float cameraKickPitch;
+        private bool cameraKickDirty;
 
         private bool IsAnimLocked()
         {
@@ -41,6 +49,23 @@ namespace Game.Hero
         {
             controller = GetComponent<CharacterController>();
             inputs = new HeroInputActions();
+            if (cameraTransform != null) cameraBaseLocalPosition = cameraTransform.localPosition;
+        }
+
+        /// スキル演出によるカメラの一時的なずれ。照準（AimForward）には影響しない。
+        public void SetCameraKick(Vector3 localPosition, float pitchDegrees)
+        {
+            cameraKickPosition = localPosition;
+            cameraKickPitch = pitchDegrees;
+            cameraKickDirty = true;
+        }
+
+        private void LateUpdate()
+        {
+            if (!cameraKickDirty || cameraTransform == null) return;
+            cameraTransform.localPosition = cameraBaseLocalPosition + cameraKickPosition;
+            cameraTransform.localRotation = Quaternion.Euler(pitch + cameraKickPitch, 0f, 0f);
+            cameraKickDirty = cameraKickPosition != Vector3.zero || cameraKickPitch != 0f;
         }
 
         private void OnEnable()
@@ -71,7 +96,7 @@ namespace Game.Hero
                 return;
             }
             HandleLook();
-            if (StatusEffectController.IsStunnedObj(gameObject)) HandleStunnedGravity();
+            if (MovementLocked || StatusEffectController.IsStunnedObj(gameObject)) HandleStunnedGravity();
             else HandleMove();
             HandleClickToRelock();
         }
