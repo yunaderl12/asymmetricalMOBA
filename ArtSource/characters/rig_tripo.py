@@ -21,6 +21,7 @@ SOURCES = dict(a.split("=", 1) for a in args[2:])
 UP = (0, 0, 1)
 # item: source key, hand, length along the item's up axis, world up and front (item -Y) in the idle pose, grip point on the item.
 # grip: fraction of the height; plate items (shield, book) are held on their back side.
+# palm: where on the hand it sits, from the wrist (0) to the fingertips (1).
 CHARS = {
     "mage": dict(
         folder="Mage", fbx="mage.fbx", blend="mage_tripo.blend", prefix="Mage", height=2.9, target=9000, head_z=0.50,
@@ -48,10 +49,11 @@ CHARS = {
         hip_center=(0, 0.03, 0.37), hip=(0.07, 0.03, 0.345), knee=(0.10, 0.01, 0.19), ankle=(0.11, 0.044, 0.06),
         toe=(0.12, -0.02, 0.02), toe_tip=(0.125, -0.09, 0.015), neck=(0, -0.03, 0.64), head=(0, -0.08, 0.66),
         shoulder=(0.05, 0.05, 0.62), arm=(0.16, 0.60), elbow=(0.31, 0.50), wrist=(0.41, 0.40), tip=(0.45, 0.25),
-        items=[dict(src="right", hand="Right", name="Dagger", length=0.85, target=600, up=UP, front=(-0.7, -0.7, 0), grip=0.17),
+        items=[dict(src="right", hand="Right", name="Dagger", length=1.0, target=600, up=(-0.1, -0.8, 0.6), front=(-1, 0, 0), grip=0.17, palm=0.55),
                dict(src="left", hand="Left", name="Shield", length=1.1, target=900, up=UP, front=(0.45, -0.89, 0), grip=0.5, plate=True)]),
 }
 CFG = CHARS[CHAR]
+DEFAULT_PALM = 0.42
 
 # Where the world axes come from in the hand's rest frame, sampled from knight_alert: rest-pose direction of world up / forward.
 # An item built with these stands the way it is specified while the hero idles.
@@ -218,7 +220,7 @@ for side in ("Left", "Right"):
     Xform[side + "ForeArm"] = (Rf, E0, E1)
     Xform[side + "Hand"] = (Rh, W0, W1)
     bone_new[side + "Arm"], bone_new[side + "ForeArm"], bone_new[side + "Hand"] = S0, E1, W1
-    J[side + "palm"] = W1 + (T1 - W1) * 0.42
+    J[side + "wrist_rest"], J[side + "tip_rest"] = W1, T1
 
 moved = P.copy()
 for name, (R, a, b) in Xform.items():
@@ -287,6 +289,11 @@ def straighten_plate(co):
     return c @ np.stack((x, -normal, up), axis=1)
 
 
+def palm_point(hand, along):
+    """Rest position of the grip: along = 0 at the wrist, 1 at the fingertips."""
+    return J[hand + "wrist_rest"] + (J[hand + "tip_rest"] - J[hand + "wrist_rest"]) * along
+
+
 def hand_frame(hand):
     ru, rf = (np.array(v, dtype=float) for v in HAND_REST_DIRS[hand])
     ru /= np.linalg.norm(ru)
@@ -319,7 +326,7 @@ for it in CFG["items"]:
         # stays beside the left hand; ModelBoneFit's sibling FloatingHeldItem animates it from here
         center = co.max(axis=0) / 2 + co.min(axis=0) / 2
         set_co(o, co - center)
-        o.location = Vector(J["Leftpalm"]) + Vector((0.1, -0.35, 0.4))
+        o.location = Vector(palm_point("Left", DEFAULT_PALM)) + Vector((0.1, -0.35, 0.4))
         o.name = "FloatingBook"
         smooth(o)
         floating = o
@@ -331,7 +338,7 @@ for it in CFG["items"]:
         near = co[np.abs(co[:, 2] - z) < 0.04 * it["length"]]
         anchor = np.array((np.median(near[:, 0]), np.median(near[:, 1]), z))
     R = hand_frame(it["hand"]) @ item_axes(it["up"], it["front"])
-    set_co(o, (co - anchor) @ R.T + J[it["hand"] + "palm"])
+    set_co(o, (co - anchor) @ R.T + palm_point(it["hand"], it.get("palm", DEFAULT_PALM)))
     vg = o.vertex_groups.new(name=it["hand"] + "Hand")
     vg.add(list(range(len(o.data.vertices))), 1.0, "REPLACE")
     smooth(o)
