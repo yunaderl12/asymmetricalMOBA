@@ -17,9 +17,11 @@ namespace Game.Skill
         private Vector3 baseLocalScale;
         private Quaternion baseLocalRotation;
         private Vector3 direction;
+        private float recoil = 1f;
         private float startTime;
 
-        public static void Play(GameObject target, Vector3 direction)
+        /// recoilScale: 押し込みと傾きの強さ。0 ならつぶれるだけ。
+        public static void Play(GameObject target, Vector3 direction, float recoilScale = 1f)
         {
             var punch = target.GetComponent<ImpactPunch>();
             if (punch == null)
@@ -34,6 +36,7 @@ namespace Game.Skill
             }
             direction.y = 0f;
             punch.direction = direction.sqrMagnitude > 0.001f ? direction.normalized : target.transform.forward;
+            punch.recoil = recoilScale;
             punch.startTime = Time.unscaledTime;
             punch.enabled = true;
         }
@@ -69,12 +72,12 @@ namespace Game.Skill
             float k = Mathf.Exp(-t * 4.5f) * Mathf.Cos(t * Mathf.PI * 2.6f);
             float push = Mathf.Exp(-t * 5f);
             visual.localScale = Vector3.Scale(baseLocalScale, new Vector3(1f + Widen * k, 1f - Squash * k, 1f + Widen * k));
-            Vector3 offset = direction * (Recoil * push);
+            Vector3 offset = direction * (Recoil * push * recoil);
             if (visual.parent != null) offset = visual.parent.InverseTransformVector(offset);
             visual.localPosition = baseLocalPosition + offset;
             Vector3 axis = Vector3.Cross(Vector3.up, direction);
             Vector3 localAxis = visual.parent != null ? visual.parent.InverseTransformDirection(axis) : axis;
-            visual.localRotation = Quaternion.AngleAxis(TiltDegrees * k, localAxis) * baseLocalRotation;
+            visual.localRotation = Quaternion.AngleAxis(TiltDegrees * k * recoil, localAxis) * baseLocalRotation;
         }
     }
 }

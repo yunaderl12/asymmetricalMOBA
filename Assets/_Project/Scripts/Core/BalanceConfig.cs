@@ -36,6 +36,16 @@ namespace Game.Core
         [Tooltip("A warp point can always be set within this radius (m) of StartTown")]
         public float warpTownRadius = 20f;
 
+        [Header("Monster Spawn Animation")]
+        [Tooltip("Warning circle on the ground before the portal opens (seconds)")]
+        public float spawnWarnSeconds = 1.2f;
+        [Tooltip("Portal opening time; the monster appears when it finishes (seconds)")]
+        public float spawnPortalSeconds = 0.9f;
+        [Tooltip("Monster rising out of the portal; it cannot act or be hit until this ends (seconds)")]
+        public float spawnEmergeSeconds = 1.1f;
+        [Tooltip("Radius of the warning circle and portal (m)")]
+        public float spawnPortalRadius = 1.4f;
+
         [Header("Monster Hate (smart monsters only)")]
         [Tooltip("Heals cast within this radius (m) of a monster add hate to the healer")]
         public float hateHealRadius = 10f;

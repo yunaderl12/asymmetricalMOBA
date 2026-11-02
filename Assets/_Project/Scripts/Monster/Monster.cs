@@ -28,6 +28,8 @@ namespace Game.Monster
 
         public MonsterData Data => data;
         public Spawner SpawnedBy { get; private set; }
+        /// ポータルから這い出している間は何もしない（MonsterEmerge が管理する）。
+        public bool IsEmerging { get; set; }
 
         public int CurrentAtk
         {
@@ -186,7 +188,7 @@ namespace Game.Monster
 
         private void Update()
         {
-            if (destroyed || agent == null) return;
+            if (destroyed || agent == null || IsEmerging) return;
 
             if (StatusEffectController.IsStunnedObj(gameObject))
             {

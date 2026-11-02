@@ -8,8 +8,8 @@ namespace Game.Skill
     [DefaultExecutionOrder(100)] // ImpactPunch と構えの反映後の形を写す
     public class FireHitEffect : MonoBehaviour
     {
-        private const int FlashFrames = 2;
-        private const float FilmSeconds = 0.5f;
+        private const int HitFlashFrames = 2;
+        private const float HitFilmSeconds = 0.5f;
         private const float FlashExpand = 0f;
         private const float FilmExpandStart = 0.015f;
         private const float FilmExpandEnd = 0.07f;
@@ -30,6 +30,8 @@ namespace Game.Skill
 
         private readonly List<Ghost> ghosts = new List<Ghost>();
         private MaterialPropertyBlock block;
+        private int flashFrames;
+        private float filmSeconds;
         private int startFrame;
         private float filmStart = -1f;
 
@@ -48,6 +50,17 @@ namespace Game.Skill
 
         public static void Play(GameObject target)
         {
+            Begin(target, HitFlashFrames, HitFilmSeconds);
+        }
+
+        /// 白フラッシュなしで、炎の膜だけを指定秒数まとわせる（魔物の出現演出用）。
+        public static void PlayBurn(GameObject target, float seconds)
+        {
+            Begin(target, 0, seconds);
+        }
+
+        private static void Begin(GameObject target, int flashFrames, float filmSeconds)
+        {
             var renderers = new List<Renderer>();
             CollectVisualRenderers(target, renderers);
             if (renderers.Count == 0) return;
@@ -55,6 +68,8 @@ namespace Game.Skill
             var go = new GameObject("FireHitEffect");
             var effect = go.AddComponent<FireHitEffect>();
             effect.block = new MaterialPropertyBlock();
+            effect.flashFrames = flashFrames;
+            effect.filmSeconds = filmSeconds;
             effect.startFrame = Time.frameCount;
             foreach (var r in renderers) effect.AddGhost(r);
             effect.RefreshGhosts();
@@ -148,7 +163,7 @@ namespace Game.Skill
         // フラッシュはコマ数で、膜は実時間で進める（ヒットストップ中も動く）。
         private void ApplyPhase()
         {
-            bool flashing = Time.frameCount - startFrame < FlashFrames;
+            bool flashing = Time.frameCount - startFrame < flashFrames;
             if (flashing)
             {
                 block.SetFloat("_Flash", 1f);
@@ -157,7 +172,7 @@ namespace Game.Skill
             else
             {
                 if (filmStart < 0f) filmStart = Time.unscaledTime;
-                float t = (Time.unscaledTime - filmStart) / FilmSeconds;
+                float t = (Time.unscaledTime - filmStart) / filmSeconds;
                 if (t >= 1f)
                 {
                     Destroy(gameObject);

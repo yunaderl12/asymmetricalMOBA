@@ -7,6 +7,7 @@ namespace Game.Skill
     public static class FireballVfx
     {
         private static Material orb, shell, glow, particle, trail;
+        private static readonly System.Collections.Generic.Dictionary<string, Material> ExtraMaterials = new System.Collections.Generic.Dictionary<string, Material>();
         private static Mesh sphereMesh, quadMesh;
 
         public static Material Orb => GetMaterial(ref orb, "VFX/FireOrb");
@@ -28,6 +29,15 @@ namespace Game.Skill
 
         public static Mesh SphereMesh => GetPrimitiveMesh(ref sphereMesh, PrimitiveType.Sphere);
         public static Mesh QuadMesh => GetPrimitiveMesh(ref quadMesh, PrimitiveType.Quad);
+
+        /// 他の演出のシェーダー用。パスごとにマテリアルを1つ共有する。
+        public static Material GetMaterial(string path)
+        {
+            ExtraMaterials.TryGetValue(path, out var cached);
+            var material = GetMaterial(ref cached, path);
+            ExtraMaterials[path] = material;
+            return material;
+        }
 
         private static Material GetMaterial(ref Material cache, string path)
         {

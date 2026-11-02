@@ -84,6 +84,9 @@ namespace Game.Monster
 
         private HealthComponent health;
         private readonly List<Monster> spawnedMonsters = new List<Monster>();
+        // 出現演出中でまだ生成していない魔物。上限の判定に含める。
+        private readonly List<MonsterData> pendingSpawns = new List<MonsterData>();
+        private readonly List<SpawnPortal> activePortals = new List<SpawnPortal>();
         private int invIndex;
 
         private void Awake()
@@ -275,6 +278,7 @@ namespace Game.Monster
 
                 int aliveCount = 0;
                 foreach (var sm in spawnedMonsters) if (sm != null) aliveCount++;
+                aliveCount += pendingSpawns.Count;
                 if (maxConcurrentMonsters > 0 && aliveCount >= maxConcurrentMonsters)
                 {
                     yield return new WaitForSeconds(retryDelay);
@@ -285,6 +289,10 @@ namespace Game.Monster
                 foreach (var sm in spawnedMonsters)
                 {
                     if (sm != null && sm.Data == dataToSpawn) sameCount++;
+                }
+                foreach (var pending in pendingSpawns)
+                {
+                    if (pending == dataToSpawn) sameCount++;
                 }
                 if (sameCount >= dataToSpawn.maxSpwn)
                 {
@@ -308,21 +316,33 @@ namespace Game.Monster
                     continue;
                 }
 
-                var monsterGO = Instantiate(monsterPrefab, spawnPos.Value, Quaternion.identity);
-                var monsterComp = monsterGO.GetComponent<Monster>();
-                if (monsterComp != null)
-                {
-                    monsterComp.Initialize(dataToSpawn, this, waypointsToStartTown);
-                    spawnedMonsters.Add(monsterComp);
-                }
+                BeginSpawn(dataToSpawn, spawnPos.Value);
 
-                // Spawn interval comes only from the monster's own SpwnCool.
+                // Spawn interval comes only from the monster's own SpwnCool (counted from the warning circle).
                 float perMonsterCool = Mathf.Max(0.05f, dataToSpawn.spwnCool);
                 Debug.Log($"[Spawner] {name} spawned {dataToSpawn.monsterName}, next in {perMonsterCool:F1}s");
 
                 invIndex = (invIndex + 1) % inv.Count;
                 yield return new WaitForSeconds(perMonsterCool);
             }
+        }
+
+        /// 警告の円とポータルを出し、ポータルが開いたら魔物を生成して這い出させる。
+        private void BeginSpawn(MonsterData dataToSpawn, Vector3 position)
+        {
+            var cfg = BalanceConfig.Instance;
+            activePortals.RemoveAll(p => p == null);
+            pendingSpawns.Add(dataToSpawn);
+            activePortals.Add(SpawnPortal.Begin(position, cfg.spawnPortalRadius, () =>
+            {
+                pendingSpawns.Remove(dataToSpawn);
+                var monsterGO = Instantiate(monsterPrefab, position, Quaternion.identity);
+                var monsterComp = monsterGO.GetComponent<Monster>();
+                if (monsterComp == null) return;
+                monsterComp.Initialize(dataToSpawn, this, waypointsToStartTown);
+                spawnedMonsters.Add(monsterComp);
+                MonsterEmerge.Begin(monsterComp, cfg.spawnEmergeSeconds, dataToSpawn.modelScale);
+            }));
         }
 
         private Vector3? SampleSpawnPosition()
@@ -347,6 +367,13 @@ namespace Game.Monster
             StopAllCoroutines();
             activeAttackLineRoutine = null;
             if (attackLine != null) attackLine.enabled = false;
+            // まだ魔物が出ていないポータルは閉じる。
+            foreach (var portal in activePortals)
+            {
+                if (portal != null) portal.Cancel();
+            }
+            activePortals.Clear();
+            pendingSpawns.Clear();
             if (bodyRenderer != null && destroyedMaterial != null)
             {
                 bodyRenderer.material = destroyedMaterial;
