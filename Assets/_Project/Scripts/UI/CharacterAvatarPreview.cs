@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
+using Game.Hero;
 
 namespace Game.UI
 {
@@ -90,6 +91,8 @@ namespace Game.UI
 
             modelRoot = Instantiate(prefab, stagePosition, Quaternion.identity);
             modelRoot.name = "Preview (" + prefab.name + ")";
+            var boneFit = ModelBoneFit.Attach(modelRoot);
+            var floatingItem = FloatingHeldItem.AttachIfPresent(modelRoot);
             currentModelPath = modelPath;
             currentMaterialPath = materialPath;
             if (!string.IsNullOrEmpty(materialPath))
@@ -109,6 +112,12 @@ namespace Game.UI
                     Debug.LogWarning($"[CharacterAvatarPreview] Resources/{materialPath} not found");
                 }
             }
+
+            // 手に持つ物が広がるTポーズではなく、実際に見せるポーズの大きさで画面に収める。
+            var poseClip = FindAnimationClip();
+            if (poseClip != null) poseClip.SampleAnimation(modelRoot, 0f);
+            if (boneFit != null) boneFit.Apply();
+            if (floatingItem != null) floatingItem.Place();
 
             FrameCamera();
             SetupAnimation();
@@ -383,12 +392,23 @@ namespace Game.UI
             foreach (var r in renderers)
             {
                 if (r == null) continue;
-                // SkinnedMeshRenderer.bounds requires the renderer to be enabled to give a valid
-                // value pre-first-frame in some Unity versions; toggle if needed.
-                if (!has) { bounds = r.bounds; has = true; }
-                else bounds.Encapsulate(r.bounds);
+                Bounds b = r is SkinnedMeshRenderer skinned ? PosedBounds(skinned) : r.bounds;
+                if (!has) { bounds = b; has = true; }
+                else bounds.Encapsulate(b);
             }
             return has && bounds.size.sqrMagnitude > 1e-6f;
+        }
+
+        // SkinnedMeshRenderer.bounds はポーズを反映しないので、今の姿勢を焼いて測る。
+        private static Bounds PosedBounds(SkinnedMeshRenderer skinned)
+        {
+            var baked = new Mesh();
+            skinned.BakeMesh(baked, true);
+            var result = new Bounds(skinned.transform.position, Vector3.zero);
+            var vertices = baked.vertices;
+            for (int i = 0; i < vertices.Length; i++) result.Encapsulate(skinned.transform.TransformPoint(vertices[i]));
+            Destroy(baked);
+            return result;
         }
     }
 }

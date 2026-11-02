@@ -70,7 +70,11 @@ namespace Game.Editor
             try
             {
                 ApplyMaterial(model, cls.modelMaterialPath);
+                var boneFit = ModelBoneFit.Attach(model);
+                var floatingItem = FloatingHeldItem.AttachIfPresent(model);
                 if (poseClip != null) poseClip.SampleAnimation(model, poseClip.length * 0.3f);
+                if (boneFit != null) boneFit.Apply();
+                if (floatingItem != null) floatingItem.Place();
                 var points = CollectPoints(model);
                 if (points.Count == 0) { Debug.LogWarning($"[ClassPortrait] no renderers on {cls.modelPath}"); return false; }
 

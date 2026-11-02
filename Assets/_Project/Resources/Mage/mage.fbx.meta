@@ -3,7 +3,22 @@ guid: ba7f952cf96c94cca8a6ef99a3bc1a51
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Body
+    second: {fileID: 2100000, guid: 7aa9c5ca7e88043d68d91218e5bdd196, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Book
+    second: {fileID: 2100000, guid: 75e8628e936ed4cdc8e290132d0cb7c6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Mage_Wand
+    second: {fileID: 2100000, guid: 3daf99626ad57475fb3037240e583820, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

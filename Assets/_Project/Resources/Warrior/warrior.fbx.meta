@@ -3,7 +3,22 @@ guid: fb6fbb1202ae04e70a02484f9bdaa462
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Warrior_Axe
+    second: {fileID: 2100000, guid: e4e946bf6bb584e7b9f8e3c720a3711c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Warrior_Body
+    second: {fileID: 2100000, guid: e9eca537f00764fe2b920f829956b624, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Warrior_Shield
+    second: {fileID: 2100000, guid: 49b67f7f98e534376b63c6b7953cc435, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

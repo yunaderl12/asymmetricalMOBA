@@ -3,7 +3,22 @@ guid: 869f0a36e4a82401590b3d9b7aeb9247
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Priest_Body
+    second: {fileID: 2100000, guid: 58e17c8be5ee248998cbec6597e89579, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Priest_Book
+    second: {fileID: 2100000, guid: 3bae10f140c784c95b2e508ca13e328a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Priest_Wand
+    second: {fileID: 2100000, guid: f4ee44efd956f45468f2793035f9ebc5, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

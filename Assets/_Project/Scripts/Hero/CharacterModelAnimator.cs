@@ -261,6 +261,8 @@ namespace Game.Hero
             model.transform.localPosition = modelOffset;
             model.transform.localEulerAngles = modelEulerOffset;
             model.transform.localScale = Vector3.one * modelScale;
+            ModelBoneFit.Attach(model);
+            FloatingHeldItem.AttachIfPresent(model);
 
             // 1人称カメラから自分のアバターが映り込まないように専用Layerへ移す。
             ApplyAvatarLayer(model);

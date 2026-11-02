@@ -3,7 +3,22 @@ guid: da63e77dbfb1c40cc9be16ba7cad0d15
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Goblin_Body
+    second: {fileID: 2100000, guid: 080106f3645c448c6afb2a3dd2b551ef, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Goblin_Dagger
+    second: {fileID: 2100000, guid: 1c5049620675243f4a714b8383f91f1a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Goblin_Shield
+    second: {fileID: 2100000, guid: 12af2a577b4614e0d8ddffdc0f21db58, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
