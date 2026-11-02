@@ -23,6 +23,7 @@ namespace Game.Skill
         private Coroutine activeBeamRoutine;
         private Game.Hero.HeroRegen regen;
         private FireballCast fireball;
+        private HeroTeleport teleport;
 
         private void Awake()
         {
@@ -62,6 +63,7 @@ namespace Game.Skill
         {
             if (runtime == null) return;
             if (fireball != null && fireball.IsCasting) return;
+            if (teleport != null && teleport.IsBusy) return;
             if (!StatusEffectController.CanUseSkills(gameObject))
             {
                 Debug.Log("[Skill] cannot cast while stunned / silenced");
@@ -76,6 +78,7 @@ namespace Game.Skill
             }
             if (skill.skillName == WarpSkillName) { TryWarp(idx, skill); return; }
             if (skill.skillName == FireballSkillName) { TryFireball(idx, skill); return; }
+            if (skill.skillName == TeleportSkillName) { TryTeleport(idx, skill); return; }
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
@@ -159,10 +162,34 @@ namespace Game.Skill
                 });
         }
 
+        public const string TeleportSkillName = "Teleport";
+
+        /// はじまりのまちへの帰還。SPとクールタイムは飛び立つ瞬間に消費する。
+        private void TryTeleport(int idx, SkillData skill)
+        {
+            if (fireball != null && fireball.IsPosing) return;
+            if (!runtime.CanCast(idx))
+            {
+                float cd = runtime.GetCooldownRemaining(idx);
+                Debug.Log($"[Skill] Teleport on cooldown or low SP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
+                return;
+            }
+            if (teleport == null) teleport = GetComponent<HeroTeleport>();
+            if (teleport == null) teleport = gameObject.AddComponent<HeroTeleport>();
+            teleport.BeginCast(skill, cameraTransform, () =>
+            {
+                if (!runtime.CanCast(idx)) return false;
+                if (mana != null) mana.TryUseMana(skill.spCost);
+                runtime.StartCooldown(idx);
+                runtime.NotifyCast(idx);
+                if (regen != null) regen.NotifyActed();
+                return true;
+            });
+        }
+
         private void Execute(SkillData skill, float effectValue)
         {
             // Special-case placeholders first
-            if (skill.skillName == "Teleport") { ExecuteTeleport(skill); return; }
             if (skill.skillName == "Taunt") { ExecuteTaunt(skill); return; }
             if (skill.skillName == "Detect") { ExecuteDetect(skill); return; }
 
@@ -317,24 +344,6 @@ namespace Game.Skill
             if (stats != null) stats.RemoveModifier(srcId);
             ApplyBuffToSpeed();
             Debug.Log($"[Skill] {skillName} expired");
-        }
-
-        private void ExecuteTeleport(SkillData skill)
-        {
-            if (cameraTransform == null) return;
-            Vector3 fwd = cameraTransform.forward;
-            fwd.y = 0f;
-            fwd.Normalize();
-            var cc = GetComponent<CharacterController>();
-            Vector3 target = transform.position + fwd * skill.range;
-            if (cc != null)
-            {
-                cc.enabled = false;
-                transform.position = target;
-                cc.enabled = true;
-            }
-            else transform.position = target;
-            Debug.Log("[Skill] Teleport: moved to " + target);
         }
 
         private void ExecuteTaunt(SkillData skill)

@@ -105,6 +105,16 @@ namespace Game.Skill
         /// 火球からぴゅっと飛ぶ火花。進行方向へ抜けつつ、重力で放物線を描いて消える。
         public static void SpawnSparks(Vector3 position, Vector3 direction, int count)
         {
+            SpawnSparks(position, direction, count, new Color(1f, 0.9f, 0.55f), new Color(1f, 0.5f, 0.12f), new Color(1f, 0.3f, 0.05f));
+        }
+
+        public static void SpawnSparks(Vector3 position, Vector3 direction, int count, Color start, Color end)
+        {
+            SpawnSparks(position, direction, count, start, end, end);
+        }
+
+        private static void SpawnSparks(Vector3 position, Vector3 direction, int count, Color start, Color end, Color fade)
+        {
             var ps = NewParticles("FireSparks", null);
             ps.transform.SetPositionAndRotation(position, Quaternion.LookRotation(direction));
 
@@ -114,7 +124,7 @@ namespace Game.Skill
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.12f, 0.34f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(5f, 15f);
             main.startSize = new ParticleSystem.MinMaxCurve(0.03f, 0.08f);
-            main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.9f, 0.55f), new Color(1f, 0.5f, 0.12f));
+            main.startColor = new ParticleSystem.MinMaxGradient(start, end);
             main.gravityModifier = 1.4f;
             main.maxParticles = count;
             main.stopAction = ParticleSystemStopAction.Destroy;
@@ -133,7 +143,7 @@ namespace Game.Skill
 
             var color = ps.colorOverLifetime;
             color.enabled = true;
-            color.color = FadeGradient(Color.white, new Color(1f, 0.3f, 0.05f));
+            color.color = FadeGradient(Color.white, fade);
 
             var r = ps.GetComponent<ParticleSystemRenderer>();
             r.renderMode = ParticleSystemRenderMode.Stretch;

@@ -36,6 +36,18 @@ namespace Game.Core
         [Tooltip("A warp point can always be set within this radius (m) of StartTown")]
         public float warpTownRadius = 20f;
 
+        [Header("Teleport Skill")]
+        [Tooltip("Time to climb straight up from the ground to the hover point (seconds)")]
+        public float teleportRiseSeconds = 1.6f;
+        [Tooltip("Time spent hovering in the sky while turning toward StartTown (seconds)")]
+        public float teleportHoverSeconds = 0.8f;
+        [Tooltip("Time to fly from the hover point down to StartTown (seconds)")]
+        public float teleportTravelSeconds = 2.5f;
+        [Tooltip("Minimum height of the hover point above the ground (m); longer flights go higher")]
+        public float teleportArcHeight = 30f;
+        [Tooltip("Hero stays locked after landing (seconds)")]
+        public float teleportLandingSeconds = 0.3f;
+
         [Header("Monster Spawn Animation")]
         [Tooltip("Warning circle on the ground before the portal opens (seconds)")]
         public float spawnWarnSeconds = 1.2f;

@@ -80,6 +80,12 @@ namespace Game.Core
             if (heroController != null) heroController.enabled = ccWasEnabled;
         }
 
+        /// 勇者の復活地点（Teleport の着地点にも使う）。自分の当たり判定を切ってから呼ぶこと。
+        public Vector3 GetSpawnPosition()
+        {
+            return ComputeSpawnPosition();
+        }
+
         /// <summary>
         /// スポーン地点(spawnPoint or StartTown + spawnOffsetLocal)を計算し、
         /// snapToGround が有効なら下方向レイキャストで地面の上に乗せる。

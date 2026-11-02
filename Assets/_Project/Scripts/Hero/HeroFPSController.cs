@@ -24,6 +24,9 @@ namespace Game.Hero
         public bool LookEnabled { get; set; } = true;
         /// 溜め中など、視点だけ動かせて移動できない状態。
         public bool MovementLocked { get; set; }
+        /// スキルが勇者を直接動かしている間（Teleport の飛行中）は、移動も視点も重力も止める。
+        public bool Suspended { get; set; }
+        public float LookPitch => pitch;
         /// カメラの揺れを含まない照準方向。
         public Vector3 AimForward => transform.rotation * Quaternion.Euler(pitch, 0f, 0f) * Vector3.forward;
 
@@ -86,7 +89,7 @@ namespace Game.Hero
 
         private void Update()
         {
-            if (Game.UI.ConsoleUI.IsConsoleActive) return;
+            if (Game.UI.ConsoleUI.IsConsoleActive || Suspended) return;
             if (IsAnimLocked())
             {
                 // Keep gravity so the hero doesn't float, but ignore movement input.

@@ -47,6 +47,8 @@ namespace Game.Skill
         private Vector3 lastHoldPoint;
 
         public bool IsCasting => phase == Phase.Charging;
+        /// 溜めか発射後の戻りの途中（カメラを動かしている間）。
+        public bool IsPosing => phase != Phase.Idle;
 
         private void Awake()
         {
