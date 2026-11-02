@@ -13,7 +13,9 @@ MonoBehaviour:
   m_Name: WarpPoint
   m_EditorClassIdentifier: 
   skillName: WarpPoint
-  description: 'No point: set a warp point here (only on our side of a destroyed spawner, or near the town). Point set: cast 5s, then warp there. Moving or taking damage cancels the cast.'
+  description: 'No point: set a warp point here (only on our side of a destroyed
+    spawner, or near the town). Point set: cast 5s, then warp there. Moving or taking
+    damage cancels the cast.'
   spCost: 20
   cooldown: 45
   effectType: 2
@@ -22,5 +24,11 @@ MonoBehaviour:
   effectValue: 0
   range: 0
   duration: 0
+  statusEffect: 0
+  statusDuration: 0
+  statusPower: 0
+  levelGrowthRate: 0.2
   maxSkillLevel: 1
   iconColor: {r: 0.3, g: 0.85, b: 0.9, a: 1}
+  ownerClass: {fileID: 0}
+  icon: {fileID: 21300000, guid: a1dc1aa12e1d64614b2ed788cb661ee4, type: 3}

@@ -299,10 +299,12 @@ Y < -10 で「Backspace でリスポーン」表示。Backspace キーで StartT
   - HeroLobby: 勇者ロビー（クラス + スキル設定）
     - 設定パネル: クラスの全身画像（HeroClassData.portrait）とクラス一覧の丸アイコン（HeroClassData.icon）。未設定なら色付きの楕円/丸で表示。現在の画像は 3D モデルから作った仮画像（Tools/Characters/Generate Class Portraits）で、正式イラストは同じ欄に差し替える
     - スキル5枠: 枠をクリックすると黄色の外枠で選択表示。5枠目を選んだ状態で下の一覧のスキルをクリックすると入れ替わり、外したスキルは一覧に戻る。1〜4枠目はクリックすると「クラス専用のため変更できません」と表示
+    - スキルのイラスト: 枠・一覧・詳細・五角形のダイヤの中に SkillData.icon を表示（未設定なら色だけのダイヤ）。現在の画像は仮（ArtSource/skill_icons/build_skill_icons.py で生成し、Tools/Skills/Assign Skill Icons で割り当て）で、正式イラストは同じ欄に差し替える
     - スキル詳細: 枠または一覧のスキルをクリックすると、パネル下部に詳細を表示（スキル名、専用クラス/共通、消費SP、CT、射程、効果時間、効果の種類と量、対象、状態異常、説明）。値は SkillData の値をそのまま表示する（各スキルの消費SP・CT・射程は未定のため現状は仮値）
     - 選んだ5スキルは、画面左下の 3D モデル下の五角形に色とスキル名で反映（1〜4枠はクラス色、5枠目はスキル色）
   - DemonLobby: 魔王ロビー（デッキ + スポナー初期設定）
   - MatchLobby: マッチング待機（HeroPanel / DemonPanel）
+    - HeroPanel: 勇者ロビーと同じ部品で構成（左に3Dモデルと五角形、中央に常時表示の設定パネル、右に他プレイヤー）。ロジックは HeroSkillLoadout で共有。クラスを変えても5枠目は保持し、新しいクラスの専用スキルになる場合だけ初期スキルに戻す
   - MainStage: 本戦
   - Result: 戦績表示
   - Test_Sandbox / Test_DemonKing: 開発テスト用
@@ -424,6 +426,5 @@ Y < -10 で「Backspace でリスポーン」表示。Backspace キーで StartT
 ### 軽い改善候補
 
 - HumanHeroMarker のリファクタ（重複コード整理）
-- HeroLobby/MatchLobby の HeroLoadoutPanel リファクタ（コード重複解消）
 - 古いテストシーン（Test_Sandbox / Test_DemonKing）の削除 or 統合
 - Application.runInBackground の確認

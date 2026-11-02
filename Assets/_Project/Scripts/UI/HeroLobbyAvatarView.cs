@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using Game.Hero;
 using Game.Skill;
 
 namespace Game.UI
@@ -11,6 +12,7 @@ namespace Game.UI
         private RawImage avatar3D; // shown instead of avatarOval when SetAvatar3D(tex) provides a texture
         private DiamondGraphic[] skillPentagons;
         private Text[] skillNameTexts;
+        private Image[] skillIcons;
         private Text userNameText;
         private Text classNameText;
 
@@ -138,6 +140,37 @@ namespace Game.UI
                 pg.raycastTarget = false;
                 skillPentagons[i] = pg;
             }
+
+            // Illustrations go after every diamond (petals overlap) and stay upright, unlike the rotated petals.
+            skillIcons = new Image[5];
+            for (int i = 0; i < 5; i++)
+            {
+                float rad = i * 72f * Mathf.Deg2Rad;
+                var iGO = new GameObject("SkillIcon_" + i, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                iGO.transform.SetParent(holderGO.transform, false);
+                var iconRT = (RectTransform)iGO.transform;
+                iconRT.anchorMin = new Vector2(0.5f, 0.5f); iconRT.anchorMax = new Vector2(0.5f, 0.5f);
+                iconRT.sizeDelta = new Vector2(52f, 52f);
+                iconRT.anchoredPosition = new Vector2(-Mathf.Sin(rad), Mathf.Cos(rad)) * (diamondSize * 0.573f);
+                skillIcons[i] = iGO.GetComponent<Image>();
+                skillIcons[i].preserveAspect = true;
+                skillIcons[i].raycastTarget = false;
+                skillIcons[i].enabled = false;
+            }
+        }
+
+        /// Shows the loadout's class name, model (flat oval if it has none) and skills.
+        public void ShowLoadout(HeroSkillLoadout loadout, CharacterAvatarPreview preview)
+        {
+            var cls = loadout.CurrentClass;
+            if (cls != null)
+            {
+                SetAvatarColor(cls.avatarColor);
+                SetClassName(cls.className);
+                bool shown = preview != null && preview.ShowModel(cls.modelPath, cls.modelMaterialPath);
+                SetAvatar3D(shown ? preview.Texture : null);
+            }
+            SetSkills(loadout.Skills, loadout.ClassColor);
         }
 
         public void SetAvatarColor(Color c)
@@ -187,6 +220,11 @@ namespace Game.UI
                     else skillPentagons[i].color = s != null ? s.EffectiveIconColor() : new Color(0.4f, 0.4f, 0.4f, 1f);
                 }
                 if (skillNameTexts != null && skillNameTexts[i] != null) skillNameTexts[i].text = s != null ? s.skillName : "-";
+                if (skillIcons != null && skillIcons[i] != null)
+                {
+                    skillIcons[i].sprite = s != null ? s.icon : null;
+                    skillIcons[i].enabled = skillIcons[i].sprite != null;
+                }
             }
         }
 

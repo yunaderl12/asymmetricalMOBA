@@ -35,6 +35,8 @@ namespace Game.Skill
         [Header("Lobby Visual")]
         public Color iconColor = new Color(0f, 0f, 0f, 0f); // alpha=0 -> use ownerClass.avatarColor or effectType fallback
         public HeroClassData ownerClass; // null = common skill
+        [Tooltip("Illustration shown inside the skill's diamond. Empty = plain diamond.")]
+        public Sprite icon;
 
         /// Common skills placed under Resources/CommonSkills, offered in the free slot in addition to the lobby's serialized list.
         public static SkillData[] LoadExtraCommonSkills()

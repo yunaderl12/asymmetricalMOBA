@@ -27,8 +27,7 @@ namespace Game.UI
         [Tooltip("Model preview component in the scene. Shows the selected class's model (HeroClassData.modelPath) in the avatar area instead of the flat ellipse.")]
         [SerializeField] private CharacterAvatarPreview modelPreview;
 
-        private int selectedClassIndex = 0;
-        private readonly SkillData[] currentSkills = new SkillData[5];
+        private HeroSkillLoadout loadout;
 
         private HeroLobbyAvatarView avatarView;
         private HeroLobbySettingsPanel settingsPanel;
@@ -37,26 +36,16 @@ namespace Game.UI
         private Button roleButton;
         private Button settingsButton;
         private Button startButton;
-        private int selectedSlot = -1;
 
         private void Awake()
         {
             GameSession.GetOrCreate();
-            PopulateSkillOwners();
+            loadout = new HeroSkillLoadout(allClasses, commonSkills);
         }
 
         private void Start()
         {
-            // Restore selection from session
-            var session = GameSession.Instance;
-            if (session != null && session.SelectedHeroClass != null)
-            {
-                for (int i = 0; i < allClasses.Count; i++)
-                {
-                    if (allClasses[i] == session.SelectedHeroClass) { selectedClassIndex = i; break; }
-                }
-            }
-
+            loadout.LoadFromSession();
             BuildOverlayUI();
             // Auto-spawn a CharacterAvatarPreview if the Inspector reference is blank,
             // so the lobby works out of the box without manual scene wiring.
@@ -66,16 +55,10 @@ namespace Game.UI
                 modelPreview = pvGO.AddComponent<CharacterAvatarPreview>();
                 Debug.Log("[HeroLobby] auto-spawned CharacterAvatarPreview");
             }
-            InitSkillsForClass();
             if (settingsPanel != null)
             {
-                settingsPanel.OnClassSelected = OnClassSelected;
-                settingsPanel.OnSlotSelectedForReplace = OnSlotSelectedForReplace;
-                settingsPanel.OnAvailableSkillPicked = OnAvailableSkillPicked;
-                settingsPanel.PopulateCarousel(allClasses, selectedClassIndex);
-                settingsPanel.SetCurrentClass(GetCurrentClass());
-                settingsPanel.SetSkillSet(currentSkills, GetCurrentClassColor());
-                settingsPanel.PopulateAvailable(BuildAvailableSkillList());
+                settingsPanel.OnLoadoutChanged = RefreshAvatar;
+                settingsPanel.Bind(loadout);
             }
             RefreshAvatar();
 
@@ -84,19 +67,6 @@ namespace Game.UI
             {
                 var es = new GameObject("EventSystem", typeof(EventSystem), typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
                 Debug.Log("[HeroLobby] created EventSystem");
-            }
-        }
-
-        private void PopulateSkillOwners()
-        {
-            if (allClasses == null) return;
-            foreach (var c in allClasses)
-            {
-                if (c == null || c.classSkills == null) continue;
-                foreach (var s in c.classSkills)
-                {
-                    if (s != null && s.ownerClass == null) s.ownerClass = c;
-                }
             }
         }
 
@@ -218,117 +188,9 @@ namespace Game.UI
             return go;
         }
 
-        private HeroClassData GetCurrentClass()
-        {
-            if (allClasses == null || allClasses.Count == 0) return null;
-            int i = Mathf.Clamp(selectedClassIndex, 0, allClasses.Count - 1);
-            return allClasses[i];
-        }
-
-        private Color GetCurrentClassColor()
-        {
-            var c = GetCurrentClass();
-            return c != null ? c.avatarColor : new Color(0.4f, 0.4f, 0.4f, 1f);
-        }
-
-        private void InitSkillsForClass()
-        {
-            var cls = GetCurrentClass();
-            for (int i = 0; i < currentSkills.Length; i++) currentSkills[i] = null;
-            if (cls != null && cls.classSkills != null)
-            {
-                for (int i = 0; i < 4 && i < cls.classSkills.Count; i++) currentSkills[i] = cls.classSkills[i];
-            }
-            var session = GameSession.Instance;
-            SkillData freeSlot = session != null ? session.SelectedCommonSkill : null;
-            if (freeSlot == null && commonSkills != null && commonSkills.Count > 0) freeSlot = commonSkills[0];
-            currentSkills[4] = freeSlot;
-        }
-
-        private void OnClassSelected(int idx)
-        {
-            if (idx < 0 || idx >= allClasses.Count) return;
-            if (selectedClassIndex == idx) return;
-            selectedClassIndex = idx;
-            InitSkillsForClass();
-            RefreshAvatar();
-            if (settingsPanel != null)
-            {
-                settingsPanel.SetCurrentClass(GetCurrentClass());
-                settingsPanel.SetSkillSet(currentSkills, GetCurrentClassColor());
-                settingsPanel.PopulateAvailable(BuildAvailableSkillList());
-                settingsPanel.ClearSelectedSlot();
-            }
-        }
-
-        // slotIdx = -1 when the selected slot was clicked again (deselect).
-        private void OnSlotSelectedForReplace(int slotIdx)
-        {
-            if (slotIdx >= 0 && slotIdx < 4)
-            {
-                selectedSlot = -1;
-                if (settingsPanel != null)
-                {
-                    settingsPanel.ClearSelectedSlot();
-                    settingsPanel.ShowNotice("スロット1〜4はクラス専用のため変更できません");
-                }
-                return;
-            }
-            selectedSlot = slotIdx;
-        }
-
-        private void OnAvailableSkillPicked(SkillData s)
-        {
-            if (s == null) return;
-            if (selectedSlot != 4)
-            {
-                if (settingsPanel != null) settingsPanel.ShowNotice("入れ替えるときは先に5枠目を選んでください");
-                return;
-            }
-            currentSkills[4] = s;
-            RefreshAvatar();
-            if (settingsPanel != null)
-            {
-                // Slot 5 stays selected so another skill can be tried right away.
-                settingsPanel.SetSkillSet(currentSkills, GetCurrentClassColor());
-                settingsPanel.PopulateAvailable(BuildAvailableSkillList());
-            }
-        }
-
-        // Skills that can go into slot 5. The one currently equipped is left out, so a swap
-        // puts the old skill back into the list.
-        public List<SkillData> BuildAvailableSkillList()
-        {
-            var list = new List<SkillData>();
-            var current = GetCurrentClass();
-            if (allClasses != null)
-            {
-                foreach (var c in allClasses)
-                {
-                    if (c == null || c == current) continue;
-                    if (c.classSkills == null) continue;
-                    foreach (var s in c.classSkills) if (s != null) list.Add(s);
-                }
-            }
-            if (commonSkills != null) foreach (var s in commonSkills) if (s != null && !list.Contains(s)) list.Add(s);
-            foreach (var s in SkillData.LoadExtraCommonSkills()) if (s != null && !list.Contains(s)) list.Add(s);
-            list.RemoveAll(s => System.Array.IndexOf(currentSkills, s) >= 0);
-            return list;
-        }
-
         private void RefreshAvatar()
         {
-            var cls = GetCurrentClass();
-            if (avatarView == null) return;
-            if (cls != null)
-            {
-                avatarView.SetAvatarColor(cls.avatarColor);
-                avatarView.SetClassName(cls.className);
-                // Show the class's 3D model when it has one; revert to flat oval otherwise.
-                bool shown = modelPreview != null && modelPreview.ShowModel(cls.modelPath, cls.modelMaterialPath);
-                avatarView.SetAvatar3D(shown ? modelPreview.Texture : null);
-            }
-            avatarView.SetSkills(currentSkills, GetCurrentClassColor());
+            if (avatarView != null) avatarView.ShowLoadout(loadout, modelPreview);
         }
 
         private void OnRoleClicked()
@@ -360,14 +222,9 @@ namespace Game.UI
 
         private void OnStartClicked()
         {
-            var session = GameSession.Instance;
-            if (session != null)
-            {
-                var cls = GetCurrentClass();
-                if (cls != null) session.SelectedHeroClass = cls;
-                session.SelectedCommonSkill = currentSkills[4];
-                Debug.Log($"[HeroLobby] start: class={(cls != null ? cls.className : "?")}, slot5={(currentSkills[4] != null ? currentSkills[4].skillName : "?")}");
-            }
+            loadout.SaveToSession();
+            var free = loadout.Skills[HeroSkillLoadout.FreeSlot];
+            Debug.Log($"[HeroLobby] start: class={(loadout.CurrentClass != null ? loadout.CurrentClass.className : "?")}, slot5={(free != null ? free.skillName : "?")}");
             SceneManager.LoadScene(matchSceneName);
         }
     }

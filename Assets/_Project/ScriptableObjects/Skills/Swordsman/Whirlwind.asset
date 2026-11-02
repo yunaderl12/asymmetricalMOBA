@@ -22,4 +22,11 @@ MonoBehaviour:
   effectValue: 20
   range: 5
   duration: 0
+  statusEffect: 0
+  statusDuration: 0
+  statusPower: 0
+  levelGrowthRate: 0.2
+  maxSkillLevel: 5
+  iconColor: {r: 0, g: 0, b: 0, a: 0}
   ownerClass: {fileID: 11400000, guid: 6210ec3a6f1d2460e90b0ca56b16bb2a, type: 2}
+  icon: {fileID: 21300000, guid: b73e2f0d0ac7f48238f2eeead3ece3df, type: 3}

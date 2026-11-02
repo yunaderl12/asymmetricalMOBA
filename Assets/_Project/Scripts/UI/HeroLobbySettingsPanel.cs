@@ -12,9 +12,8 @@ namespace Game.UI
     {
         public bool IsOpen { get; private set; }
 
-        public Action<int> OnClassSelected;
-        public Action<int> OnSlotSelectedForReplace;
-        public Action<SkillData> OnAvailableSkillPicked;
+        /// Fired after the player changes the class or slot 5.
+        public Action OnLoadoutChanged;
 
         private static readonly Color SelectedOutlineColor = new Color(1f, 0.85f, 0.2f, 1f);
 
@@ -37,6 +36,9 @@ namespace Game.UI
         private SkillTooltipUI tooltipUI;
         private SkillDetailView detailView;
         private HeroClassData shownClass;
+        private HeroSkillLoadout loadout;
+        private GameObject titleGO;
+        private GameObject hintGO;
         private readonly List<SkillHoverTrigger> slotHoverTriggers = new List<SkillHoverTrigger>();
 
         public static HeroLobbySettingsPanel Create(RectTransform parent)
@@ -91,7 +93,7 @@ namespace Game.UI
             bg.raycastTarget = true;
 
             // Title
-            var titleGO = MakeText(root, "Title", font, 22, FontStyle.Bold, "設定");
+            titleGO = MakeText(root, "Title", font, 22, FontStyle.Bold, "設定");
             var tRT = (RectTransform)titleGO.transform;
             tRT.anchorMin = new Vector2(0f, 1f); tRT.anchorMax = new Vector2(1f, 1f); tRT.pivot = new Vector2(0.5f, 1f);
             tRT.sizeDelta = new Vector2(-32f, 36f); tRT.anchoredPosition = new Vector2(0f, -10f);
@@ -180,7 +182,7 @@ namespace Game.UI
                 lt.alignment = TextAnchor.UpperCenter; lt.color = Color.white;
                 slotLabels.Add(lt);
 
-                // All slots are clickable so locked ones can explain themselves (HeroLobby decides).
+                // All slots are clickable so locked ones can explain themselves.
                 var btn = sGO.AddComponent<Button>();
                 btn.targetGraphic = pg;
                 slotButtons.Add(btn);
@@ -189,7 +191,12 @@ namespace Game.UI
                     selectedSlot = selectedSlot == captured ? -1 : captured;
                     RefreshOutlines();
                     if (detailView != null) detailView.Show(slotHoverTriggers[captured].data);
-                    OnSlotSelectedForReplace?.Invoke(selectedSlot);
+                    // Only slot 5 can be swapped; the others just show their details.
+                    if (selectedSlot >= 0 && selectedSlot != HeroSkillLoadout.FreeSlot)
+                    {
+                        ClearSelectedSlot();
+                        ShowNotice("スロット1〜4はクラス専用のため変更できません");
+                    }
                 });
 
                 // Hover-to-tooltip (1s)
@@ -236,10 +243,10 @@ namespace Game.UI
             detailView = SkillDetailView.Create(root, font);
             var dtRT = (RectTransform)detailView.transform;
             dtRT.anchorMin = new Vector2(0.5f, 1f); dtRT.anchorMax = new Vector2(0.5f, 1f); dtRT.pivot = new Vector2(0.5f, 1f);
-            dtRT.sizeDelta = new Vector2(880f, 160f); dtRT.anchoredPosition = new Vector2(0f, -760f);
+            dtRT.sizeDelta = new Vector2(880f, 156f); dtRT.anchoredPosition = new Vector2(0f, -760f);
 
             // Close hint at bottom
-            var hintGO = MakeText(root, "Hint", font, 12, FontStyle.Italic, "Esc キーでパネルを閉じる");
+            hintGO = MakeText(root, "Hint", font, 12, FontStyle.Italic, "Esc キーでパネルを閉じる");
             var hRT = (RectTransform)hintGO.transform;
             hRT.anchorMin = new Vector2(0f, 0f); hRT.anchorMax = new Vector2(1f, 0f); hRT.pivot = new Vector2(0.5f, 0f);
             hRT.sizeDelta = new Vector2(-16f, 20f); hRT.anchoredPosition = new Vector2(0f, 6f);
@@ -263,7 +270,46 @@ namespace Game.UI
             return go;
         }
 
-        public void PopulateCarousel(IList<HeroClassData> classes, int currentIdx)
+        /// Shows this loadout and lets the panel edit it.
+        public void Bind(HeroSkillLoadout newLoadout)
+        {
+            loadout = newLoadout;
+            PopulateCarousel(loadout.Classes);
+            RefreshLoadout();
+        }
+
+        private void RefreshLoadout()
+        {
+            SetCurrentClass(loadout.CurrentClass);
+            SetSkillSet(loadout.Skills, loadout.ClassColor);
+            PopulateAvailable(loadout.BuildAvailableSkills());
+        }
+
+        private void OnClassClicked(int index)
+        {
+            if (loadout == null || index == loadout.ClassIndex) return;
+            loadout.SelectClass(index);
+            RefreshLoadout();
+            ClearSelectedSlot();
+            OnLoadoutChanged?.Invoke();
+        }
+
+        private void OnAvailableSkillClicked(SkillData skill)
+        {
+            if (detailView != null) detailView.Show(skill);
+            if (loadout == null) return;
+            if (selectedSlot != HeroSkillLoadout.FreeSlot)
+            {
+                ShowNotice("入れ替えるときは先に5枠目を選んでください");
+                return;
+            }
+            loadout.SetFreeSkill(skill);
+            // Slot 5 stays selected so another skill can be tried right away.
+            RefreshLoadout();
+            OnLoadoutChanged?.Invoke();
+        }
+
+        private void PopulateCarousel(IList<HeroClassData> classes)
         {
             if (_carouselContainer == null) return;
             for (int i = _carouselContainer.childCount - 1; i >= 0; i--) Destroy(_carouselContainer.GetChild(i).gameObject);
@@ -312,11 +358,11 @@ namespace Game.UI
                 nRT.sizeDelta = new Vector2(btnSize + 24f, 20f); nRT.anchoredPosition = new Vector2(0f, 0f);
                 nameGO.GetComponent<Text>().alignment = TextAnchor.MiddleCenter;
 
-                bGO.GetComponent<Button>().onClick.AddListener(() => OnClassSelected?.Invoke(captured));
+                bGO.GetComponent<Button>().onClick.AddListener(() => OnClassClicked(captured));
             }
         }
 
-        public void SetCurrentClass(HeroClassData cls)
+        private void SetCurrentClass(HeroClassData cls)
         {
             if (cls == null) return;
             if (currentClassFill != null)
@@ -352,7 +398,7 @@ namespace Game.UI
         /// Slot 0..3 use currentClassColor (locked). Slot 4 uses skill.EffectiveIconColor.
         /// Locked slots are darkened by 0.7×.
         /// </summary>
-        public void SetSkillSet(SkillData[] skills, Color currentClassColor)
+        private void SetSkillSet(SkillData[] skills, Color currentClassColor)
         {
             for (int i = 0; i < slotGraphics.Count; i++)
             {
@@ -361,13 +407,14 @@ namespace Game.UI
                 {
                     if (i < 4) slotGraphics[i].color = currentClassColor * new Color(0.7f, 0.7f, 0.7f, 1f) + new Color(0f, 0f, 0f, 0.3f);
                     else slotGraphics[i].color = s != null ? s.EffectiveIconColor() : new Color(0.4f, 0.4f, 0.4f, 1f);
+                    SkillIconView.Set(slotGraphics[i].rectTransform, s);
                 }
                 if (slotLabels[i] != null) slotLabels[i].text = s != null ? s.skillName : "-";
                 if (i < slotHoverTriggers.Count && slotHoverTriggers[i] != null) slotHoverTriggers[i].data = s;
             }
         }
 
-        public void PopulateAvailable(List<SkillData> skills)
+        private void PopulateAvailable(List<SkillData> skills)
         {
             for (int i = availableButtons.Count - 1; i >= 0; i--) if (availableButtons[i] != null) Destroy(availableButtons[i]);
             availableButtons.Clear();
@@ -397,6 +444,7 @@ namespace Game.UI
                 var pg = go.AddComponent<DiamondGraphic>();
                 pg.color = s.EffectiveIconColor();
                 pg.raycastTarget = true;
+                SkillIconView.Set(rt, s);
 
                 var lblGO = MakeText(go.transform, "Lbl", font, 10, FontStyle.Bold, s.skillName);
                 var lRT = (RectTransform)lblGO.transform;
@@ -407,11 +455,7 @@ namespace Game.UI
                 var btn = go.AddComponent<Button>();
                 btn.targetGraphic = pg;
                 var captured = s;
-                btn.onClick.AddListener(() =>
-                {
-                    if (detailView != null) detailView.Show(captured);
-                    OnAvailableSkillPicked?.Invoke(captured);
-                });
+                btn.onClick.AddListener(() => OnAvailableSkillClicked(captured));
 
                 // Hover-to-tooltip (1s)
                 var hover = go.AddComponent<SkillHoverTrigger>();
@@ -434,6 +478,20 @@ namespace Game.UI
             {
                 if (outlineHosts[i] != null) outlineHosts[i].SetActive(i == selectedSlot);
             }
+        }
+
+        /// Always-open layout for the match lobby: no slide-in, backdrop, title or Esc hint.
+        /// extendTop lets the panel's content start above the parent's top edge.
+        public void ShowDocked(float left, float extendTop)
+        {
+            IsOpen = true;
+            gameObject.SetActive(true);
+            root.anchorMin = new Vector2(0f, 0f); root.anchorMax = new Vector2(0f, 1f); root.pivot = new Vector2(0f, 0.5f);
+            root.offsetMin = new Vector2(left, 0f); root.offsetMax = new Vector2(left + panelWidth, extendTop);
+            GetComponent<Image>().enabled = false;
+            titleGO.SetActive(false);
+            hintGO.SetActive(false);
+            if (tooltipUI != null) tooltipUI.transform.SetAsLastSibling();
         }
 
         public void Show()

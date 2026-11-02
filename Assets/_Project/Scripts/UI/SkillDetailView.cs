@@ -38,7 +38,7 @@ namespace Game.UI
             iGO.transform.SetParent(transform, false);
             var iRT = (RectTransform)iGO.transform;
             iRT.anchorMin = new Vector2(0f, 1f); iRT.anchorMax = new Vector2(0f, 1f); iRT.pivot = new Vector2(0f, 1f);
-            iRT.sizeDelta = new Vector2(40f, 40f); iRT.anchoredPosition = new Vector2(16f, -14f);
+            iRT.sizeDelta = new Vector2(48f, 48f); iRT.anchoredPosition = new Vector2(12f, -12f);
             icon = iGO.AddComponent<DiamondGraphic>();
             icon.raycastTarget = false;
 
@@ -73,14 +73,15 @@ namespace Game.UI
 
         public void Show(SkillData s)
         {
+            SkillIconView.Set(icon.rectTransform, s);
             if (s == null)
             {
                 icon.enabled = false;
                 nameText.text = "";
                 ownerText.text = "";
                 statsText.text = "";
-                effectText.text = "";
-                descText.text = "スキルをクリックすると、消費SP・クールタイムなどの詳細をここに表示します";
+                effectText.text = "スキルをクリックすると、消費SP・クールタイムなどの詳細をここに表示します";
+                descText.text = "";
                 return;
             }
             icon.enabled = true;

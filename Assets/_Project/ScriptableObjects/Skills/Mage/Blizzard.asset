@@ -18,7 +18,6 @@ MonoBehaviour:
   cooldown: 10
   effectType: 0
   damageType: 1
-  damageType: 1
   targetType: 2
   effectValue: 25
   range: 8
@@ -26,4 +25,8 @@ MonoBehaviour:
   statusEffect: 2
   statusDuration: 3
   statusPower: 0.4
+  levelGrowthRate: 0.2
+  maxSkillLevel: 5
+  iconColor: {r: 0, g: 0, b: 0, a: 0}
   ownerClass: {fileID: 11400000, guid: 5c79a6f114db141968cfd3e07c9edfba, type: 2}
+  icon: {fileID: 21300000, guid: a291fea907c2547a9a4c2c65dfa7ba7f, type: 3}
