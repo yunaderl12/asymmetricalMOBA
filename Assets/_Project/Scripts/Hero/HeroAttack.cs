@@ -18,6 +18,9 @@ namespace Game.Hero
         [SerializeField] private ManaComponent mana;
         [SerializeField] private GameObject magicProjectilePrefab;
 
+        /// 通常攻撃を出した瞬間（1人称の腕の振り用）。
+        public event System.Action Attacked;
+
         public int Damage => damage;
         public void SetDamage(int value) { damage = value; }
 
@@ -80,6 +83,7 @@ namespace Game.Hero
 
             cooldownTimer = attackInterval;
             if (regen != null) regen.NotifyActed();
+            Attacked?.Invoke();
 
             bool isMage = classInit != null && classInit.ClassData != null && classInit.ClassData.className == "Mage";
             if (isMage && magicProjectilePrefab != null) FireMagicProjectile();

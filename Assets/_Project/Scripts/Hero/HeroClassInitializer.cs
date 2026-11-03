@@ -57,6 +57,7 @@ namespace Game.Hero
                 var anim = gameObject.AddComponent<CharacterModelAnimator>();
                 anim.Configure(classData.modelPath, classData.modelMaterialPath, classData.modelScale, true, true);
                 Debug.Log($"[HeroClass] added CharacterModelAnimator ({classData.className}: {classData.modelPath})");
+                HeroViewModel.Attach(gameObject, classData);
             }
         }
 

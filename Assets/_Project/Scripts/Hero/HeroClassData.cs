@@ -49,5 +49,17 @@ namespace Game.Hero
         public string modelMaterialPath;
         [Tooltip("Scale of the model. Size order: Demon King > Warrior > Swordsman > Mage = Priest > Goblin.")]
         public float modelScale = 1f;
+
+        [Header("First-Person View (seen from the camera: x right, y up, z forward)")]
+        [Tooltip("Scale of the arms and weapon in the first-person view.")]
+        public float viewScale = 0.26f;
+        [Tooltip("Point the arm comes from. The arm is drawn from this direction to the hand.")]
+        public Vector3 viewRightShoulder = new Vector3(0.34f, -0.6f, 0.1f);
+        public Vector3 viewRightPosition = new Vector3(0.2f, -0.15f, 0.42f);
+        [Tooltip("Rotation from the character's idle hand. 0 = held as in the idle pose.")]
+        public Vector3 viewRightEuler = new Vector3(30f, -15f, -20f);
+        public Vector3 viewLeftShoulder = new Vector3(-0.34f, -0.6f, 0.1f);
+        public Vector3 viewLeftPosition = new Vector3(-0.27f, -0.18f, 0.42f);
+        public Vector3 viewLeftEuler = new Vector3(0f, 35f, 0f);
     }
 }

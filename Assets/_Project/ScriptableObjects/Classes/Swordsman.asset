@@ -41,3 +41,10 @@ MonoBehaviour:
   modelPath: Swordsman/swordsman
   modelMaterialPath: 
   modelScale: 1.05
+  viewScale: 0.26
+  viewRightShoulder: {x: 0.34, y: -0.6, z: 0.1}
+  viewRightPosition: {x: 0.24, y: -0.15, z: 0.42}
+  viewRightEuler: {x: 25, y: 5, z: -30}
+  viewLeftShoulder: {x: -0.34, y: -0.6, z: 0.1}
+  viewLeftPosition: {x: -0.34, y: -0.235, z: 0.42}
+  viewLeftEuler: {x: 0, y: 35, z: 0}
