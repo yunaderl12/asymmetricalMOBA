@@ -42,6 +42,7 @@ namespace Game.Hero
         private Vector3 cameraBaseLocalPosition;
         private Vector3 cameraKickPosition;
         private float cameraKickPitch;
+        private float cameraKickRoll;
         private bool cameraKickDirty;
 
         private bool IsAnimLocked()
@@ -58,10 +59,11 @@ namespace Game.Hero
         }
 
         /// スキル演出によるカメラの一時的なずれ。照準（AimForward）には影響しない。
-        public void SetCameraKick(Vector3 localPosition, float pitchDegrees)
+        public void SetCameraKick(Vector3 localPosition, float pitchDegrees, float rollDegrees = 0f)
         {
             cameraKickPosition = localPosition;
             cameraKickPitch = pitchDegrees;
+            cameraKickRoll = rollDegrees;
             cameraKickDirty = true;
         }
 
@@ -69,8 +71,8 @@ namespace Game.Hero
         {
             if (!cameraKickDirty || cameraTransform == null) return;
             cameraTransform.localPosition = cameraBaseLocalPosition + cameraKickPosition;
-            cameraTransform.localRotation = Quaternion.Euler(pitch + cameraKickPitch, 0f, 0f);
-            cameraKickDirty = cameraKickPosition != Vector3.zero || cameraKickPitch != 0f;
+            cameraTransform.localRotation = Quaternion.Euler(pitch + cameraKickPitch, 0f, cameraKickRoll);
+            cameraKickDirty = cameraKickPosition != Vector3.zero || cameraKickPitch != 0f || cameraKickRoll != 0f;
         }
 
         private void OnEnable()

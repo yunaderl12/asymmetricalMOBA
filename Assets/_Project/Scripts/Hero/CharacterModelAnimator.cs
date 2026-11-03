@@ -121,8 +121,14 @@ namespace Game.Hero
         private float castLean;
         private float castReach;
         private Vector3 castHoldPoint;
+        private float meleeLean;
+        private float meleeSpin;
+        private float meleeReach;
+        private Vector3 meleePoint;
+        private float guardReach;
+        private Vector3 guardPoint;
         private bool castBonesCached;
-        private Transform spineLower, spineUpper, leftArm, leftForeArm, leftHand, rightArm, rightForeArm, rightHand;
+        private Transform hips, spineLower, spineUpper, leftArm, leftForeArm, leftHand, rightArm, rightForeArm, rightHand;
 
         private static readonly string[] TriggerNames =
         {
@@ -183,33 +189,63 @@ namespace Game.Hero
             castHoldPoint = holdPoint;
         }
 
+        /// 近接スキルの姿勢。lean: 上体の傾き（+で前）/ spinDegrees: 体ごとの回転 / rightReach: 右腕を rightPoint へ向ける強さ（0〜1）。
+        public void SetMeleePose(float lean, float spinDegrees, float rightReach, Vector3 rightPoint)
+        {
+            meleeLean = lean;
+            meleeSpin = spinDegrees;
+            meleeReach = rightReach;
+            meleePoint = rightPoint;
+        }
+
+        public void ClearMeleePose()
+        {
+            SetMeleePose(0f, 0f, 0f, Vector3.zero);
+        }
+
+        /// 盾を構える左腕。reach: 左腕を point へ向ける強さ（0〜1）。
+        public void SetGuardArm(float reach, Vector3 point)
+        {
+            guardReach = reach;
+            guardPoint = point;
+        }
+
         private void LateUpdate()
         {
             if (model == null || animator == null) return;
-            if (castLean == 0f && castReach == 0f) return;
+            bool casting = castLean != 0f || castReach != 0f;
+            bool melee = meleeLean != 0f || meleeSpin != 0f || meleeReach != 0f;
+            if (!casting && !melee && guardReach == 0f) return;
             if (health != null && health.IsDead) return;
             CacheCastBones();
 
-            Quaternion lean = Quaternion.AngleAxis(castLean * CastLeanDegrees * 0.5f, transform.right);
+            Quaternion lean = Quaternion.AngleAxis((castLean + meleeLean) * CastLeanDegrees * 0.5f, transform.right);
             if (spineLower != null) spineLower.rotation = lean * spineLower.rotation;
             if (spineUpper != null) spineUpper.rotation = lean * spineUpper.rotation;
 
-            AimArm(leftArm, leftForeArm, leftHand, -transform.right);
-            AimArm(rightArm, rightForeArm, rightHand, transform.right);
+            if (casting)
+            {
+                AimArm(leftArm, leftForeArm, leftHand, -transform.right, castHoldPoint, castReach);
+                AimArm(rightArm, rightForeArm, rightHand, transform.right, castHoldPoint, castReach);
+            }
+            if (meleeReach != 0f) AimArm(rightArm, rightForeArm, rightHand, transform.right, meleePoint, meleeReach);
+            if (guardReach != 0f) AimArm(leftArm, leftForeArm, leftHand, -transform.right, guardPoint, guardReach);
+            // 腕を決めた後に回すと、腕ごと体が回る。
+            if (meleeSpin != 0f && hips != null) hips.rotation = Quaternion.AngleAxis(meleeSpin, transform.up) * hips.rotation;
         }
 
-        private void AimArm(Transform arm, Transform foreArm, Transform hand, Vector3 side)
+        private void AimArm(Transform arm, Transform foreArm, Transform hand, Vector3 side, Vector3 point, float reach)
         {
             if (arm == null || foreArm == null || hand == null) return;
-            // 肘は少し外・下へ開き、手先は火球を挟むように向ける。
-            AimBone(arm, foreArm, castHoldPoint + side * 0.22f - transform.up * 0.12f);
-            AimBone(foreArm, hand, castHoldPoint + side * 0.06f);
+            // 肘は少し外・下へ開き、手先は目標を挟むように向ける。
+            AimBone(arm, foreArm, point + side * 0.22f - transform.up * 0.12f, reach);
+            AimBone(foreArm, hand, point + side * 0.06f, reach);
         }
 
-        private void AimBone(Transform bone, Transform child, Vector3 target)
+        private static void AimBone(Transform bone, Transform child, Vector3 target, float reach)
         {
             Quaternion delta = Quaternion.FromToRotation(child.position - bone.position, target - bone.position);
-            bone.rotation = Quaternion.Slerp(Quaternion.identity, delta, castReach) * bone.rotation;
+            bone.rotation = Quaternion.Slerp(Quaternion.identity, delta, reach) * bone.rotation;
         }
 
         private void CacheCastBones()
@@ -220,6 +256,7 @@ namespace Game.Hero
             {
                 switch (t.name)
                 {
+                    case "Hips": hips = t; break;
                     case "Spine01": spineLower = t; break;
                     case "Spine": spineUpper = t; break;
                     case "LeftArm": leftArm = t; break;

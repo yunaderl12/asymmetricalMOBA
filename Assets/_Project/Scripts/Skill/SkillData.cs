@@ -42,6 +42,12 @@ namespace Game.Skill
         [Tooltip("Hit-stop on impact for the local player (real seconds). 0 = none.")]
         public float hitStopSeconds = 0.06f;
 
+        [Header("Melee")]
+        [Tooltip("Width of the hit fan in degrees (Slash).")]
+        public float coneAngle = 120f;
+        [Tooltip("Dash speed in m/s (Charge). The dash stops after range metres.")]
+        public float dashSpeed = 24f;
+
         [Header("Leveling")]
         public float levelGrowthRate = 0.2f;
         public int maxSkillLevel = 5;

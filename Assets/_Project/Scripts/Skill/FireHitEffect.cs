@@ -53,6 +53,12 @@ namespace Game.Skill
             Begin(target, HitFlashFrames, HitFilmSeconds);
         }
 
+        /// 炎の膜なしで、白フラッシュだけを入れる（近接スキル用）。
+        public static void PlayFlash(GameObject target)
+        {
+            Begin(target, HitFlashFrames, 0f);
+        }
+
         /// 白フラッシュなしで、炎の膜だけを指定秒数まとわせる（魔物の出現演出用）。
         public static void PlayBurn(GameObject target, float seconds)
         {

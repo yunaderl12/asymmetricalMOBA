@@ -195,6 +195,14 @@ namespace Game.Skill
             return !float.IsPositiveInfinity(best.Distance);
         }
 
+        /// 敵の体の範囲。見た目が無ければ当たり判定の範囲を使う。
+        public static Bounds BodyBoundsOf(GameObject target, Collider fallback)
+        {
+            FireHitEffect.CollectVisualRenderers(target, RendererBuffer);
+            if (RendererBuffer.Count > 0) return GetBodyBounds(target, RendererBuffer);
+            return fallback != null ? fallback.bounds : new Bounds(target.transform.position, Vector3.one);
+        }
+
         // SkinnedMeshRenderer.bounds は実際の体よりかなり大きいので、
         // スキンメッシュはメッシュの高さと奥行きから足元基準の直立した箱を作る。
         private static Bounds GetBodyBounds(GameObject target, List<Renderer> renderers)

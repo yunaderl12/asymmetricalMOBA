@@ -25,6 +25,7 @@ namespace Game.Skill
         private FireballCast fireball;
         private HeroTeleport teleport;
         private BlizzardCast blizzard;
+        private MeleeSkillCast melee;
 
         private void Awake()
         {
@@ -66,6 +67,7 @@ namespace Game.Skill
             if (fireball != null && fireball.IsCasting) return;
             if (teleport != null && teleport.IsBusy) return;
             if (blizzard != null && blizzard.IsPosing) return;
+            if (melee != null && melee.IsBusy) return;
             if (!StatusEffectController.CanUseSkills(gameObject))
             {
                 Debug.Log("[Skill] cannot cast while stunned / silenced");
@@ -82,6 +84,10 @@ namespace Game.Skill
             if (skill.skillName == FireballSkillName) { TryFireball(idx, skill); return; }
             if (skill.skillName == TeleportSkillName) { TryTeleport(idx, skill); return; }
             if (skill.skillName == BlizzardSkillName) { TryBlizzard(idx, skill); return; }
+            if (skill.skillName == "Slash") { TryMelee<SlashCast>(idx, skill); return; }
+            if (skill.skillName == "Charge") { TryMelee<ChargeCast>(idx, skill); return; }
+            if (skill.skillName == "Whirlwind") { TryMelee<WhirlwindCast>(idx, skill); return; }
+            if (skill.skillName == "Guard") { TryMelee<GuardCast>(idx, skill); return; }
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
@@ -241,6 +247,43 @@ namespace Game.Skill
                 if (regen != null) regen.NotifyActed();
                 return true;
             });
+        }
+
+        /// 溜めてから出す近接スキル。SPとクールタイムは発動の瞬間に消費し、ダメージは当たった敵に入る。
+        private void TryMelee<T>(int idx, SkillData skill) where T : MeleeSkillCast
+        {
+            if (!runtime.CanCast(idx))
+            {
+                float cd = runtime.GetCooldownRemaining(idx);
+                Debug.Log($"[Skill] {skill.skillName} on cooldown or low SP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
+                return;
+            }
+            T cast = GetComponent<T>();
+            if (cast == null) cast = gameObject.AddComponent<T>();
+            melee = cast;
+
+            float value = 0f;
+            cast.BeginCast(skill, cameraTransform,
+                () =>
+                {
+                    if (!runtime.CanCast(idx)) return false;
+                    if (mana != null) mana.TryUseMana(skill.spCost);
+                    runtime.StartCooldown(idx);
+                    runtime.NotifyCast(idx);
+                    if (regen != null) regen.NotifyActed();
+                    value = runtime.GetCurrentEffectValue(idx);
+                    Debug.Log($"[Skill] {skill.skillName} released (value={value})");
+                    return true;
+                },
+                hp =>
+                {
+                    hp.TakeDamage(Mathf.RoundToInt(value), gameObject, ToDamageType(skill.damageType));
+                    ApplySkillStatus(skill, hp);
+                },
+                () =>
+                {
+                    if (skill.effectType == SkillEffectType.Buff) ExecuteBuff(skill, value);
+                });
         }
 
         private void Execute(SkillData skill, float effectValue)
