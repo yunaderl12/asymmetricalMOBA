@@ -21,6 +21,7 @@ SOURCES = dict(a.split("=", 1) for a in args[2:])
 UP = (0, 0, 1)
 # item: source key, hand, length along the item's up axis, world up and front (item -Y) in the idle pose, grip point on the item.
 # grip: fraction of the height; plate items (shield, book) are held on their back side.
+# upright: the source already stands straight (a nearly square shield confuses straighten_plate).
 # palm: where on the hand it sits, from the wrist (0) to the fingertips (1).
 CHARS = {
     "mage": dict(
@@ -44,6 +45,13 @@ CHARS = {
         shoulder=(0.04, -0.13, 0.53), arm=(0.19, 0.52), elbow=(0.33, 0.38), wrist=(0.39, 0.30), tip=(0.39, 0.21),
         items=[dict(src="right", hand="Right", name="Axe", length=2.2, target=2000, up=UP, front=(-0.57, -0.82, 0), grip=0.26),
                dict(src="left", hand="Left", name="Shield", length=1.35, target=1500, up=UP, front=(0.45, -0.89, 0), grip=0.55, plate=True)]),
+    "swordsman": dict(
+        folder="Swordsman", fbx="swordsman.fbx", blend="swordsman_tripo.blend", prefix="Swordsman", height=2.9, target=9000, head_z=0.50,
+        hip_center=(0, -0.01, 0.25), hip=(0.06, -0.005, 0.23), knee=(0.095, 0, 0.13), ankle=(0.10, 0, 0.05),
+        toe=(0.105, -0.035, 0.02), toe_tip=(0.11, -0.07, 0.015), neck=(0, -0.01, 0.47), head=(0, -0.01, 0.50),
+        shoulder=(0.04, -0.01, 0.455), arm=(0.14, 0.45), elbow=(0.235, 0.425), wrist=(0.325, 0.42), tip=(0.44, 0.41),
+        items=[dict(src="right", hand="Right", name="Sword", length=2.0, target=2000, up=(0, -0.25, 0.97), front=(-1, 0, 0), grip=0.115, palm=0.45),
+               dict(src="left", hand="Left", name="Shield", length=1.25, target=1500, up=UP, front=(0.45, -0.89, 0), grip=0.5, plate=True, upright=True)]),
     "goblin": dict(
         folder="Goblin", fbx="goblin.fbx", blend="goblin_tripo.blend", prefix="Goblin", height=2.8, target=3500, head_z=0.67,
         hip_center=(0, 0.03, 0.37), hip=(0.07, 0.03, 0.345), knee=(0.10, 0.01, 0.19), ankle=(0.11, 0.044, 0.06),
@@ -318,7 +326,7 @@ for it in CFG["items"]:
     o = load_source(SOURCES[it["src"]], it["target"])
     assign_material(o, CFG["prefix"] + "_" + it["name"])
     co = get_co(o)
-    if it.get("plate"):
+    if it.get("plate") and not it.get("upright"):
         co = straighten_plate(co)
     co = co - np.array((0, 0, co[:, 2].min()))
     co *= it["length"] / co[:, 2].max()
