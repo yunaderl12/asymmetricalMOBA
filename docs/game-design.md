@@ -59,7 +59,7 @@ GitHub: https://github.com/yunaderl12/asymmetricalMOBA（private）
 | 僧侶 (Priest) | 100 | 60 | 8 | 10 | 6 | 10 | 5.0 |
 | 重戦士 (Warrior) | 150 | 30 | 12 | 3 | 15 | 5 | 3.5 |
 
-- **クラスの見た目**: 魔法使い・僧侶・重戦士は外部で作ったテクスチャ付きモデルに差し替え済み（剣士は従来のまま）。持ち物は、魔法使いが右手の杖と左手のそばに浮かぶ本（FloatingHeldItem）、僧侶が右手の杖と左手の本、重戦士が右手の斧と左手の盾。どのモデルも Knight の骨格とアニメーションを共有し、関節の位置だけモデルごとに合わせる（ModelBoneFit）。作り方は ArtSource/characters/rig_tripo.py
+- **クラスの見た目**: 全クラスとも外部で作ったテクスチャ付きモデルに差し替え済み。持ち物は、剣士が右手の剣と左手の盾、魔法使いが右手の杖と左手のそばに浮かぶ本（FloatingHeldItem）、僧侶が右手の杖と左手の本、重戦士が右手の斧と左手の盾。見た目の大きさは 魔王 ＞ 重戦士 ＞ 剣士 ＞ 魔法使い ＝ 僧侶 ＞ ゴブリン（倍率の仮値は 魔王1.5 / 重戦士1.15 / 剣士1.05 / 魔法使い0.93 / 僧侶0.89 / ゴブリン0.70。HeroClassData.modelScale、MonsterData.modelScale、BalanceConfig.demonKingModelScale）。当たり判定の大きさは見た目に連動させず、共通のまま。どのモデルも Knight の骨格とアニメーションを共有し、関節の位置だけモデルごとに合わせる（ModelBoneFit）。作り方は ArtSource/characters/rig_tripo.py
 
 - **成長値（レベル毎）**: クラスごとに異なる成長値に統一する（剣士は HP+12, Atk+2 など。全クラスの成長値の数値表は未作成）
 - **防御の種類**: 物理防御（Df）と魔法防御（mDf）に分ける。物理攻撃（Atk系）にDf、魔法攻撃（mAtk系）にmDfを適用する。mDfはクラスの性格でDfと逆転させ、魔法使い・僧侶は魔法に強く、重戦士は魔法に弱い（魔物・魔王のmDfは未定）

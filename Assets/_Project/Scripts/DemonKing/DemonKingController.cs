@@ -18,7 +18,15 @@ namespace Game.DemonKing
         [SerializeField] private float pitchMin = -70f;
         [SerializeField] private float pitchMax = 70f;
 
+        [Header("Camera")]
+        [Tooltip("Radius of the sphere swept from the shoulder to the camera. Walls and pillars pull the camera in front of them.")]
+        [SerializeField] private float cameraRadius = 0.2f;
+
+        private static readonly RaycastHit[] CameraHits = new RaycastHit[16];
+
         private float pitch;
+        private Transform cameraTransform;
+        private Vector3 cameraRest;
 
         private CharacterController controller;
         private Vector3 slipVelocity;
@@ -44,11 +52,44 @@ namespace Game.DemonKing
             controller = GetComponent<CharacterController>();
             mods = GetComponent<StatModifierContainer>();
             if (inputs == null) inputs = new DemonKingInputActions();
+            var cam = pitchTarget != null ? pitchTarget.GetComponentInChildren<Camera>(true) : null;
+            if (cam != null)
+            {
+                cameraTransform = cam.transform;
+                cameraRest = cameraTransform.localPosition;
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (cameraTransform == null) return;
+            Vector3 origin = pitchTarget.position;
+            Vector3 offset = pitchTarget.TransformPoint(cameraRest) - origin;
+            float full = offset.magnitude;
+            float nearest = full;
+            int count = Physics.SphereCastNonAlloc(origin, cameraRadius, offset / full, CameraHits, full, ~0, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < count; i++)
+            {
+                var hit = CameraHits[i];
+                // 動くキャラの陰でカメラが揺れないよう、地形と建物だけで止める。
+                if (hit.distance <= 0f || hit.distance >= nearest || hit.collider.GetComponentInParent<HealthComponent>() != null) continue;
+                nearest = hit.distance;
+            }
+            cameraTransform.localPosition = cameraRest * (nearest / full);
         }
 
         private void Start()
         {
             Game.Hero.CharacterModelAnimator.AttachDemonKingModel(gameObject);
+            HideCoreHealthBar();
+        }
+
+        // 自分のコアのHPはHUDに出ているので、城内でカメラの前を塞ぐ頭上のバーは消す。
+        private static void HideCoreHealthBar()
+        {
+            var core = GameObject.Find("DemonCastle_Core");
+            var bar = core != null ? core.GetComponentInChildren<Game.UI.HealthBarUI>(true) : null;
+            if (bar != null) bar.gameObject.SetActive(false);
         }
 
         private void OnEnable()

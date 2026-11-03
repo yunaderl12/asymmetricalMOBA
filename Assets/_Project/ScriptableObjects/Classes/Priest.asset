@@ -40,3 +40,4 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: e3239554fd9774e8482b934bba6a7a60, type: 3}
   modelPath: Priest/priest
   modelMaterialPath: 
+  modelScale: 0.89

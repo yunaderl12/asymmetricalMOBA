@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Game.Combat;
@@ -31,6 +32,8 @@ namespace Game.Hero
         [SerializeField] private Vector3 modelEulerOffset = Vector3.zero;
         [SerializeField] private float modelScale = 1f;
         [SerializeField] private bool hideExistingBody = true;
+        // モデルの頭からHPバーまでの隙間。
+        [SerializeField] private float healthBarMargin = 0.1f;
         // 自分のFPSカメラから自分のアバターを除外するためのLayer名。
         // Hero.prefab のCameraの cullingMask はこのLayerを外しているので、
         // 同名のLayerをここに設定すれば1人称視点でアバターが映り込まなくなる。
@@ -106,6 +109,7 @@ namespace Game.Hero
         private bool wasDead;
         private float dyingFallSeconds;
         private static Material sharedParticleMaterial;
+        private static readonly Dictionary<GameObject, float> ModelHeights = new Dictionary<GameObject, float>();
 
         /// 離散した瞬間に一度だけ呼ばれる。引数は離散した地点。
         public event System.Action<Vector3> DeathScattered;
@@ -266,6 +270,43 @@ namespace Game.Hero
             currentState = AnimState.Idle;
         }
 
+        // プレハブの固定の高さだと大きいモデルの体にバーが埋もれるので、モデルの頭の上へ移す。
+        private void PlaceHealthBars(GameObject prefab)
+        {
+            float top = ModelHeight(prefab) * modelScale + healthBarMargin;
+            foreach (var bar in GetComponentsInChildren<Game.UI.HealthBarUI>(true)) bar.SetHeight(top);
+        }
+
+        // 手に持つ物を除いた等倍の身長。Renderer.bounds は実寸より大きく出るので、モデルごとに一度だけ焼いて測る。
+        private static float ModelHeight(GameObject prefab)
+        {
+            if (ModelHeights.TryGetValue(prefab, out float height)) return height;
+            var probe = Instantiate(prefab);
+            foreach (var skinned in probe.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                var baked = new Mesh();
+                skinned.BakeMesh(baked, true);
+                var vertices = baked.vertices;
+                var materials = skinned.sharedMaterials;
+                bool hasBody = System.Array.Exists(materials, m => IsBodyMaterial(m));
+                for (int s = 0; s < baked.subMeshCount; s++)
+                {
+                    if (hasBody && (s >= materials.Length || !IsBodyMaterial(materials[s]))) continue;
+                    foreach (int index in baked.GetIndices(s))
+                        height = Mathf.Max(height, skinned.transform.TransformPoint(vertices[index]).y - probe.transform.position.y);
+                }
+                Destroy(baked);
+            }
+            DestroyImmediate(probe);
+            ModelHeights[prefab] = height;
+            return height;
+        }
+
+        private static bool IsBodyMaterial(Material m)
+        {
+            return m != null && m.name.Contains("_Body");
+        }
+
         private void SpawnModel()
         {
             if (string.IsNullOrEmpty(modelPath)) return;
@@ -297,6 +338,7 @@ namespace Game.Hero
             modelRenderers = model.GetComponentsInChildren<Renderer>(true);
             originalMaterials = new Material[modelRenderers.Length][];
             for (int i = 0; i < modelRenderers.Length; i++) originalMaterials[i] = modelRenderers[i].sharedMaterials;
+            PlaceHealthBars(prefab);
 
             animator = model.GetComponentInChildren<Animator>(true);
             if (animator == null) animator = model.AddComponent<Animator>();

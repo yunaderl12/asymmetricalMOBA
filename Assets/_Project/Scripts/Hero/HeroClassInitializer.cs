@@ -55,7 +55,7 @@ namespace Game.Hero
             if (!string.IsNullOrEmpty(classData.modelPath) && GetComponent<CharacterModelAnimator>() == null)
             {
                 var anim = gameObject.AddComponent<CharacterModelAnimator>();
-                anim.Configure(classData.modelPath, classData.modelMaterialPath, 1f, true, true);
+                anim.Configure(classData.modelPath, classData.modelMaterialPath, classData.modelScale, true, true);
                 Debug.Log($"[HeroClass] added CharacterModelAnimator ({classData.className}: {classData.modelPath})");
             }
         }

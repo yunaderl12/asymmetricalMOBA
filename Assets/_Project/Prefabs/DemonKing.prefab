@@ -119,6 +119,7 @@ MonoBehaviour:
   pitchTarget: {fileID: 2527277441568802705}
   pitchMin: -70
   pitchMax: 70
+  cameraRadius: 0.2
 --- !u!114 &1328229829529510799
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -133,12 +134,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   tpsCam: {fileID: 0}
   birdsEyeCam: {fileID: 0}
+  spawnerOverheadCam: {fileID: 0}
   activePriority: 20
   inactivePriority: 10
   tpsPlainCamera: {fileID: 0}
   birdsEyePlainCamera: {fileID: 0}
+  spawnerOverheadPlainCamera: {fileID: 0}
   tpsAudio: {fileID: 0}
   birdsEyeAudio: {fileID: 0}
+  spawnerOverheadAudio: {fileID: 0}
 --- !u!114 &7484252850510472293
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -198,6 +202,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mpDrainPerSecond: 5
+  drainDisableLevel: 15
+  maxDebuff: 0.3
+  secondsToMax: 60
+  secondsToRecover: 60
+  sourceId: OutsideDebuff
 --- !u!114 &6646909166288378614
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -208,8 +217,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9e0a076d15ace461bbeb5711fbfa4f7e, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   deck:
   - {fileID: 11400000, guid: 99308e291e52c46cba9abd910658d3e9, type: 2}
 --- !u!114 &7777777777777777777
@@ -222,8 +231,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a7b3c2d4e5f60718293a4b5c6d7e8f90, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   hpGrowthPerLevel: 50
   mpGrowthPerLevel: 20
   healToFullOnLevelUp: 1
@@ -237,8 +246,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e1b2c3d4e5f607182a3b4c5d6e7f8091, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   birdsEyeCamera: {fileID: 0}
   pickRange: 200
   hitMask:
@@ -254,14 +263,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f2c3d4e5f607182a3b4c5d6e7f8091a2, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   overheadCamera: {fileID: 0}
   overheadAudio: {fileID: 0}
   yawSpeed: 0.2
-  pitchSpeed: 0.15
-  pitchMin: 30
-  pitchMax: 85
+  fixedPitch: 0
 --- !u!1 &3447037085168827552
 GameObject:
   m_ObjectHideFlags: 0
@@ -287,7 +294,7 @@ Transform:
   m_GameObject: {fileID: 3447037085168827552}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.7, z: 0}
+  m_LocalPosition: {x: 0, y: 2.6, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -355,6 +362,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -376,9 +385,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1 &7531873371363303681
 GameObject:
@@ -407,7 +418,7 @@ Transform:
   m_GameObject: {fileID: 7531873371363303681}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.4, z: -2.8}
+  m_LocalPosition: {x: 0, y: 0.55, z: -3.8}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

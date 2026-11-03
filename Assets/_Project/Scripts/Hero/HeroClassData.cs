@@ -47,5 +47,7 @@ namespace Game.Hero
         public string modelPath;
         [Tooltip("Resources path of a material applied to every renderer (e.g. Knight/KnightMat). Empty = keep the FBX materials.")]
         public string modelMaterialPath;
+        [Tooltip("Scale of the model. Size order: Demon King > Warrior > Swordsman > Mage = Priest > Goblin.")]
+        public float modelScale = 1f;
     }
 }

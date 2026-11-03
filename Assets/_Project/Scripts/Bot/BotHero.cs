@@ -64,7 +64,7 @@ namespace Game.Bot
         {
             if (classData == null || string.IsNullOrEmpty(classData.modelPath)) return;
             modelAnim = gameObject.AddComponent<CharacterModelAnimator>();
-            modelAnim.Configure(classData.modelPath, classData.modelMaterialPath, 1f, false, false);
+            modelAnim.Configure(classData.modelPath, classData.modelMaterialPath, classData.modelScale, false, false);
         }
 
         // The model hides Body itself and plays its own death / respawn, so leave Body alone.

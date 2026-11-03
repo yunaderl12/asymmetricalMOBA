@@ -27,6 +27,14 @@ namespace Game.UI
             if (fillImage != null) graphic = HealthBarGraphic.Replace(fillImage);
         }
 
+        /// 持ち主の足元からの高さへ移す（モデルの大きさはキャラごとに違う）。
+        public void SetHeight(float height)
+        {
+            var p = transform.localPosition;
+            p.y = height;
+            transform.localPosition = p;
+        }
+
         private void OnEnable()
         {
             if (target != null) target.OnHPChanged += OnHPChanged;
