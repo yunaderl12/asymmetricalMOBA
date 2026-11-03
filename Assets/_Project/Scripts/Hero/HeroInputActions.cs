@@ -271,6 +271,17 @@ namespace Game.Hero
                 },
                 {
                     ""name"": """",
+                    ""id"": ""72b809d0-803c-4984-a8d9-85806655d040"",
+                    ""path"": ""<Keyboard>/e"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""SkillCast"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
                     ""id"": ""a3000000-0000-0000-0000-00000000000d"",
                     ""path"": ""<Keyboard>/leftShift"",
                     ""interactions"": """",
