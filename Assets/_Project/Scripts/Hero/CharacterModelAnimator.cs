@@ -121,7 +121,7 @@ namespace Game.Hero
         // 溜めの構えの強さ（Animator の結果に LateUpdate で上乗せする）
         private const float CastLeanDegrees = 20f;
         private const float BlastGravity = -14f;
-        private const float BlastTumbleDegrees = 420f;
+        private const float BlastTumbleDegrees = 70f;
         private const float BlastSwell = 0.7f;
         private const float BlastJitter = 0.22f;
         private const float BlastJitterInterval = 0.05f;
