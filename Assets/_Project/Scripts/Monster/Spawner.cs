@@ -173,9 +173,12 @@ namespace Game.Monster
             }
         }
 
+        private const float LaserAimHeight = 1.5f;
+
         private float attackCooldownTimer;
         private bool charging;
         private float chargeTimer;
+        private Vector3 chargeAimPoint;
 
         private void Update()
         {
@@ -187,15 +190,17 @@ namespace Game.Monster
                 return;
             }
             if (attackCooldownTimer > 0f) return;
-            if (FindClosestPlayerInRange() == null) return;
+            var target = FindClosestPlayerInRange();
+            if (target == null) return;
 
+            chargeAimPoint = target.transform.position + Vector3.up * LaserAimHeight;
             charging = true;
             chargeTimer = 0f;
             attackCooldownTimer = data.cool;
             if (towerVisual != null) towerVisual.SetCharge(0f);
         }
 
-        // 溜め終わった時点で一番近い勇者を狙う。範囲から誰もいなくなっていたら撃たない。
+        // 溜め始めに一番近かった勇者がいた場所へ撃つ。動いていれば当たらない。
         private void UpdateCharge()
         {
             chargeTimer += Time.deltaTime;
@@ -204,14 +209,8 @@ namespace Game.Monster
             if (chargeTimer < duration) return;
 
             charging = false;
-            var target = FindClosestPlayerInRange();
-            if (target == null)
-            {
-                if (towerVisual != null) towerVisual.Cancel();
-                return;
-            }
             if (towerVisual != null) towerVisual.Release();
-            Shoot(target);
+            Shoot(chargeAimPoint);
         }
 
         private GameObject FindClosestPlayerInRange()
@@ -230,11 +229,11 @@ namespace Game.Monster
             return closest;
         }
 
-        private void Shoot(GameObject target)
+        private void Shoot(Vector3 aimPoint)
         {
             if (attackOrigin == null) return;
             var origin = attackOrigin.position;
-            var dir = (target.transform.position + Vector3.up * 1.5f - origin).normalized;
+            var dir = (aimPoint - origin).normalized;
             Debug.DrawRay(origin, dir * data.attackRange, Color.yellow, 0.2f);
 
             Vector3 endPoint = origin + dir * data.attackRange;
@@ -242,9 +241,9 @@ namespace Game.Monster
             {
                 endPoint = hit.point;
                 var hp = hit.collider.GetComponentInParent<HealthComponent>();
-                if (hp != null && hp.gameObject == target)
+                if (hp != null && hp.CompareTag("Player"))
                 {
-                    hp.TakeDamage(data.atk, gameObject, DamageType.Physical);
+                    hp.TakeDamage(data.atk, gameObject, DamageType.Magical);
                 }
             }
             SpawnerLaser.Spawn(origin, endPoint);
