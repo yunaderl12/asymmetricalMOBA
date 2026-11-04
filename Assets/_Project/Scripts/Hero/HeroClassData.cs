@@ -31,7 +31,8 @@ namespace Game.Hero
         public List<SkillData> classSkills = new List<SkillData>();
 
         [Header("Magic Class")]
-        public bool isMagicClass = false;
+        [Tooltip("SP restored even during combat: share of Max SP per tick (HeroRegen). 0.04 = 4%.")]
+        public float spCombatRegenRate = 0.025f;
         public int basicAttackMpCost = 0;
         public float regenMultiplier = 1.0f;
 

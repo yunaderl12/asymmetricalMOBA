@@ -10,7 +10,6 @@ namespace Game.Hero
         [SerializeField] private float regenMultiplier = 1.1f;
         [SerializeField] private float regenTickInterval = 1.0f;
         [SerializeField] private float mpAlwaysRegenInterval = 1.5f;
-        [SerializeField] private float mpAlwaysRegenRate = 0.04f;
 
         private HealthComponent health;
         private ManaComponent mana;
@@ -48,9 +47,9 @@ namespace Game.Hero
         private void TickMpAlwaysRegen()
         {
             if (mana == null) return;
-            if (classInit == null || classInit.ClassData == null || !classInit.ClassData.isMagicClass) return;
+            if (classInit == null || classInit.ClassData == null) return;
             if (Time.time < nextMpAlwaysTickTime) return;
-            int restore = Mathf.CeilToInt(mana.MaxMP * mpAlwaysRegenRate);
+            int restore = Mathf.CeilToInt(mana.MaxMP * classInit.ClassData.spCombatRegenRate);
             if (restore > 0) mana.RestoreMana(restore);
             nextMpAlwaysTickTime = Time.time + mpAlwaysRegenInterval;
         }

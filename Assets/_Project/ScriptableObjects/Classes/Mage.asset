@@ -32,7 +32,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: c08def79f328943b0a1075d06456d2f3, type: 2}
   - {fileID: 11400000, guid: b5805bb1d637745d59c9033db1420334, type: 2}
   - {fileID: 11400000, guid: be9a4dddbb337417888d6231abf8a94f, type: 2}
-  isMagicClass: 1
+  spCombatRegenRate: 0.04
   basicAttackMpCost: 2
   regenMultiplier: 2
   avatarColor: {r: 0.7, g: 0.2, b: 0.95, a: 1}
@@ -41,3 +41,10 @@ MonoBehaviour:
   modelPath: Mage/mage
   modelMaterialPath: 
   modelScale: 0.93
+  viewScale: 0.26
+  viewRightShoulder: {x: 0.34, y: -0.6, z: 0.1}
+  viewRightPosition: {x: 0.2, y: -0.15, z: 0.42}
+  viewRightEuler: {x: 30, y: -15, z: -20}
+  viewLeftShoulder: {x: -0.34, y: -0.6, z: 0.1}
+  viewLeftPosition: {x: -0.27, y: -0.18, z: 0.42}
+  viewLeftEuler: {x: 0, y: 35, z: 0}

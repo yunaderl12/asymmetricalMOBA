@@ -32,7 +32,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7b3c544d5062b4677bfb825f5ea37ef7, type: 2}
   - {fileID: 11400000, guid: 607725091e58d428286f7bd46defd9e2, type: 2}
   - {fileID: 11400000, guid: 6b76f33f4a2c4464abeb1a85526755ce, type: 2}
-  isMagicClass: 0
+  spCombatRegenRate: 0.025
   basicAttackMpCost: 0
   regenMultiplier: 2
   avatarColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
@@ -41,3 +41,10 @@ MonoBehaviour:
   modelPath: Warrior/warrior
   modelMaterialPath: 
   modelScale: 1.15
+  viewScale: 0.26
+  viewRightShoulder: {x: 0.34, y: -0.6, z: 0.1}
+  viewRightPosition: {x: 0.2, y: -0.15, z: 0.42}
+  viewRightEuler: {x: 30, y: -15, z: -20}
+  viewLeftShoulder: {x: -0.34, y: -0.6, z: 0.1}
+  viewLeftPosition: {x: -0.27, y: -0.18, z: 0.42}
+  viewLeftEuler: {x: 0, y: 35, z: 0}

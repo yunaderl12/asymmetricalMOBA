@@ -32,7 +32,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8e43e3485befb4351bd7cfe1134918e0, type: 2}
   - {fileID: 11400000, guid: a1a4a9c9ad15c489496fc3683fb0f2b5, type: 2}
   - {fileID: 11400000, guid: bbdbe2dc0f996427fb1604348cc195bc, type: 2}
-  isMagicClass: 0
+  spCombatRegenRate: 0.025
   basicAttackMpCost: 0
   regenMultiplier: 2
   avatarColor: {r: 1, g: 0.15, b: 0.15, a: 1}
