@@ -378,7 +378,7 @@ Y < -10 で「Backspace でリスポーン」表示。Backspace キーで StartT
 | UI | 役割 | 表示タイミング |
 | --- | --- | --- |
 | TopBarUI | 拠点HP両方 + マッチ時間 | 常時 |
-| HeroHUD | Lv/HP/SP/Exp + スキル5枠 + CD オーバーレイ + Lv 表示 | 勇者ロール時 |
+| HeroHUD | Lv/HP/SP/Exp + スキルカード5枚（SkillCardRow）。カードは縦長で、左上にレベル、中央にイラスト、下部に名前と消費SP。選択中は浮き上がって金色に光り、クールダウン中はグレーの幕が下がっていく | 勇者ロール時 |
 | DemonKingHUD | Lv/HP/MP | 魔王ロール時 |
 | SpawnerListUI | スポナー一覧 | PrepPhase 中（魔王ロール） |
 | MatchTimerUI | マッチ残り時間 | 常時 |

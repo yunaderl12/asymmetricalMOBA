@@ -17,16 +17,6 @@ namespace Game.UI
         [SerializeField] private Text expText;
         [SerializeField] private Text lvText;
 
-        [Header("Skill Slots (5)")]
-        [SerializeField] private Image[] slotBackgrounds;
-        [SerializeField] private Text[] slotNameTexts;
-        [SerializeField] private Text[] slotSpCostTexts;
-        [SerializeField] private Text[] slotCooldownTexts;
-        [SerializeField] private Image[] slotCooldownOverlays;
-        [SerializeField] private Text[] slotLevelTexts;
-        [SerializeField] private Color slotNormalColor = new Color(0.1f, 0.1f, 0.15f, 0.8f);
-        [SerializeField] private Color slotSelectedColor = new Color(1f, 0.85f, 0.2f, 0.9f);
-
         private HealthComponent health;
         private ManaComponent mana;
         private LevelComponent level;
@@ -44,11 +34,6 @@ namespace Game.UI
             {
                 // Hide this HUD's own GameObject (HP/MP/Lv/Exp).
                 gameObject.SetActive(false);
-                // The skill-slot row is a separate sibling GameObject (e.g. "SkillSlots")
-                // — walk through any slot reference and disable its parent.
-                DisableExternalRoot(slotBackgrounds);
-                DisableExternalRoot(slotNameTexts);
-                DisableExternalRoot(slotCooldownOverlays);
                 return;
             }
 
@@ -67,27 +52,12 @@ namespace Game.UI
             if (mana != null) mana.OnMPChanged += OnMPChanged;
             if (level != null) level.OnLevelChanged += OnLevelChanged;
             if (exp != null) exp.OnExpChanged += OnExpChanged;
-            if (runtime != null) { runtime.OnSelectionChanged += OnSelectionChanged; runtime.OnSkillCast += OnSkillCast; runtime.OnSkillLevelChanged += OnSkillLevelChanged; }
-            RefreshSlots();
-            UpdateAll();
-        }
-
-        // Walks the given array, finds the first non-null entry, walks up to its
-        // parent (= the slot panel root), and disables that GameObject. Safe for
-        // arrays that are empty or have null entries.
-        private static void DisableExternalRoot<T>(T[] entries) where T : Component
-        {
-            if (entries == null) return;
-            foreach (var e in entries)
+            if (runtime != null)
             {
-                if (e == null) continue;
-                var parent = e.transform.parent;
-                if (parent != null)
-                {
-                    parent.gameObject.SetActive(false);
-                    return;
-                }
+                var canvas = GetComponentInParent<Canvas>();
+                if (canvas != null) SkillCardRow.Create(canvas.rootCanvas.transform, hpText != null ? hpText.font : null, runtime);
             }
+            UpdateAll();
         }
 
         private void OnDestroy()
@@ -96,64 +66,12 @@ namespace Game.UI
             if (mana != null) mana.OnMPChanged -= OnMPChanged;
             if (level != null) level.OnLevelChanged -= OnLevelChanged;
             if (exp != null) exp.OnExpChanged -= OnExpChanged;
-            if (runtime != null) { runtime.OnSelectionChanged -= OnSelectionChanged; runtime.OnSkillCast -= OnSkillCast; runtime.OnSkillLevelChanged -= OnSkillLevelChanged; }
         }
 
         private void OnHPChanged(int cur, int max) { UpdateAll(); }
         private void OnMPChanged(int cur, int max) { UpdateAll(); }
         private void OnLevelChanged(int lv) { UpdateAll(); }
         private void OnExpChanged(int cur, int req) { UpdateAll(); }
-        private void OnSelectionChanged(int idx) { RefreshSlots(); }
-        private void OnSkillCast(int idx) { RefreshSlots(); }
-        private void OnSkillLevelChanged(int slot, int lv) { RefreshSlots(); }
-
-        private void Update()
-        {
-            if (runtime == null || slotCooldownTexts == null) return;
-            for (int i = 0; i < slotCooldownTexts.Length; i++)
-            {
-                if (slotCooldownTexts[i] == null) continue;
-                float cd = runtime.GetCooldownRemaining(i);
-                slotCooldownTexts[i].gameObject.SetActive(cd > 0f);
-                if (cd > 0f) slotCooldownTexts[i].text = cd.ToString("F1");
-            }
-            if (slotCooldownOverlays != null)
-            {
-                for (int i = 0; i < slotCooldownOverlays.Length; i++)
-                {
-                    if (slotCooldownOverlays[i] == null) continue;
-                    var skill = runtime.EquippedSkills.Count > i ? runtime.EquippedSkills[i] : null;
-                    float remaining = runtime.GetCooldownRemaining(i);
-                    float ratio = (skill != null && skill.cooldown > 0f) ? Mathf.Clamp01(remaining / skill.cooldown) : 0f;
-                    slotCooldownOverlays[i].fillAmount = ratio;
-                }
-            }
-        }
-
-        private void RefreshSlots()
-        {
-            if (runtime == null) return;
-            int selected = runtime.SelectedIndex;
-            for (int i = 0; i < SkillRuntime.SLOT_COUNT; i++)
-            {
-                var s = runtime.EquippedSkills.Count > i ? runtime.EquippedSkills[i] : null;
-                if (slotBackgrounds != null && i < slotBackgrounds.Length && slotBackgrounds[i] != null)
-                    slotBackgrounds[i].color = (i == selected) ? slotSelectedColor : slotNormalColor;
-                if (slotNameTexts != null && i < slotNameTexts.Length && slotNameTexts[i] != null)
-                    slotNameTexts[i].text = s != null ? s.skillName : "-";
-                if (slotSpCostTexts != null && i < slotSpCostTexts.Length && slotSpCostTexts[i] != null)
-                    slotSpCostTexts[i].text = s != null ? "SP " + s.spCost : "";
-                if (slotLevelTexts != null && i < slotLevelTexts.Length && slotLevelTexts[i] != null)
-                {
-                    if (s == null) slotLevelTexts[i].text = "";
-                    else
-                    {
-                        int lv = runtime.GetSkillLevel(i);
-                        slotLevelTexts[i].text = lv >= s.maxSkillLevel ? ("Lv " + lv + " MAX") : ("Lv " + lv);
-                    }
-                }
-            }
-        }
 
         private void UpdateAll()
         {
