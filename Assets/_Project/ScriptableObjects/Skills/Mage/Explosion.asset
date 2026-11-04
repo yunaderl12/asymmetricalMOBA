@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34ed98167838340b3b92b1cc89849f41, type: 3}
+  m_Name: Explosion
+  m_EditorClassIdentifier: Game.Runtime::Game.Skill.SkillData
+  skillName: Explosion
+  description: Charge for 5s, then a huge blast at the aimed spot.
+  spCost: 50
+  cooldown: 40
+  effectType: 0
+  damageType: 1
+  targetType: 2
+  effectValue: 120
+  range: 30
+  duration: 0
+  durationPerLevel: 0
+  areaRadius: 9
+  statusEffect: 0
+  statusDuration: 0
+  statusPower: 0
+  statusChance: 1
+  castTime: 5
+  projectileSpeed: 28
+  castLocksMovement: 1
+  hitStopSeconds: 0.1
+  coneAngle: 120
+  dashSpeed: 24
+  knockbackDistance: 6
+  leapHeight: 0
+  diveSpeed: 0
+  directHitMultiplier: 1
+  levelGrowthRate: 0.2
+  maxSkillLevel: 5
+  sizeGrowthPerLevel: 0.1
+  iconColor: {r: 0, g: 0, b: 0, a: 0}
+  ownerClass: {fileID: 11400000, guid: 5c79a6f114db141968cfd3e07c9edfba, type: 2}
+  icon: {fileID: 21300000, guid: 97ca4a5a2618f4c459320cc64ad4eff2, type: 3}

@@ -114,6 +114,7 @@ namespace Game.Skill
             if (skill.skillName == "Blessing") { TryMelee<BlessingCast>(idx, skill); return; }
             if (skill.skillName == "Smite") { TryMelee<SmiteCast>(idx, skill); return; }
             if (skill.skillName == "ManaShield") { TryMelee<ManaShieldCast>(idx, skill); return; }
+            if (skill.skillName == "Explosion") { TryMelee<ExplosionCast>(idx, skill); return; }
             if (skill.skillName == "Sprint") { TryMelee<SprintCast>(idx, skill); return; }
             if (skill.skillName == "Recover") { TryMelee<RecoverCast>(idx, skill); return; }
             if (skill.skillName == "Detect") { TryMelee<DetectCast>(idx, skill); return; }

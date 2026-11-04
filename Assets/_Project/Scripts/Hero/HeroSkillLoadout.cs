@@ -49,6 +49,10 @@ namespace Game.Hero
                 {
                     if (s != null && s.ownerClass == null) s.ownerClass = c;
                 }
+                foreach (var s in c.exclusiveFreeSkills)
+                {
+                    if (s != null && s.ownerClass == null) s.ownerClass = c;
+                }
             }
         }
 
@@ -89,6 +93,7 @@ namespace Game.Hero
         {
             var list = new List<SkillData>();
             var current = CurrentClass;
+            if (current != null) foreach (var s in current.exclusiveFreeSkills) if (s != null) list.Add(s);
             if (Classes != null)
             {
                 foreach (var c in Classes)
@@ -103,7 +108,15 @@ namespace Game.Hero
             return list;
         }
 
-        // Slots 1-4 follow the class. Slot 5 is kept unless it is now one of the class's own skills.
+        private bool IsExclusiveToOtherClass(SkillData skill)
+        {
+            if (Classes == null) return false;
+            foreach (var c in Classes)
+                if (c != null && c != CurrentClass && c.exclusiveFreeSkills.Contains(skill)) return true;
+            return false;
+        }
+
+        // Slots 1-4 follow the class. Slot 5 is kept unless it is now one of the class's own skills or another class's exclusive skill.
         private void RefreshSkills()
         {
             var cls = CurrentClass;
@@ -112,7 +125,7 @@ namespace Game.Hero
                 Skills[i] = classSkills != null && i < classSkills.Count ? classSkills[i] : null;
 
             var free = Skills[FreeSlot];
-            if (free == null || (classSkills != null && classSkills.Contains(free)))
+            if (free == null || (classSkills != null && classSkills.Contains(free)) || IsExclusiveToOtherClass(free))
                 Skills[FreeSlot] = commonSkills != null && commonSkills.Count > 0 ? commonSkills[0] : null;
         }
     }

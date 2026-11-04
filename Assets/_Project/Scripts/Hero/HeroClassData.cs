@@ -29,6 +29,8 @@ namespace Game.Hero
 
         [Header("Skills")]
         public List<SkillData> classSkills = new List<SkillData>();
+        [Tooltip("Skills only this class can pick for the free slot (slot 5).")]
+        public List<SkillData> exclusiveFreeSkills = new List<SkillData>();
 
         [Header("Magic Class")]
         [Tooltip("SP restored even during combat: share of Max SP per tick (HeroRegen). 0.04 = 4%.")]
