@@ -22,11 +22,25 @@ MonoBehaviour:
   effectValue: 30
   range: 8
   duration: 0
+  durationPerLevel: 0
+  areaRadius: 0
   statusEffect: 0
   statusDuration: 0
   statusPower: 0
+  statusChance: 1
+  castTime: 0.25
+  projectileSpeed: 28
+  castLocksMovement: 0
+  hitStopSeconds: 0.06
+  coneAngle: 120
+  dashSpeed: 24
+  knockbackDistance: 0
+  leapHeight: 0
+  diveSpeed: 0
+  directHitMultiplier: 1
   levelGrowthRate: 0.2
   maxSkillLevel: 5
+  sizeGrowthPerLevel: 0.1
   iconColor: {r: 0, g: 0, b: 0, a: 0}
   ownerClass: {fileID: 11400000, guid: 1f145e4be16da4e86afd704b5f5b5d09, type: 2}
   icon: {fileID: 21300000, guid: 5e36fa54a35604b8d969edfda847193a, type: 3}

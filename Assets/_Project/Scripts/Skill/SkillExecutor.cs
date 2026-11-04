@@ -92,6 +92,10 @@ namespace Game.Skill
             if (skill.skillName == "Stomp") { TryMelee<StompCast>(idx, skill); return; }
             if (skill.skillName == "Taunt") { TryMelee<TauntCast>(idx, skill); return; }
             if (skill.skillName == "IronWall") { TryMelee<IronWallCast>(idx, skill); return; }
+            if (skill.skillName == "Heal") { TryMelee<HealCast>(idx, skill); return; }
+            if (skill.skillName == "GroupHeal") { TryMelee<GroupHealCast>(idx, skill); return; }
+            if (skill.skillName == "Blessing") { TryMelee<BlessingCast>(idx, skill); return; }
+            if (skill.skillName == "Smite") { TryMelee<SmiteCast>(idx, skill); return; }
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
@@ -284,6 +288,13 @@ namespace Game.Skill
                 },
                 (hp, damageScale) =>
                 {
+                    if (skill.effectType == SkillEffectType.Heal)
+                    {
+                        int amount = Mathf.RoundToInt(value * damageScale);
+                        hp.Heal(amount);
+                        if (hp.gameObject != gameObject) SupportTracker.RecordSupport(gameObject, hp.gameObject, amount);
+                        return;
+                    }
                     hp.TakeDamage(Mathf.RoundToInt(value * damageScale), gameObject, ToDamageType(skill.damageType));
                     ApplySkillStatus(skill, hp);
                 },
@@ -362,47 +373,10 @@ namespace Game.Skill
             }
         }
 
+        // 対象を選ぶ回復は HealCast / GroupHealCast が行う。
         private void ExecuteHeal(SkillData skill, float effectValue)
         {
-            int amount = Mathf.RoundToInt(effectValue);
-            if (skill.targetType == SkillTargetType.Self)
-            {
-                if (health != null) health.Heal(amount);
-            }
-            else if (skill.targetType == SkillTargetType.Single)
-            {
-                if (cameraTransform == null) return;
-                if (Physics.Raycast(cameraTransform.position, cameraTransform.forward, out var hit, skill.range))
-                {
-                    var hp = hit.collider.GetComponentInParent<HealthComponent>();
-                    if (hp != null)
-                    {
-                        hp.Heal(amount);
-                        SupportTracker.RecordSupport(gameObject, hp.gameObject, amount);
-                        Debug.Log($"[Skill] Healed {hp.name} for {amount}");
-                    }
-                    else Debug.Log("[Skill] Heal: no valid target");
-                }
-                else
-                {
-                    Debug.Log("[Skill] Heal: no target in range; self-heal fallback");
-                    if (health != null) health.Heal(amount);
-                }
-            }
-            else if (skill.targetType == SkillTargetType.Area)
-            {
-                var hits = Physics.OverlapSphere(transform.position, skill.range);
-                int healed = 0;
-                foreach (var col in hits)
-                {
-                    var hp = col.GetComponentInParent<HealthComponent>();
-                    if (hp == null) continue;
-                    hp.Heal(amount);
-                    SupportTracker.RecordSupport(gameObject, hp.gameObject, amount);
-                    healed++;
-                }
-                Debug.Log($"[Skill] {skill.skillName} healed {healed} target(s) in area");
-            }
+            if (skill.targetType == SkillTargetType.Self && health != null) health.Heal(Mathf.RoundToInt(effectValue));
         }
 
         private void ExecuteBuff(SkillData skill, float effectValue)

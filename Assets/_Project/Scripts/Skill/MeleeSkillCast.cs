@@ -263,6 +263,12 @@ namespace Game.Skill
             return count;
         }
 
+        /// ダメージや回復だけを与える（当たりの演出なし）。
+        protected void ApplyHit(HealthComponent target, float scale = 1f)
+        {
+            onHit?.Invoke(target, scale);
+        }
+
         protected Vector3 Chest => transform.position + Vector3.up * 1.2f;
 
         protected static float EaseOut(float t)

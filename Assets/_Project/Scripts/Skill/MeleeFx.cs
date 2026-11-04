@@ -24,6 +24,13 @@ namespace Game.Skill
             Light = new Color(1f, 0.72f, 0.4f, 1f),
             Spark = new Color(1f, 0.5f, 0.12f),
         };
+        public static readonly Palette Holy = new Palette
+        {
+            Core = new Color(3f, 2.7f, 1.9f, 1f),
+            Main = new Color(1.5f, 1.05f, 0.4f, 1f),
+            Light = new Color(1f, 0.9f, 0.6f, 1f),
+            Spark = new Color(1f, 0.82f, 0.4f),
+        };
 
         /// 刃が当たった瞬間の閃光と火花。
         public static void Impact(Vector3 point, Vector3 direction, float flashSize, Palette palette)
