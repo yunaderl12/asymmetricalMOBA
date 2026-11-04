@@ -171,7 +171,8 @@ namespace Game.Skill
         protected override void OnRelease()
         {
             DestroyCharge();
-            ExplosionBurst.Spawn(targetPoint, BlastRadius);
+            bool dug = Game.Core.GroundDig.Dig(targetPoint, Skill.digRadius * SizeScale, Skill.digDepth);
+            ExplosionBurst.Spawn(targetPoint, BlastRadius, !dug);
 
             Vector3 from = targetPoint + Vector3.up * 1.5f;
             var targets = FindEnemies(from, BlastRadius, Vector3.forward, -1f);

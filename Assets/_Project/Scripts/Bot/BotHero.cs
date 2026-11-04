@@ -70,6 +70,7 @@ namespace Game.Bot
 
         private void Awake()
         {
+            gameObject.AddComponent<Game.Core.GroundFollower>();
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<HealthComponent>();
             mods = gameObject.AddComponent<StatModifierContainer>();

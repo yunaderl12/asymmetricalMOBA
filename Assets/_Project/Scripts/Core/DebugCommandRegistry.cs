@@ -24,6 +24,7 @@ namespace Game.Core
             Register("respawn", "勇者を StartTown でリスポーン (HP/SP 全回復)", RespawnCmd);
             Register("skipprep", "PrepPhase スキップ", SkipPrepCmd);
             Register("usemp", "魔王 MP消費 [n=20]", UseMpCmd);
+            Register("dig", "足元の地面を削る [半径m=4] [深さm=1]", DigCmd);
             Register("selfdamage", "自分にダメージ [n=50]", SelfDamageCmd);
             Register("magichit", "自分に魔法攻撃 [n=10] (魔法陣の確認用。防御とブロックを通す)", MagicHitCmd);
             Register("skiplevel", "魔王 Lv+1", SkipLevelCmd);
@@ -162,6 +163,17 @@ namespace Game.Core
             if (mp == null) return "ManaComponent not found";
             bool ok = mp.TryUseMana(n);
             return ok ? ("Used " + n + " MP, now " + mp.CurrentMP + "/" + mp.MaxMP) : ("Not enough MP (" + mp.CurrentMP + "/" + mp.MaxMP + ")");
+        }
+
+        private static string DigCmd(string[] args)
+        {
+            float radius = 4f, depth = 1f;
+            if (args.Length > 0) float.TryParse(args[0], out radius);
+            if (args.Length > 1) float.TryParse(args[1], out depth);
+            var hero = FindHero();
+            if (hero == null) return "hero not found";
+            bool dug = GroundDig.Dig(hero.transform.position, radius, depth);
+            return dug ? $"Dug r={radius} depth={depth}" : "Cannot dig here";
         }
 
         private static string MagicHitCmd(string[] args)

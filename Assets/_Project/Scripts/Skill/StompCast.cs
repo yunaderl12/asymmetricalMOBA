@@ -19,6 +19,7 @@ namespace Game.Skill
         private const float DiveGhostInterval = 0.03f;
         private const float DiveGhostSeconds = 0.22f;
         private const float CrackHoldSeconds = 6f;
+        private const int ChipCount = 22;
 
         private static readonly Vector3 AxeLowPosition = new Vector3(0.3f, -0.3f, 0.3f);
         private static readonly Vector3 AxeLowEuler = new Vector3(30f, -5f, -25f);
@@ -174,7 +175,9 @@ namespace Game.Skill
             ShockRing.Spawn(feet, 0.3f, ScaledRange * 0.6f, 0.5f, 0.5f, Palette.Main);
             MeleeFx.DustBurst(feet, ScaledRange * 0.35f, 42, 7f * SizeScale);
             FireballVfx.SpawnSparks(feet + Vector3.up * 0.2f, Vector3.up, 34, Color.white, Palette.Spark);
-            GroundCracks.Spawn(feet, ScaledRange * 0.75f, CrackHoldSeconds);
+            float digRadius = Skill.digRadius * SizeScale;
+            if (Game.Core.GroundDig.Dig(feet, digRadius, Skill.digDepth)) EarthChips.Spawn(feet, digRadius * 0.6f, ChipCount);
+            else GroundCracks.Spawn(feet, ScaledRange * 0.75f, CrackHoldSeconds); // 削れない場所ではひび割れだけ残す
             Shake(ShakeSeconds, ShakeSize * SizeScale);
             if (Controller != null) Controller.SkillMotion = false;
         }

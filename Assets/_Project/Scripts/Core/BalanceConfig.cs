@@ -138,6 +138,22 @@ namespace Game.Core
 
         private static BalanceConfig instance;
 
+        [Header("Ground Dig")]
+        [Tooltip("Size of one cell of the dig grid (m). Larger = bigger, more angular facets.")]
+        public float digCellSize = 0.75f;
+        [Tooltip("Height of one terrace (m). Neighbouring vertices differ by one terrace at most, so keep slopes under the hero's slope limit (45 degrees).")]
+        public float digStepDepth = 0.25f;
+        [Tooltip("Deepest the ground can go (m).")]
+        public float digMaxDepth = 1f;
+        [Tooltip("Keep-out around rocks, walls, town, castle and towers (m).")]
+        public float digKeepOutMargin = 1.5f;
+        [Tooltip("Keep-out around spawners (m).")]
+        public float digSpawnerMargin = 4f;
+        [Tooltip("Keep-out around trees (m).")]
+        public float digTreeMargin = 2f;
+        [Tooltip("Keep-out along the outer edge of the field (m).")]
+        public float digEdgeMargin = 3f;
+
         public static BalanceConfig Instance
         {
             get

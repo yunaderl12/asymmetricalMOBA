@@ -33,7 +33,6 @@ namespace Game.Skill
 
         private readonly List<Chunk> chunks = new List<Chunk>();
         private MaterialPropertyBlock block;
-        private Mesh cube;
         private float age;
         private float lifeSeconds;
         private float fadeSeconds;
@@ -50,14 +49,12 @@ namespace Game.Skill
 
         private void Build(Vector3 center, float radius, int count)
         {
-            var temp = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            cube = temp.GetComponent<MeshFilter>().sharedMesh;
-            DestroyImmediate(temp);
+            var shard = EarthChips.ShardMesh;
             var material = FireballVfx.GetMaterial("VFX/VoxelChunk");
 
             for (int i = 0; i < count; i++)
             {
-                var renderer = FireballVfx.NewMeshObject("Chunk", transform, cube, material);
+                var renderer = FireballVfx.NewMeshObject("Chunk", transform, shard, material);
                 bool big = i < count * BigChunkRatio;
                 float size = big ? Random.Range(1.6f, 2.8f) : Random.Range(0.25f, 0.7f);
                 Vector2 flat = Random.insideUnitCircle.normalized;

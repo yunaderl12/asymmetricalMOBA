@@ -58,6 +58,12 @@ namespace Game.Skill
         [Tooltip("Damage multiplier for enemies directly under the landing (Stomp).")]
         public float directHitMultiplier = 1f;
 
+        [Header("Ground Dig (Stomp, Explosion)")]
+        [Tooltip("Radius of the hole dug into the ground (m, Lv1). 0 = does not dig. Grows with the skill's size.")]
+        public float digRadius;
+        [Tooltip("How deep one use digs at the centre (m). Repeated digs add up to BalanceConfig.digMaxDepth.")]
+        public float digDepth;
+
         [Header("Leveling")]
         public float levelGrowthRate = 0.2f;
         public int maxSkillLevel = 5;

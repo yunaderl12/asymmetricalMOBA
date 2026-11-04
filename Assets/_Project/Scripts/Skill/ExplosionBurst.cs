@@ -61,8 +61,10 @@ namespace Game.Skill
         private float timer;
         private float nextStar;
         private bool cloudBuilt;
+        private bool showCracks;
 
-        public static void Spawn(Vector3 center, float radius)
+        /// cracks: 地面を削れなかった場所では、代わりにひび割れを残す。
+        public static void Spawn(Vector3 center, float radius, bool cracks)
         {
             var go = new GameObject("ExplosionBurst");
             go.transform.position = center;
@@ -70,6 +72,7 @@ namespace Game.Skill
             burst.center = center;
             burst.radius = radius;
             burst.block = new MaterialPropertyBlock();
+            burst.showCracks = cracks;
             burst.Build();
         }
 
@@ -79,7 +82,7 @@ namespace Game.Skill
             FireFlash.Spawn(center + Vector3.up * radius * 0.4f, radius * 2.4f, 0.16f, 0f, new Color(3f, 3f, 3f), new Color(0.5f, 1.4f, 2f), new Color(0.6f, 0.9f, 1f), 8f);
             ShockRing.Spawn(center, radius * 0.8f, radius * 3f, 1.3f, radius * 1.1f, GroundWaveColor);
             ShockRing.Spawn(center, radius * 0.6f, radius * 2.2f, 0.7f, radius * 0.25f, Color.white);
-            GroundCracks.Spawn(center, radius * 0.9f, DebrisLifeSeconds);
+            if (showCracks) GroundCracks.Spawn(center, radius * 0.9f, DebrisLifeSeconds);
             VoxelDebris.Spawn(center, radius, DebrisCount, DebrisLifeSeconds, DebrisFadeSeconds);
 
             dome = FireballVfx.NewMeshObject("Dome", transform, FireballVfx.SphereMesh, FireballVfx.GetMaterial("VFX/ExplosionDome"));

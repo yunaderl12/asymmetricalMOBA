@@ -77,6 +77,7 @@ namespace Game.Monster
 
         private void Awake()
         {
+            gameObject.AddComponent<Game.Core.GroundFollower>();
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<HealthComponent>();
             mods = GetComponent<StatModifierContainer>();
