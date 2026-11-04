@@ -18,6 +18,20 @@ namespace Game.Core
         [Tooltip("How recent the heal must be (seconds), same as the assist window")]
         public float expShareSupportWindow = 10f;
 
+        [Header("Dash")]
+        [Tooltip("Speed multiplier while dashing")]
+        public float dashSpeedMultiplier = 1.6f;
+        [Tooltip("Second press of forward within this time (seconds) starts the dash")]
+        public float dashDoubleTapSeconds = 0.3f;
+
+        [Header("Hit Reaction (monsters)")]
+        [Tooltip("Knockback distance per point of damage (m)")]
+        public float knockbackPerDamage = 0.03f;
+        public float knockbackMax = 1.2f;
+        [Tooltip("Flinch per point of damage (seconds). Separate from Stun, so it causes no stun immunity.")]
+        public float flinchPerDamage = 0.006f;
+        public float flinchMax = 0.25f;
+
         [Header("Status Effects")]
         [Tooltip("Seconds after a stun ends during which new stuns are ignored")]
         public float stunImmunitySeconds = 1.5f;
