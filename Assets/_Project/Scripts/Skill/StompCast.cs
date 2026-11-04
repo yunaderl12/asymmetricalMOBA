@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 using Game.Combat;
 
 namespace Game.Skill
@@ -29,7 +30,10 @@ namespace Game.Skill
 
         private readonly List<HealthComponent> direct = new List<HealthComponent>();
         private readonly List<HealthComponent> wave = new List<HealthComponent>();
+        private const float GroundSearchDistance = 8f;
+
         private CharacterController characterController;
+        private NavMeshAgent airborneAgent;
         private Vector3 drift;
         private float height;
         private float risen;
@@ -63,6 +67,7 @@ namespace Game.Skill
             nextGhost = 0f;
             drift = transform.forward * (ForwardDrift / (RiseSeconds + HangSeconds + DiveEstimate()));
             if (Controller != null) Controller.SkillMotion = true;
+            LeaveGround();
             MeleeFx.DustBurst(transform.position, 0.6f, 16, 3.5f);
             ShockRing.Spawn(transform.position, 0.3f, 2f, 0.24f, 0.25f, Palette.Light);
         }
@@ -83,7 +88,7 @@ namespace Game.Skill
         private bool Rise(float seconds)
         {
             float target = height * EaseOut(Mathf.Clamp01(seconds / RiseSeconds));
-            characterController.Move(Vector3.up * (target - risen) + drift * Time.deltaTime);
+            MoveInAir(Vector3.up * (target - risen) + drift * Time.deltaTime);
             risen = target;
 
             float k = Mathf.Clamp01(seconds / RiseSeconds);
@@ -101,7 +106,7 @@ namespace Game.Skill
                 nextGhost = 0f;
             }
             fallTimer += Time.deltaTime;
-            characterController.Move(Vector3.down * (DiveSpeed * Time.deltaTime) + drift * Time.deltaTime);
+            MoveInAir(Vector3.down * (DiveSpeed * Time.deltaTime) + drift * Time.deltaTime);
 
             PoseArms(AxeSlamPosition, AxeSlamEuler);
             if (ModelAnim != null) ModelAnim.SetMeleePose(1f, 0f, 1f, Chest + transform.forward * 1.2f + Vector3.down * 1.4f);
@@ -113,14 +118,44 @@ namespace Game.Skill
                 nextGhost = fallTimer + DiveGhostInterval;
             }
 
-            bool landed = (characterController.collisionFlags & CollisionFlags.Below) != 0;
-            if (!landed && fallTimer < MaxFallSeconds) return true;
+            if (!HasLanded() && fallTimer < MaxFallSeconds) return true;
             Land();
             return false;
         }
 
+        // BOTは NavMeshAgent が地面に張り付けるので、飛んでいる間だけ切って自分で動かす。
+        private void LeaveGround()
+        {
+            if (characterController != null) return;
+            var agent = GetComponent<NavMeshAgent>();
+            if (agent == null || !agent.enabled) return;
+            agent.enabled = false;
+            airborneAgent = agent;
+        }
+
+        private void MoveInAir(Vector3 delta)
+        {
+            if (characterController != null) characterController.Move(delta);
+            else transform.position += delta;
+        }
+
+        private bool HasLanded()
+        {
+            if (characterController != null) return (characterController.collisionFlags & CollisionFlags.Below) != 0;
+            return NavMesh.SamplePosition(transform.position, out var ground, GroundSearchDistance, NavMesh.AllAreas) && transform.position.y <= ground.position.y;
+        }
+
+        private void ReturnToGround()
+        {
+            if (airborneAgent == null) return;
+            if (NavMesh.SamplePosition(transform.position, out var ground, GroundSearchDistance, NavMesh.AllAreas)) transform.position = ground.position;
+            airborneAgent.enabled = true;
+            airborneAgent = null;
+        }
+
         private void Land()
         {
+            ReturnToGround();
             Vector3 feet = transform.position;
             Vector3 low = feet + Vector3.up * 0.6f;
 
@@ -146,6 +181,7 @@ namespace Game.Skill
 
         protected override void OnRecover(float seconds, float k)
         {
+            ReturnToGround();
             if (Controller != null) Controller.SkillMotion = false;
             float settle = (1f - k) * (1f - k);
             float rise = Mathf.Clamp01(k * 2f);
@@ -156,6 +192,7 @@ namespace Game.Skill
 
         protected override void OnPoseEnd()
         {
+            ReturnToGround();
             if (Controller != null) Controller.SkillMotion = false;
         }
 

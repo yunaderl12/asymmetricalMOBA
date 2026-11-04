@@ -40,6 +40,7 @@ namespace Game.Bot
                     if (bh != null)
                     {
                         bh.SetClass(b.heroClass);
+                        bh.SetFreeSlotSkill(b.freeSlotSkill);
                         bh.SetBotName(b.botName);
                     }
                     heroIdx++;

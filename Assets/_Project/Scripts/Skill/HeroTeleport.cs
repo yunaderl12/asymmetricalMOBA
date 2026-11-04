@@ -54,6 +54,7 @@ namespace Game.Skill
         private HealthComponent health;
         private CharacterController cc;
         private HeroFPSController controller;
+        private UnityEngine.AI.NavMeshAgent agent;
         private CharacterModelAnimator modelAnim;
         private Transform cameraTransform;
         private Camera heroCamera;
@@ -82,6 +83,7 @@ namespace Game.Skill
         {
             health = GetComponent<HealthComponent>();
             cc = GetComponent<CharacterController>();
+            agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
             controller = GetComponent<HeroFPSController>();
         }
 
@@ -209,6 +211,7 @@ namespace Game.Skill
 
             if (model != null) model.gameObject.SetActive(false);
             if (cc != null) cc.enabled = false;
+            if (agent != null) agent.enabled = false;
             if (controller != null) controller.Suspended = true;
 
             // 判定に自分が当たらないよう、当たり判定を切ってから着地点を求める。
@@ -330,6 +333,7 @@ namespace Game.Skill
         {
             transform.position = p3;
             if (cc != null) cc.enabled = true;
+            if (agent != null) agent.enabled = true;
             if (controller != null) controller.Suspended = false;
             if (model != null)
             {
@@ -484,6 +488,7 @@ namespace Game.Skill
             ReleaseLight();
             phase = Phase.Idle;
             if (cc != null) cc.enabled = true;
+            if (agent != null) agent.enabled = true;
             if (controller != null)
             {
                 controller.Suspended = false;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 using Game.Combat;
 using Game.Hero;
 
@@ -29,6 +30,8 @@ namespace Game.Skill
         protected virtual MeleeFx.Palette Palette => MeleeFx.Steel;
 
         private HealthComponent health;
+        private CharacterController body;
+        private NavMeshAgent agent;
         private Camera heroCamera;
         private float baseFov;
         private Phase phase = Phase.Idle;
@@ -57,6 +60,8 @@ namespace Game.Skill
             health = GetComponent<HealthComponent>();
             Controller = GetComponent<HeroFPSController>();
             IsLocalPlayer = GetComponent<HumanHeroMarker>() != null;
+            body = GetComponent<CharacterController>();
+            agent = GetComponent<NavMeshAgent>();
         }
 
         private void OnDisable()
@@ -210,6 +215,25 @@ namespace Game.Skill
                 if (heroCamera != null) heroCamera.fieldOfView = baseFov;
                 cameraTouched = false;
             }
+        }
+
+        /// スキルの動きで体を移動させる。人間は CharacterController、BOTは NavMeshAgent で動く。
+        /// 実際に動いた量を返す。NavMeshAgent は Move の直後には transform に反映されないので nextPosition で測る。
+        protected Vector3 MoveBody(Vector3 delta)
+        {
+            if (body != null)
+            {
+                Vector3 before = transform.position;
+                body.Move(delta);
+                return transform.position - before;
+            }
+            if (agent != null && agent.enabled && agent.isOnNavMesh)
+            {
+                Vector3 before = agent.nextPosition;
+                agent.Move(delta);
+                return agent.nextPosition - before;
+            }
+            return Vector3.zero;
         }
 
         /// 体の位置から半径内の敵を集める。coneDegrees が 0 以上なら forward を中心にその角度の扇の中だけ。壁の向こうは含めない。

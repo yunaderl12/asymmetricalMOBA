@@ -24,7 +24,6 @@ namespace Game.Skill
 
         private readonly HashSet<HealthComponent> alreadyHit = new HashSet<HealthComponent>();
         private readonly List<HealthComponent> single = new List<HealthComponent>(1);
-        private CharacterController characterController;
         private Vector3 direction;
         private float traveled;
         private float nextGhost;
@@ -33,12 +32,6 @@ namespace Game.Skill
 
         protected override float RecoverSeconds => 0.3f;
         protected override MeleeFx.Palette Palette => MeleeFx.Ember;
-
-        protected override void Awake()
-        {
-            base.Awake();
-            characterController = GetComponent<CharacterController>();
-        }
 
         protected override void OnWindUp(float k)
         {
@@ -87,9 +80,7 @@ namespace Game.Skill
             HitNewTargets();
 
             float step = Mathf.Min(Skill.dashSpeed * Time.deltaTime, Skill.range - traveled);
-            Vector3 before = transform.position;
-            characterController.Move(direction * step);
-            float moved = Vector3.ProjectOnPlane(transform.position - before, Vector3.up).magnitude;
+            float moved = Vector3.ProjectOnPlane(MoveBody(direction * step), Vector3.up).magnitude;
             traveled += moved;
             if (traveled >= Skill.range - 0.01f) return false;
             if (step > 0f && moved < step * StuckRatio)

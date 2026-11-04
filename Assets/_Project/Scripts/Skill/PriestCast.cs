@@ -11,6 +11,9 @@ namespace Game.Skill
         private const float RaiseSharpness = 1f;
         private const float LocalFlashScale = 0.3f;
         private const float LocalGlowScale = 0.25f;
+        private const float AimRadius = 0.5f;
+        private const float BeamWidth = 0.22f;
+        private const float BeamSeconds = 0.26f;
 
         protected static readonly Vector3 WandUpPosition = new Vector3(0.24f, -0.05f, 0.42f);
         protected static readonly Vector3 WandUpEuler = new Vector3(-8f, -12f, -14f);
@@ -89,14 +92,59 @@ namespace Game.Skill
         }
 
         /// 光の柱と立ちのぼる粒で、回復された相手を示す。
-        protected void BlessEffect(Vector3 feet, float radius, float height, float seconds, bool onSelf)
+        protected void BlessEffect(HealthComponent target, float radius, float height, float seconds)
         {
-            LightPillar.Spawn(feet, radius, height, seconds, Palette.Main * 1.6f, true, onSelf ? SelfOnlyHiddenLayer : -1);
+            Vector3 feet = target.transform.position;
+            LightPillar.Spawn(feet, radius, height, seconds, Palette.Main * 1.6f, true, PillarLayerFor(target));
             FireballVfx.SpawnSparks(feet + Vector3.up * 0.2f, Vector3.up, Mathf.RoundToInt(18 * SizeScale), Color.white, Palette.Spark);
         }
 
-        /// 自分のカメラに映らず、他の人からは見える層（自分のモデルと同じ）。
-        protected int SelfOnlyHiddenLayer => ModelAnim != null && ModelAnim.ModelRoot != null ? ModelAnim.ModelRoot.gameObject.layer : -1;
+        /// 光の柱を置く層。操作している本人に立つ柱は、視界をふさがないよう本人のカメラに映らない層（本人のモデルと同じ）にする。
+        protected static int PillarLayerFor(HealthComponent target)
+        {
+            if (target.GetComponent<Game.Hero.HumanHeroMarker>() == null) return -1;
+            var model = target.GetComponent<Game.Hero.CharacterModelAnimator>();
+            return model != null && model.ModelRoot != null ? model.ModelRoot.gameObject.layer : -1;
+        }
+
+        // 視線の先で一番近い味方。壁や地面に遮られていれば見つからない扱い。
+        protected HealthComponent FindAllyInAim()
+        {
+            if (CameraTransform == null) return null;
+            HealthComponent best = null;
+            float bestDistance = float.PositiveInfinity;
+            float wall = float.PositiveInfinity;
+            foreach (var h in Physics.SphereCastAll(CameraTransform.position, AimRadius, CameraTransform.forward, Skill.range, ~0, QueryTriggerInteraction.Collide))
+            {
+                if (h.collider.transform.IsChildOf(transform)) continue;
+                var hp = h.collider.GetComponentInParent<HealthComponent>();
+                if (hp == null)
+                {
+                    if (!h.collider.isTrigger && h.distance < wall) wall = h.distance;
+                    continue;
+                }
+                if (hp.IsDead || !hp.CompareTag("Player") || h.distance >= bestDistance) continue;
+                best = hp;
+                bestDistance = h.distance;
+            }
+            return bestDistance < wall ? best : null;
+        }
+
+        /// 杖先から相手へ送る光の筋。
+        protected void SpawnBeam(Vector3 from, Vector3 to)
+        {
+            var go = new GameObject("HealBeam");
+            var line = go.AddComponent<LineRenderer>();
+            line.sharedMaterial = FireballVfx.Trail;
+            line.positionCount = 2;
+            line.SetPosition(0, from);
+            line.SetPosition(1, to);
+            line.widthMultiplier = BeamWidth * SizeScale;
+            line.startColor = line.endColor = new Color(1f, 0.85f, 0.4f, 1f);
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            Destroy(go, BeamSeconds);
+        }
 
         /// 半径内の生きている味方（自分を含む）。
         protected List<HealthComponent> FindAllies(Vector3 origin, float radius)

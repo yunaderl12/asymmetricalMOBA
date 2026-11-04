@@ -24,6 +24,20 @@ namespace Game.Skill
             Light = new Color(1f, 0.72f, 0.4f, 1f),
             Spark = new Color(1f, 0.5f, 0.12f),
         };
+        public static readonly Palette Arcane = new Palette
+        {
+            Core = new Color(1.8f, 2.6f, 3f, 1f),
+            Main = new Color(0.2f, 0.75f, 1.8f, 1f),
+            Light = new Color(0.6f, 0.9f, 1f, 1f),
+            Spark = new Color(0.4f, 0.8f, 1f),
+        };
+        public static readonly Palette Verdant = new Palette
+        {
+            Core = new Color(2f, 2.7f, 2.2f, 1f),
+            Main = new Color(0.3f, 1.4f, 0.8f, 1f),
+            Light = new Color(0.7f, 1f, 0.85f, 1f),
+            Spark = new Color(0.5f, 1f, 0.7f),
+        };
         public static readonly Palette Holy = new Palette
         {
             Core = new Color(3f, 2.7f, 1.9f, 1f),

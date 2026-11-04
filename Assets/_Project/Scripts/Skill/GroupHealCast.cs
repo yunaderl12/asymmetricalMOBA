@@ -26,7 +26,7 @@ namespace Game.Skill
             for (int i = 0; i < allies.Count; i++)
             {
                 ApplyHit(allies[i]);
-                BlessEffect(allies[i].transform.position, PillarRadius * SizeScale, PillarHeight * SizeScale, PillarSeconds, allies[i].gameObject == gameObject);
+                BlessEffect(allies[i], PillarRadius * SizeScale, PillarHeight * SizeScale, PillarSeconds);
             }
             Debug.Log($"[Skill] GroupHeal healed {allies.Count} ally(s)");
             Shake(0.18f, 0.025f * SizeScale);

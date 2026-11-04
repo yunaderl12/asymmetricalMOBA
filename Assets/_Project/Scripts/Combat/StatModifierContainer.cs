@@ -11,6 +11,7 @@ namespace Game.Combat
         public float TotalAtkMultiplier { get; private set; } = 1f;
         public float TotalSpdMultiplier { get; private set; } = 1f;
         public float TotalDfMultiplier { get; private set; } = 1f;
+        public float TotalDamageTakenMultiplier { get; private set; } = 1f;
 
         public event Action OnModifiersChanged;
 
@@ -41,18 +42,27 @@ namespace Game.Combat
             return true;
         }
 
+        /// その効果がまだかかっているときだけ外す。後からかけ直された分は残す。
+        public bool RemoveModifier(StatModifier mod)
+        {
+            if (mod == null || !activeModifiers.Contains(mod)) return false;
+            return RemoveModifier(mod.sourceId);
+        }
+
         private void Recalculate()
         {
-            float a = 1f, s = 1f, d = 1f;
+            float a = 1f, s = 1f, d = 1f, taken = 1f;
             foreach (var m in activeModifiers)
             {
                 a *= m.atkMultiplier;
                 s *= m.spdMultiplier;
                 d *= m.dfMultiplier;
+                taken *= m.damageTakenMultiplier;
             }
             TotalAtkMultiplier = a;
             TotalSpdMultiplier = s;
             TotalDfMultiplier = d;
+            TotalDamageTakenMultiplier = taken;
         }
     }
 }

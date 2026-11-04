@@ -10,7 +10,7 @@ namespace Game.Core
         public static List<BotData> GenerateBots(GameSession.PlayerRole humanRole)
         {
             var classes = LoadAllClasses();
-            var commonSkill = LoadCommonSprint();
+            var commonSkills = LoadCommonSkills();
             var bots = new List<BotData>();
 
             if (humanRole == GameSession.PlayerRole.Hero)
@@ -22,7 +22,7 @@ namespace Game.Core
                         botName = "BotHero" + (i + 1),
                         role = GameSession.PlayerRole.Hero,
                         heroClass = classes.Count > 0 ? classes[Random.Range(0, classes.Count)] : null,
-                        freeSlotSkill = commonSkill,
+                        freeSlotSkill = commonSkills.Count > 0 ? commonSkills[i % commonSkills.Count] : null,
                         isReady = true,
                     });
                 }
@@ -42,7 +42,7 @@ namespace Game.Core
                         botName = "BotHero" + (i + 1),
                         role = GameSession.PlayerRole.Hero,
                         heroClass = classes.Count > 0 ? classes[Random.Range(0, classes.Count)] : null,
-                        freeSlotSkill = commonSkill,
+                        freeSlotSkill = commonSkills.Count > 0 ? commonSkills[i % commonSkills.Count] : null,
                         isReady = true,
                     });
                 }
@@ -77,13 +77,18 @@ namespace Game.Core
             return result;
         }
 
-        private static SkillData LoadCommonSprint()
+        // BOTが意味のある使い方をできるものを先に並べる（Detect の印は本人の画面にしか出ない）。
+        private static List<SkillData> LoadCommonSkills()
         {
+            var result = new List<SkillData>();
 #if UNITY_EDITOR
-            return UnityEditor.AssetDatabase.LoadAssetAtPath<SkillData>("Assets/_Project/ScriptableObjects/Skills/Common/Sprint.asset");
-#else
-            return null;
+            foreach (var n in new[] { "Sprint", "Recover", "Detect" })
+            {
+                var s = UnityEditor.AssetDatabase.LoadAssetAtPath<SkillData>("Assets/_Project/ScriptableObjects/Skills/Common/" + n + ".asset");
+                if (s != null) result.Add(s);
+            }
 #endif
+            return result;
         }
     }
 }

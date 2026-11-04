@@ -88,6 +88,9 @@ namespace Game.Skill
             return duration + (lv - 1) * durationPerLevel;
         }
 
+        /// 効果の対象をスキルの動きの中で決めるもの（発動の瞬間に自分へかけない）。Detect は印を付けるだけで能力は変えない。
+        public bool AppliesBuffFromCast => skillName == "Blessing" || skillName == "Detect";
+
         public float GetSizeAtLevel(int level)
         {
             int lv = Mathf.Clamp(level, 1, maxSkillLevel);

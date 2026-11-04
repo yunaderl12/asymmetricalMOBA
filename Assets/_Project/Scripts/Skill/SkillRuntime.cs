@@ -93,6 +93,13 @@ namespace Game.Skill
                 $"{(equippedSkills[4] != null ? equippedSkills[4].skillName : "-")}");
         }
 
+        /// BOTのように HeroClassInitializer を持たない勇者のスキルを直接セットする。
+        public void Equip(IReadOnlyList<SkillData> classSkills, SkillData commonSkill)
+        {
+            for (int i = 0; i < 4; i++) equippedSkills[i] = i < classSkills.Count ? classSkills[i] : null;
+            equippedSkills[4] = commonSkill;
+        }
+
         private void Update()
         {
             float dt = Time.deltaTime;

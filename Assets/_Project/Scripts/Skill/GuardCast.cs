@@ -18,6 +18,10 @@ namespace Game.Skill
         private static readonly Vector3 ViewFilmScale = new Vector3(0.4f, 0.4f, 0.13f);
         private static readonly Vector3 ViewFilmOffset = new Vector3(0f, 0.02f, 0.12f);
 
+        private const float SurroundFilmSize = 1.5f;
+        private const float SurroundFilmGap = 0.4f;
+        private const float SurroundFilmStrength = 0.6f;
+
         private MeshRenderer bodyFilm;
         private MeshRenderer viewFilm;
         private MaterialPropertyBlock block;
@@ -27,6 +31,12 @@ namespace Game.Skill
         private float flash;
 
         protected override float RecoverSeconds => 0.05f;
+        protected virtual Vector3 FilmCenter => BodyFilmCenter;
+        protected virtual Vector3 FilmScale => BodyFilmScale;
+        /// 効果の間ずっと盾を構え続けるか。
+        protected virtual bool HoldsGuardPose => true;
+        /// 自分の画面の膜を、手の前ではなく視界全体を包む形にするか。
+        protected virtual bool SurroundsView => false;
 
         protected override void Awake()
         {
@@ -65,7 +75,7 @@ namespace Game.Skill
         private void LateUpdate()
         {
             if (guardTimer <= 0f) return;
-            if (View != null && guardTimer > FadeSeconds) View.PoseLeft(RaisedPosition, RaisedEuler);
+            if (HoldsGuardPose && View != null && guardTimer > FadeSeconds) View.PoseLeft(RaisedPosition, RaisedEuler);
             guardTimer -= Time.deltaTime;
             if (guardTimer <= 0f || (health != null && health.IsDead))
             {
@@ -77,10 +87,10 @@ namespace Game.Skill
 
             float fade = Mathf.Clamp01(guardTimer / FadeSeconds) * Mathf.Clamp01((guardSeconds - guardTimer) / 0.1f + 0.3f);
             flash = Mathf.MoveTowards(flash, 0f, FlashDecay * Time.deltaTime);
-            if (ModelAnim != null) ModelAnim.SetGuardArm(Mathf.Clamp01(guardTimer / FadeSeconds), Chest + transform.forward * 1.2f);
+            if (ModelAnim != null) ModelAnim.SetGuardArm(HoldsGuardPose ? Mathf.Clamp01(guardTimer / FadeSeconds) : 0f, Chest + transform.forward * 1.2f);
 
             ApplyFilm(bodyFilm, fade);
-            ApplyFilm(viewFilm, fade);
+            ApplyFilm(viewFilm, SurroundsView ? fade * SurroundFilmStrength : fade);
         }
 
         private void ApplyFilm(MeshRenderer film, float fade)
@@ -100,12 +110,21 @@ namespace Game.Skill
             var material = FireballVfx.GetMaterial("VFX/EnergyFilm");
             // 体の膜は他の人から見える分。自分のカメラには映さず、自分には盾の前の膜を見せる。
             bodyFilm = FireballVfx.NewMeshObject("GuardFilm", transform, FireballVfx.SphereMesh, material);
-            bodyFilm.transform.localPosition = BodyFilmCenter;
-            bodyFilm.transform.localScale = BodyFilmScale * (1f + (SizeScale - 1f) * FilmGrowth);
+            bodyFilm.transform.localPosition = FilmCenter;
+            bodyFilm.transform.localScale = FilmScale * (1f + (SizeScale - 1f) * FilmGrowth);
             int layer = ModelAnim != null && ModelAnim.ModelRoot != null ? ModelAnim.ModelRoot.gameObject.layer : gameObject.layer;
             bodyFilm.gameObject.layer = layer;
 
-            if (View != null && View.LeftHand != null)
+            if (SurroundsView && IsLocalPlayer && CameraTransform != null)
+            {
+                viewFilm = FireballVfx.NewMeshObject("GuardFilmView", CameraTransform, FireballVfx.SphereMesh, material);
+                // カメラのすぐ前に大きな球を置くと、中央は透けて画面の端だけが光る。
+                viewFilm.transform.localPosition = Vector3.forward * (SurroundFilmSize * 0.5f + SurroundFilmGap);
+                viewFilm.transform.localRotation = Quaternion.identity;
+                viewFilm.transform.localScale = Vector3.one * SurroundFilmSize;
+                if (View != null && View.LeftHand != null) viewFilm.gameObject.layer = View.LeftHand.gameObject.layer;
+            }
+            else if (View != null && View.LeftHand != null)
             {
                 viewFilm = FireballVfx.NewMeshObject("GuardFilmView", CameraTransform, FireballVfx.SphereMesh, material);
                 viewFilm.transform.localScale = ViewFilmScale;

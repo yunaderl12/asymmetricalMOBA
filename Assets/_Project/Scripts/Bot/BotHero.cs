@@ -4,10 +4,11 @@ using UnityEngine.AI;
 using UnityEngine.UI;
 using Game.Combat;
 using Game.Hero;
+using Game.Skill;
 
 namespace Game.Bot
 {
-    public class BotHero : MonoBehaviour
+    public class BotHero : MonoBehaviour, IDefenseSource
     {
         public enum BotState { Idle, EngagingMonster }
 
@@ -29,6 +30,20 @@ namespace Game.Bot
         private Transform engagementTarget;
         private bool dead;
         private BotState state = BotState.Idle;
+        private StatModifierContainer mods;
+        private BotSkillUser skills;
+        private SkillData freeSlotSkill;
+        private float baseSpeed;
+
+        public Transform EngagementTarget => engagementTarget;
+        public float AttackRange => attackRange;
+        public int Df => classData != null ? Mathf.RoundToInt(classData.initialDf * mods.TotalDfMultiplier) : 0;
+        public int MDf => classData != null ? classData.initialMDf : 0;
+
+        public void SetFreeSlotSkill(SkillData skill)
+        {
+            freeSlotSkill = skill;
+        }
 
         public void SetClass(HeroClassData c)
         {
@@ -47,6 +62,8 @@ namespace Game.Bot
         {
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<HealthComponent>();
+            mods = gameObject.AddComponent<StatModifierContainer>();
+            if (agent != null) baseSpeed = agent.speed;
         }
 
         private void Start()
@@ -54,6 +71,11 @@ namespace Game.Bot
             if (classData != null && health != null) health.SetMaxHP(classData.initialHP);
             if (health != null) health.OnDeath += OnDeath;
             AttachModel();
+            if (classData != null)
+            {
+                skills = gameObject.AddComponent<BotSkillUser>();
+                skills.Init(this, classData, freeSlotSkill);
+            }
             // スポーン地点（町の地面）を家にする。町の中心はコアの箱の内側で、
             // そこへワープするとコアの上の NavMesh に乗って降りられなくなる。
             homePosition = transform.position;
@@ -78,7 +100,9 @@ namespace Game.Bot
         private void Tick()
         {
             if (dead || agent == null || !agent.isOnNavMesh) return;
+            agent.speed = baseSpeed * mods.TotalSpdMultiplier;
             if (StatusEffectController.IsStunnedObj(gameObject)) { agent.SetDestination(transform.position); return; }
+            if (skills != null && skills.IsCasting) return;
 
             float bestDist = float.MaxValue;
             Transform best = null;
@@ -109,7 +133,7 @@ namespace Game.Bot
                     agent.SetDestination(transform.position);
                     if (Time.time - lastAttackTime >= attackInterval)
                     {
-                        hp.TakeDamage(attackDamage, gameObject, DamageType.Physical);
+                        hp.TakeDamage(Mathf.RoundToInt(attackDamage * mods.TotalAtkMultiplier), gameObject, DamageType.Physical);
                         lastAttackTime = Time.time;
                         if (modelAnim != null) modelAnim.PlayAttack();
                     }

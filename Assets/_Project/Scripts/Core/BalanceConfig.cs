@@ -102,6 +102,24 @@ namespace Game.Core
         [Tooltip("A new hero must exceed the current target's hate by this ratio to steal aggro")]
         public float hateSwitchRatio = 1.1f;
 
+        [Header("Bot Skills")]
+        [Tooltip("How often a bot hero considers using a skill (seconds).")]
+        public float botSkillThinkInterval = 0.4f;
+        [Tooltip("Minimum time between a bot hero's skills (seconds).")]
+        public float botSkillCastGap = 2f;
+        [Tooltip("Bots heal an ally or themselves below this share of HP.")]
+        public float botHealHpRatio = 0.6f;
+        [Tooltip("Bots use defensive buffs below this share of HP while an enemy is close.")]
+        public float botDefendHpRatio = 0.7f;
+        [Tooltip("An enemy this close counts as attacking the bot (metres).")]
+        public float botDefendEnemyRange = 5f;
+        [Tooltip("Bots sprint when their target is farther than this (metres).")]
+        public float botSprintTargetDistance = 6f;
+        [Tooltip("Bots with Teleport escape below this share of HP while an enemy is close.")]
+        public float botEscapeHpRatio = 0.3f;
+        [Tooltip("Seconds between a bot hero's SP regen ticks. Matches HeroRegen.")]
+        public float botSpRegenInterval = 1.5f;
+
         [Header("Demon King Level")]
         [Tooltip("Monster HP / Atk growth per Demon King level (0.05 = +5%/Lv)")]
         public float monsterStatGrowthPerDkLevel = 0.05f;

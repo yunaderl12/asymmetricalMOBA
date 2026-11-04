@@ -41,6 +41,8 @@ namespace Game.Skill
 
         private void OnEnable()
         {
+            // BOTはキー入力で動かない（BotSkillUser が CastSlot を呼ぶ）。
+            if (GetComponent<Game.Bot.BotHero>() != null) return;
             if (inputs == null) inputs = new HeroInputActions();
             inputs.Hero.Enable();
             inputs.Hero.SkillCast.performed += OnSkillCastPerformed;
@@ -61,13 +63,28 @@ namespace Game.Skill
             TryCast();
         }
 
+        /// BOTのように固定のカメラを持たない使い手の、狙いの向き。
+        public void SetAim(Transform aim)
+        {
+            cameraTransform = aim;
+        }
+
+        public bool IsBusy => (fireball != null && fireball.IsCasting)
+            || (teleport != null && teleport.IsBusy)
+            || (blizzard != null && blizzard.IsPosing)
+            || (melee != null && melee.IsBusy);
+
+        public void CastSlot(int slot)
+        {
+            if (runtime == null) return;
+            runtime.SetSelectedIndex(slot);
+            TryCast();
+        }
+
         public void TryCast()
         {
             if (runtime == null) return;
-            if (fireball != null && fireball.IsCasting) return;
-            if (teleport != null && teleport.IsBusy) return;
-            if (blizzard != null && blizzard.IsPosing) return;
-            if (melee != null && melee.IsBusy) return;
+            if (IsBusy) return;
             if (!StatusEffectController.CanUseSkills(gameObject))
             {
                 Debug.Log("[Skill] cannot cast while stunned / silenced");
@@ -96,6 +113,10 @@ namespace Game.Skill
             if (skill.skillName == "GroupHeal") { TryMelee<GroupHealCast>(idx, skill); return; }
             if (skill.skillName == "Blessing") { TryMelee<BlessingCast>(idx, skill); return; }
             if (skill.skillName == "Smite") { TryMelee<SmiteCast>(idx, skill); return; }
+            if (skill.skillName == "ManaShield") { TryMelee<ManaShieldCast>(idx, skill); return; }
+            if (skill.skillName == "Sprint") { TryMelee<SprintCast>(idx, skill); return; }
+            if (skill.skillName == "Recover") { TryMelee<RecoverCast>(idx, skill); return; }
+            if (skill.skillName == "Detect") { TryMelee<DetectCast>(idx, skill); return; }
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
@@ -288,6 +309,12 @@ namespace Game.Skill
                 },
                 (hp, damageScale) =>
                 {
+                    if (skill.effectType == SkillEffectType.Buff)
+                    {
+                        ApplyBuff(hp.gameObject, skill, value);
+                        if (hp.gameObject != gameObject) SupportTracker.RecordSupport(gameObject, hp.gameObject);
+                        return;
+                    }
                     if (skill.effectType == SkillEffectType.Heal)
                     {
                         int amount = Mathf.RoundToInt(value * damageScale);
@@ -301,20 +328,18 @@ namespace Game.Skill
                 () =>
                 {
                     if (skill.skillName == "Taunt") ExecuteTaunt(skill, size);
-                    else if (skill.effectType == SkillEffectType.Buff) ExecuteBuff(skill, value);
+                    else if (skill.effectType == SkillEffectType.Buff && !skill.AppliesBuffFromCast) ApplyBuff(gameObject, skill, value);
                 });
         }
 
         private void Execute(SkillData skill, float effectValue)
         {
-            // Special-case placeholders first
-            if (skill.skillName == "Detect") { ExecuteDetect(skill); return; }
 
             switch (skill.effectType)
             {
                 case SkillEffectType.Damage: ExecuteDamage(skill, effectValue); break;
                 case SkillEffectType.Heal: ExecuteHeal(skill, effectValue); break;
-                case SkillEffectType.Buff: ExecuteBuff(skill, effectValue); break;
+                case SkillEffectType.Buff: ApplyBuff(gameObject, skill, effectValue); break;
                 case SkillEffectType.Debuff: ExecuteDebuff(skill, effectValue); break;
             }
         }
@@ -379,35 +404,36 @@ namespace Game.Skill
             if (skill.targetType == SkillTargetType.Self && health != null) health.Heal(Mathf.RoundToInt(effectValue));
         }
 
-        private void ExecuteBuff(SkillData skill, float effectValue)
+        private void ApplyBuff(GameObject target, SkillData skill, float effectValue)
         {
-            if (stats == null) return;
+            var targetStats = target.GetComponent<StatModifierContainer>();
+            if (targetStats == null) return;
             float val = effectValue;
-            float atkMul = 1f, spdMul = 1f, dfMul = 1f;
+            float atkMul = 1f, spdMul = 1f, dfMul = 1f, damageTaken = 1f;
 
             switch (skill.skillName)
             {
                 case "Guard": dfMul = val; break;
                 case "IronWall": dfMul = val; break;
-                case "ManaShield": dfMul = val; break;
+                case "ManaShield": damageTaken = val; break;
                 case "Blessing": atkMul = val; break;
                 case "Sprint": spdMul = val; break;
                 default: spdMul = val; break;
             }
-            string srcId = "Skill_" + skill.skillName;
-            stats.AddOrReplaceModifier(new StatModifier(srcId, atkMul, spdMul, dfMul));
-
+            var mod = new StatModifier("Skill_" + skill.skillName, atkMul, spdMul, dfMul, damageTaken);
+            targetStats.AddOrReplaceModifier(mod);
             ApplyBuffToSpeed();
-            if (skill.duration > 0f) StartCoroutine(RemoveAfter(srcId, skill.skillName, skill.duration));
+            if (skill.duration > 0f) StartCoroutine(RemoveAfter(targetStats, mod, skill.skillName, skill.duration));
         }
 
         private void ExecuteDebuff(SkillData skill, float effectValue)
         {
             if (stats == null) return;
             string srcId = "Skill_" + skill.skillName;
-            stats.AddOrReplaceModifier(new StatModifier(srcId, 0.7f, 0.7f, 1f));
+            var mod = new StatModifier(srcId, 0.7f, 0.7f, 1f);
+            stats.AddOrReplaceModifier(mod);
             ApplyBuffToSpeed();
-            if (skill.duration > 0f) StartCoroutine(RemoveAfter(srcId, skill.skillName, skill.duration));
+            if (skill.duration > 0f) StartCoroutine(RemoveAfter(stats, mod, skill.skillName, skill.duration));
         }
 
         private void ApplyBuffToSpeed()
@@ -419,10 +445,10 @@ namespace Game.Skill
             }
         }
 
-        private IEnumerator RemoveAfter(string srcId, string skillName, float seconds)
+        private IEnumerator RemoveAfter(StatModifierContainer targetStats, StatModifier mod, string skillName, float seconds)
         {
             yield return new WaitForSeconds(seconds);
-            if (stats != null) stats.RemoveModifier(srcId);
+            if (targetStats != null) targetStats.RemoveModifier(mod);
             ApplyBuffToSpeed();
             Debug.Log($"[Skill] {skillName} expired");
         }
@@ -440,17 +466,6 @@ namespace Game.Skill
                 mh.Add(gameObject, amount);
             }
             Debug.Log($"[Skill] Taunt: +{amount} hate on {done.Count} monster(s)");
-        }
-
-        private void ExecuteDetect(SkillData skill)
-        {
-            var hits = Physics.OverlapSphere(transform.position, skill.range);
-            int enemies = 0;
-            foreach (var col in hits)
-            {
-                if (col.GetComponentInParent<Game.Monster.Monster>() != null) enemies++;
-            }
-            Debug.Log($"[Skill] Detect: enemies in {skill.range}m = {enemies}");
         }
 
         private void ShowBeam(Vector3 a, Vector3 b)

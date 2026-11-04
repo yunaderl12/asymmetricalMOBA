@@ -19,19 +19,12 @@ namespace Game.Skill
         private static readonly Vector3 ThrustEuler = new Vector3(72f, -10f, 0f);
         private static readonly Vector3 ShieldTuckPosition = new Vector3(-0.3f, -0.3f, 0.36f);
 
-        private CharacterController characterController;
         private Vector3 direction;
         private float traveled;
         private float nextGhost;
         private ParticleSystem speedLines;
 
         protected override float RecoverSeconds => 0.32f;
-
-        protected override void Awake()
-        {
-            base.Awake();
-            characterController = GetComponent<CharacterController>();
-        }
 
         protected override void OnWindUp(float k)
         {
@@ -80,9 +73,7 @@ namespace Game.Skill
             }
 
             float step = Mathf.Min(Skill.dashSpeed * Time.deltaTime, Skill.range - traveled);
-            Vector3 before = transform.position;
-            characterController.Move(direction * step);
-            float moved = Vector3.ProjectOnPlane(transform.position - before, Vector3.up).magnitude;
+            float moved = Vector3.ProjectOnPlane(MoveBody(direction * step), Vector3.up).magnitude;
             traveled += moved;
             if (traveled >= Skill.range - 0.01f) { StopDash(); return false; }
             if (step > 0f && moved < step * StuckRatio)
