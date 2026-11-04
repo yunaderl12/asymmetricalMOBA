@@ -23,4 +23,14 @@ MonoBehaviour:
   maxSpwn: 2
   exp: 40
   unlockDkLevel: 3
-  description: "重装の盾役モブ。HP150・防御3で勇者の攻撃を吸い、後続のモブを通す前線維持役。生成は遅くコストも重い。"
+  useHate: 0
+  description: "\u91CD\u88C5\u306E\u76FE\u5F79\u30E2\u30D6\u3002HP150\u30FB\u9632\u5FA13\u3067\u52C7\u8005\u306E\u653B\u6483\u3092\u5438\u3044\u3001\u5F8C\u7D9A\u306E\u30E2\u30D6\u3092\u901A\u3059\u524D\u7DDA\u7DAD\u6301\u5F79\u3002\u751F\u6210\u306F\u9045\u304F\u30B3\u30B9\u30C8\u3082\u91CD\u3044\u3002"
+  modelPath: 
+  modelMaterialPath: 
+  modelScale: 1
+  hitReactionScale: 0
+  deathBlastSeconds: 0.75
+  deathBlastSpeed: 11
+  deathFallSeconds: 1
+  deathHoldSeconds: 0.2
+  deathParticleCount: 50

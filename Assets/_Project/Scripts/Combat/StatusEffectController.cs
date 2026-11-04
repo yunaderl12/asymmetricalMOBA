@@ -131,7 +131,10 @@ namespace Game.Combat
             if (dotTickTimer > 0f) return;
             dotTickTimer += BalanceConfig.Instance.dotTickInterval;
             var e = effects[(int)StatusEffectType.DamageOverTime];
-            if (health != null) health.TakeDamage(Mathf.RoundToInt(e.power), e.source, DamageType.True);
+            if (health == null) return;
+            health.SuppressHitReaction = true;
+            health.TakeDamage(Mathf.RoundToInt(e.power), e.source, DamageType.True);
+            health.SuppressHitReaction = false;
         }
 
         private void RefreshSlow()

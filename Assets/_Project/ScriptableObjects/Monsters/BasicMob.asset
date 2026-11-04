@@ -28,6 +28,9 @@ MonoBehaviour:
   modelPath: Goblin/goblin
   modelMaterialPath: 
   modelScale: 0.7
+  hitReactionScale: 1
+  deathBlastSeconds: 0.75
+  deathBlastSpeed: 11
   deathFallSeconds: 1
   deathHoldSeconds: 0.2
   deathParticleCount: 50

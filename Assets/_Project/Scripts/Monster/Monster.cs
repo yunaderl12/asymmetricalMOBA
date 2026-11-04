@@ -30,6 +30,8 @@ namespace Game.Monster
         public Spawner SpawnedBy { get; private set; }
         /// ポータルから這い出している間は何もしない（MonsterEmerge が管理する）。
         public bool IsEmerging { get; set; }
+        /// 攻撃を受けた直後のごく短いのけぞり。スタンとは別物で、スタン耐性を作らない。
+        public bool IsFlinching => hitReaction != null && hitReaction.IsFlinching;
 
         public int CurrentAtk
         {
@@ -69,6 +71,7 @@ namespace Game.Monster
         private float heroLookupTimer;
         private float chaseRefreshTimer;
         private MonsterHate hate;
+        private MonsterHitReaction hitReaction;
 
         private bool UsesHate => hate != null && ((data != null && data.useHate) || MonsterHate.ForceAll);
 
@@ -79,6 +82,7 @@ namespace Game.Monster
             mods = GetComponent<StatModifierContainer>();
             hate = GetComponent<MonsterHate>();
             if (hate == null) hate = gameObject.AddComponent<MonsterHate>();
+            hitReaction = gameObject.AddComponent<MonsterHitReaction>();
             // Trigger events need a Rigidbody on one side. The town core has none, so without this
             // ContactDamage never hit it (heroes worked only because CharacterController counts).
             if (GetComponent<Rigidbody>() == null)
@@ -153,6 +157,7 @@ namespace Game.Monster
             var anim = gameObject.AddComponent<CharacterModelAnimator>();
             anim.Configure(data.modelPath, data.modelMaterialPath, data.modelScale, false, false, false);
             anim.ConfigureDeath(data.deathFallSeconds, data.deathHoldSeconds, data.deathParticleCount);
+            anim.ConfigureBlastDeath(data.deathBlastSeconds, data.deathBlastSpeed);
         }
 
         private void ApplySpeed()
@@ -193,7 +198,7 @@ namespace Game.Monster
         {
             if (destroyed || agent == null || IsEmerging) return;
 
-            if (StatusEffectController.IsStunnedObj(gameObject))
+            if (StatusEffectController.IsStunnedObj(gameObject) || IsFlinching)
             {
                 if (agent.isOnNavMesh) agent.isStopped = true;
                 wasStunned = true;

@@ -13,6 +13,9 @@ namespace Game.Combat
         public int MaxHP => maxHP;
         public int CurrentHP => currentHP;
         public bool IsDead { get; private set; }
+        /// 継続ダメージのように、のけぞりを起こさないダメージの間だけ true にする。
+        public bool SuppressHitReaction { get; set; }
+        public GameObject LastAttacker => recentDamages.Count > 0 ? recentDamages[recentDamages.Count - 1].attacker : null;
 
         public event Action OnDeath;
         public event Action<int, int> OnHPChanged;

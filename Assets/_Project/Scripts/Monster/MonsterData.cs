@@ -31,6 +31,16 @@ namespace Game.Monster
         public string modelMaterialPath;
         public float modelScale = 1f;
 
+        [Header("Hit Reaction")]
+        [Tooltip("Scale of knockback and flinch when hit. 0 = immune.")]
+        public float hitReactionScale = 1f;
+
+        [Header("Blast Death")]
+        [Tooltip("Seconds from the kill to the burst: flies up and away, swells white, bursts. 0 = use the fall below.")]
+        public float deathBlastSeconds = 0.75f;
+        [Tooltip("Launch speed (m/s) of the blast.")]
+        public float deathBlastSpeed = 11f;
+
         [Header("Death (models only; a monster without a model vanishes at once)")]
         [Tooltip("Seconds of the fall before it lies still.")]
         public float deathFallSeconds = 1f;

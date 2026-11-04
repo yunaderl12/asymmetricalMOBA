@@ -23,6 +23,8 @@ namespace Game.Skill
         /// recoilScale: 押し込みと傾きの強さ。0 ならつぶれるだけ。
         public static void Play(GameObject target, Vector3 direction, float recoilScale = 1f)
         {
+            var model = target.GetComponent<CharacterModelAnimator>();
+            if (model != null && model.IsBlasting) return;
             var punch = target.GetComponent<ImpactPunch>();
             if (punch == null)
             {
@@ -39,6 +41,18 @@ namespace Game.Skill
             punch.recoil = recoilScale;
             punch.startTime = Time.unscaledTime;
             punch.enabled = true;
+        }
+
+        /// 再生を止めて、モデルを元の形へ戻す。
+        public void Stop()
+        {
+            if (visual != null)
+            {
+                visual.localPosition = baseLocalPosition;
+                visual.localScale = baseLocalScale;
+                visual.localRotation = baseLocalRotation;
+            }
+            enabled = false;
         }
 
         private static Transform FindVisual(GameObject target)

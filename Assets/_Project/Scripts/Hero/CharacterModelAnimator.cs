@@ -108,6 +108,8 @@ namespace Game.Hero
         private Vector3 lastPosition;
         private bool wasDead;
         private float dyingFallSeconds;
+        private float blastSeconds;
+        private float blastSpeed;
         private static Material sharedParticleMaterial;
         private static readonly Dictionary<GameObject, float> ModelHeights = new Dictionary<GameObject, float>();
 
@@ -118,6 +120,13 @@ namespace Game.Hero
 
         // 溜めの構えの強さ（Animator の結果に LateUpdate で上乗せする）
         private const float CastLeanDegrees = 20f;
+        private const float BlastGravity = -14f;
+        private const float BlastTumbleDegrees = 420f;
+        private const float BlastSwell = 0.7f;
+        private const float BlastJitter = 0.22f;
+        private const float BlastJitterInterval = 0.05f;
+        private const float BlastInflate = 0.14f;
+        private const float BlastWhitenRatio = 0.65f;
         private float castLean;
         private float castReach;
         private Vector3 castHoldPoint;
@@ -159,8 +168,18 @@ namespace Game.Hero
             deathParticleBurstCount = particleCount;
         }
 
+        /// 倒れる代わりに斜め上へぶっ飛び、白く膨らんで破裂する（雑魚魔物用）。seconds が 0 なら普通に倒れる。
+        public void ConfigureBlastDeath(float seconds, float speed)
+        {
+            blastSeconds = seconds;
+            blastSpeed = speed;
+        }
+
+        /// 破裂の演出中。
+        public bool IsBlasting { get; private set; }
+
         /// HPが0になってから離散するまでの秒数。
-        public float DeathSequenceSeconds => FallSeconds + dyingHoldAfterFreeze + whiteHoldDuration;
+        public float DeathSequenceSeconds => blastSeconds > 0f ? blastSeconds : FallSeconds + dyingHoldAfterFreeze + whiteHoldDuration;
 
         private float FallSeconds => dyingFallSeconds > 0f ? dyingFallSeconds : dyingFreezeAt;
 
@@ -472,7 +491,7 @@ namespace Game.Hero
             currentState = AnimState.Dying;
             FireTrigger(AnimState.Dying);
             if (deathSequenceRoutine != null) StopCoroutine(deathSequenceRoutine);
-            deathSequenceRoutine = StartCoroutine(DeathSequence());
+            deathSequenceRoutine = StartCoroutine(blastSeconds > 0f && model != null ? BlastSequence() : DeathSequence());
         }
 
         /// <summary>
@@ -512,6 +531,71 @@ namespace Game.Hero
             DeathScattered = null;
             scattered?.Invoke(spawnPos);
 
+            deathSequenceRoutine = null;
+        }
+
+        // 攻撃と反対の斜め上へ飛びながら白く染まり、不規則に膨らんで最後に破裂する。
+        private IEnumerator BlastSequence()
+        {
+            IsBlasting = true;
+            var punch = GetComponent<Game.Skill.ImpactPunch>();
+            if (punch != null) punch.Stop();
+
+            var attacker = health != null ? health.LastAttacker : null;
+            Vector3 away = attacker != null ? transform.position - attacker.transform.position : -transform.forward;
+            away.y = 0f;
+            away = away.sqrMagnitude > 0.001f ? away.normalized : -transform.forward;
+            Vector3 velocity = (away + Vector3.up).normalized * blastSpeed;
+            Vector3 tumbleAxis = Vector3.Cross(Vector3.up, away);
+            float groundY = transform.position.y;
+            Vector3 baseScale = model.transform.localScale;
+            var whiten = new Game.Skill.DeathWhiten(modelRenderers, originalMaterials);
+
+            Vector3 jitter = Vector3.one;
+            float nextJitter = 0f;
+            float seed = 0f;
+            float t = 0f;
+            while (t < blastSeconds)
+            {
+                float dt = Time.deltaTime;
+                t += dt;
+                float k = Mathf.Clamp01(t / blastSeconds);
+
+                velocity.y += BlastGravity * dt;
+                Vector3 step = velocity * dt;
+                Vector3 flat = new Vector3(step.x, 0f, step.z);
+                if (flat.sqrMagnitude > 0f && Physics.Raycast(transform.position + Vector3.up, flat.normalized, flat.magnitude + 0.4f, ~0, QueryTriggerInteraction.Ignore))
+                {
+                    step.x = step.z = 0f;
+                    velocity.x = velocity.z = 0f;
+                }
+                Vector3 next = transform.position + step;
+                next.y = Mathf.Max(next.y, groundY);
+                transform.position = next;
+                model.transform.Rotate(tumbleAxis, BlastTumbleDegrees * dt, Space.World);
+
+                // ぐぐぐっと、一定間隔ごとに軸ごとの膨らみをランダムに変える。
+                if (t >= nextJitter)
+                {
+                    nextJitter = t + BlastJitterInterval;
+                    seed = Random.value * 100f;
+                    float size = BlastJitter * k;
+                    jitter = new Vector3(1f + Random.Range(-size, size), 1f + Random.Range(-size, size), 1f + Random.Range(-size, size));
+                }
+                model.transform.localScale = Vector3.Scale(baseScale * (1f + BlastSwell * k * k), jitter);
+                whiten.Apply(Mathf.SmoothStep(0f, 1f, k / BlastWhitenRatio), BlastInflate * k, seed);
+                yield return null;
+            }
+
+            Vector3 point = CorpsePosition();
+            Game.Skill.DeathBurst.Spawn(point, deathParticleBurstCount);
+            model.SetActive(false);
+            whiten.Restore();
+            IsBlasting = false;
+
+            var scattered = DeathScattered;
+            DeathScattered = null;
+            scattered?.Invoke(point);
             deathSequenceRoutine = null;
         }
 
