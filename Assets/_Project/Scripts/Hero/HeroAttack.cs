@@ -24,6 +24,12 @@ namespace Game.Hero
         public int Damage => damage;
         public void SetDamage(int value) { damage = value; }
 
+        private const float BoltMuzzleForward = 0.7f;
+        private const float BoltMuzzleRight = 0.34f;
+        private const float BoltMuzzleDown = 0.04f;
+        private const float BoltAimDistance = 20f;
+        private const float BoltMinAimDistance = 1.5f;
+
         private HeroInputActions inputs;
         private float cooldownTimer;
         private HeroRegen regen;
@@ -104,8 +110,14 @@ namespace Game.Hero
 
         private void FireMagicProjectile()
         {
-            var origin = cameraTransform.position + cameraTransform.forward * 0.5f;
-            var dir = cameraTransform.forward;
+            // 視線の真上から撃つと軌跡が見えないので、杖の宝石のあたりから照準点へ向けて飛ばす。
+            var eye = cameraTransform.position;
+            var aim = cameraTransform.forward;
+            var origin = eye + aim * BoltMuzzleForward + cameraTransform.right * BoltMuzzleRight - cameraTransform.up * BoltMuzzleDown;
+            var target = eye + aim * BoltAimDistance;
+            if (Game.Skill.FireballProjectile.Probe(eye, aim, 0f, BoltAimDistance, gameObject, out var hit)) target = hit.Point;
+            var toTarget = target - origin;
+            var dir = toTarget.magnitude > BoltMinAimDistance ? toTarget.normalized : aim;
             var go = Instantiate(magicProjectilePrefab, origin, Quaternion.LookRotation(dir));
             var mp = go.GetComponent<MagicProjectile>();
             int dmg = classInit != null ? Mathf.Max(1, classInit.CurrentMAtk) : damage;
