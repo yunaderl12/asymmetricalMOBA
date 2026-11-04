@@ -117,6 +117,8 @@ namespace Game.Core
         public float botSprintTargetDistance = 6f;
         [Tooltip("Bots with Teleport escape below this share of HP while an enemy is close.")]
         public float botEscapeHpRatio = 0.3f;
+        [Tooltip("Mage bots stop this far from their target and shoot magic bolts (metres).")]
+        public float botMageAttackRange = 10f;
         [Tooltip("Seconds between a bot hero's SP regen ticks. Matches HeroRegen.")]
         public float botSpRegenInterval = 1.5f;
 

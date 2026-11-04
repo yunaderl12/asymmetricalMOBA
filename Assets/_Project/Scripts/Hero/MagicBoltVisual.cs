@@ -3,25 +3,37 @@ using Game.Skill;
 
 namespace Game.Hero
 {
-    /// 魔法使いの通常攻撃の見た目。中心が白く外周が紺色の魔力の球で、紺色の魔力を軌跡に残す。
+    /// 魔法使いの通常攻撃の見た目。白い芯・マゼンタ・青・紺が重なる涙滴形の炎で、丸い根元を先頭に尾をうねらせて飛ぶ。
     public class MagicBoltVisual : MonoBehaviour
     {
-        private const float OrbDiameter = 0.34f;
-        private const float GlowSize = 0.95f;
-        private const float TrailSeconds = 0.4f;
-        private const float TrailWidth = 0.34f;
-        private const float WispsPerMeter = 7f;
-        private const float PulseSpeed = 30f;
+        private const float FlameLength = 1.25f;
+        private const float GlowSize = 1.15f;
+        private const float CoreGlowSize = 0.42f;
+        private const int CoreGlowQueue = 3020;
+        private const float TrailSeconds = 0.14f;
+        private const float TrailWidth = 0.3f;
+        private const float WispsPerMeter = 6f;
 
-        private static readonly Color Navy = new Color(0.06f, 0.11f, 0.5f, 1f);
-        private static readonly Color DeepNavy = new Color(0.03f, 0.05f, 0.3f, 1f);
-        private static readonly Color GlowColor = new Color(0.05f, 0.12f, 0.9f, 0.9f);
+        private static readonly Color Navy = new Color(0.05f, 0.08f, 0.55f, 1f);
+        private static readonly Color DeepNavy = new Color(0.02f, 0.03f, 0.3f, 1f);
+        private static readonly Color GlowColor = new Color(0.45f, 0.1f, 0.9f, 0.7f);
+        private static readonly Color CoreGlowColor = new Color(1.6f, 0.75f, 1.4f, 0.9f);
+        private static readonly Color Magenta = new Color(1f, 0.25f, 0.8f, 1f);
 
-        private Transform orb;
+        private static Material coreGlowMaterial;
+
+        // 炎より後に描いて、どの向きでも芯が見えるようにする。
+        private static Material CoreGlowMaterial
+        {
+            get
+            {
+                if (coreGlowMaterial == null) coreGlowMaterial = new Material(FireballVfx.Glow) { renderQueue = CoreGlowQueue };
+                return coreGlowMaterial;
+            }
+        }
+
         private TrailRenderer trail;
         private ParticleSystem wisps;
-        private float baseScale;
-        private float age;
 
         /// parent の大きさに関係なく、世界の大きさで作る。
         public static MagicBoltVisual Attach(GameObject parent)
@@ -37,10 +49,13 @@ namespace Game.Hero
 
         private void Build()
         {
-            var orbRenderer = FireballVfx.NewMeshObject("Orb", transform, FireballVfx.SphereMesh, FireballVfx.GetMaterial("VFX/MagicOrb"));
-            orb = orbRenderer.transform;
-            baseScale = OrbDiameter;
-            orb.localScale = Vector3.one * baseScale;
+            var flame = FireballVfx.NewMeshObject("Flame", transform, FlameMesh.Get(), FireballVfx.GetMaterial("VFX/MagicFlame"));
+            flame.transform.localScale = Vector3.one * FlameLength;
+            // 向きと揺れの位相を弾ごとに変えて、同じ形が続かないようにする。
+            flame.transform.localRotation = Quaternion.Euler(0f, 0f, Random.Range(0f, 360f));
+            var flameBlock = new MaterialPropertyBlock();
+            flameBlock.SetFloat("_Seed", Random.Range(0f, 100f));
+            flame.SetPropertyBlock(flameBlock);
 
             var block = new MaterialPropertyBlock();
             block.SetColor("_Color", GlowColor);
@@ -48,6 +63,14 @@ namespace Game.Hero
             var glow = FireballVfx.NewMeshObject("Glow", transform, FireballVfx.QuadMesh, FireballVfx.Glow);
             glow.transform.localScale = Vector3.one * GlowSize;
             glow.SetPropertyBlock(block);
+
+            // 後ろから見ると尾しか見えないので、芯の光を別に置く。
+            var coreBlock = new MaterialPropertyBlock();
+            coreBlock.SetColor("_Color", CoreGlowColor);
+            coreBlock.SetFloat("_Pull", 0f);
+            var core = FireballVfx.NewMeshObject("CoreGlow", transform, FireballVfx.QuadMesh, CoreGlowMaterial);
+            core.transform.localScale = Vector3.one * CoreGlowSize;
+            core.SetPropertyBlock(coreBlock);
 
             var trailObject = new GameObject("Trail");
             trailObject.transform.SetParent(transform, false);
@@ -75,7 +98,7 @@ namespace Game.Hero
             main.startLifetime = new ParticleSystem.MinMaxCurve(0.15f, 0.4f);
             main.startSpeed = new ParticleSystem.MinMaxCurve(0.1f, 0.6f);
             main.startSize = new ParticleSystem.MinMaxCurve(0.05f, 0.13f);
-            main.startColor = new ParticleSystem.MinMaxGradient(Navy, GlowColor);
+            main.startColor = new ParticleSystem.MinMaxGradient(Magenta, new Color(0.15f, 0.25f, 1f, 1f));
             main.maxParticles = 64;
             main.stopAction = ParticleSystemStopAction.Destroy;
 
@@ -93,13 +116,6 @@ namespace Game.Hero
             ps.gameObject.SetActive(true);
             ps.Play();
             return ps;
-        }
-
-        private void Update()
-        {
-            age += Time.deltaTime;
-            float pulse = 1f + Mathf.Sin(age * PulseSpeed) * 0.07f;
-            if (orb != null) orb.localScale = Vector3.one * (baseScale * pulse);
         }
 
         /// 弾が消えても軌跡と粒は自然に消えるまで残す。
@@ -122,8 +138,8 @@ namespace Game.Hero
 
         public static void Impact(Vector3 point, Vector3 direction)
         {
-            FireFlash.Spawn(point, 1.8f, 0.14f, 0.8f, new Color(2.4f, 2.6f, 3f), new Color(0.1f, 0.25f, 1.4f), new Color(0.4f, 0.5f, 1f), 2f);
-            FireballVfx.SpawnSparks(point, -direction, 10, Color.white, new Color(0.2f, 0.35f, 1f));
+            FireFlash.Spawn(point, 1.9f, 0.14f, 0.8f, new Color(2.8f, 2.4f, 3f), new Color(1.4f, 0.15f, 1.1f), new Color(0.3f, 0.4f, 1f), 2f);
+            FireballVfx.SpawnSparks(point, -direction, 12, Color.white, Magenta);
         }
     }
 }

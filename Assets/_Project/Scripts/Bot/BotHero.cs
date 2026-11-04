@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
 using Game.Combat;
+using Game.Core;
 using Game.Hero;
 using Game.Skill;
 
@@ -21,6 +22,14 @@ namespace Game.Bot
         [SerializeField] private float respawnSeconds = 10f;
         [SerializeField] private Text nameLabel;
         [SerializeField] private GameObject bodyVisual;
+        [SerializeField] private GameObject magicProjectilePrefab;
+
+        private const float BoltMuzzleForward = 0.7f;
+        private const float BoltMuzzleRight = 0.3f;
+        private const float BoltMuzzleHeight = 1.4f;
+        private const float BoltPoseSeconds = 0.35f;
+        private const float BoltPoseLean = 0.4f;
+        private const float TurnDegreesPerSecond = 360f;
 
         private NavMeshAgent agent;
         private CharacterModelAnimator modelAnim;
@@ -36,7 +45,8 @@ namespace Game.Bot
         private float baseSpeed;
 
         public Transform EngagementTarget => engagementTarget;
-        public float AttackRange => attackRange;
+        public float AttackRange => IsMage ? BalanceConfig.Instance.botMageAttackRange : attackRange;
+        private bool IsMage => classData != null && classData.className == "Mage" && magicProjectilePrefab != null;
         public int Df => classData != null ? Mathf.RoundToInt(classData.initialDf * mods.TotalDfMultiplier) : 0;
         public int MDf => classData != null ? classData.initialMDf : 0;
 
@@ -97,6 +107,16 @@ namespace Game.Bot
             if (health != null) health.OnDeath -= OnDeath;
         }
 
+        // 止まって撃っている間は NavMeshAgent が向きを変えないので、相手の方を向き続ける。
+        private void Update()
+        {
+            if (!IsMage || dead || engagementTarget == null || (skills != null && skills.IsCasting)) return;
+            Vector3 flat = engagementTarget.position - transform.position;
+            flat.y = 0f;
+            if (flat.sqrMagnitude < 0.01f || flat.magnitude > AttackRange) return;
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(flat), TurnDegreesPerSecond * Time.deltaTime);
+        }
+
         private void Tick()
         {
             if (dead || agent == null || !agent.isOnNavMesh) return;
@@ -124,7 +144,7 @@ namespace Game.Bot
                 var hp = engagementTarget.GetComponentInParent<HealthComponent>();
                 if (hp == null || hp.IsDead) { engagementTarget = null; state = BotState.Idle; ReturnHome(); return; }
                 float d = Vector3.Distance(transform.position, engagementTarget.position);
-                if (d > attackRange)
+                if (d > AttackRange)
                 {
                     agent.SetDestination(engagementTarget.position);
                 }
@@ -133,9 +153,13 @@ namespace Game.Bot
                     agent.SetDestination(transform.position);
                     if (Time.time - lastAttackTime >= attackInterval)
                     {
-                        hp.TakeDamage(Mathf.RoundToInt(attackDamage * mods.TotalAtkMultiplier), gameObject, DamageType.Physical);
-                        lastAttackTime = Time.time;
-                        if (modelAnim != null) modelAnim.PlayAttack();
+                        if (IsMage) FireMagicBolt(hp);
+                        else
+                        {
+                            hp.TakeDamage(Mathf.RoundToInt(attackDamage * mods.TotalAtkMultiplier), gameObject, DamageType.Physical);
+                            lastAttackTime = Time.time;
+                            if (modelAnim != null) modelAnim.PlayAttack();
+                        }
                     }
                 }
             }
@@ -149,6 +173,39 @@ namespace Game.Bot
                     agent.SetDestination(dest);
                 }
             }
+        }
+
+        // 人間の魔法使いと同じ弾を、杖のあたりから相手の体の中心へ撃つ。消費SPも同じ。
+        private void FireMagicBolt(HealthComponent target)
+        {
+            var mana = GetComponent<ManaComponent>();
+            if (mana != null && !mana.TryUseMana(classData.basicAttackMpCost)) return;
+            lastAttackTime = Time.time;
+
+            Vector3 flat = target.transform.position - transform.position;
+            flat.y = 0f;
+            if (flat.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(flat);
+            Vector3 muzzle = transform.position + transform.forward * BoltMuzzleForward + transform.right * BoltMuzzleRight + Vector3.up * BoltMuzzleHeight;
+            Vector3 aim = FireballProjectile.BodyBoundsOf(target.gameObject, null).center;
+            Vector3 direction = (aim - muzzle).normalized;
+
+            var go = Instantiate(magicProjectilePrefab, muzzle, Quaternion.LookRotation(direction));
+            var bolt = go.GetComponent<MagicProjectile>();
+            if (bolt != null) bolt.Init(gameObject, Mathf.Max(1, Mathf.RoundToInt(classData.initialMAtk * mods.TotalAtkMultiplier)), direction);
+            if (modelAnim != null) StartCoroutine(PlayBoltPose(muzzle + direction));
+        }
+
+        // 殴りのモーションではなく、杖を突き出して放つ姿勢にする。
+        private IEnumerator PlayBoltPose(Vector3 holdPoint)
+        {
+            for (float t = 0f; t < BoltPoseSeconds; t += Time.deltaTime)
+            {
+                if (skills != null && skills.IsCasting) yield break;
+                float k = 1f - t / BoltPoseSeconds;
+                modelAnim.SetCastPose(BoltPoseLean * k, k, holdPoint);
+                yield return null;
+            }
+            modelAnim.SetCastPose(0f, 0f, Vector3.zero);
         }
 
         private void ReturnHome()
