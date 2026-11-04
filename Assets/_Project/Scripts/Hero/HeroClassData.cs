@@ -32,6 +32,10 @@ namespace Game.Hero
         [Tooltip("Skills only this class can pick for the free slot (slot 5).")]
         public List<SkillData> exclusiveFreeSkills = new List<SkillData>();
 
+        [Header("Passives")]
+        [Tooltip("Passives this class can choose from. The player picks one.")]
+        public List<PassiveData> passives = new List<PassiveData>();
+
         [Header("Magic Class")]
         [Tooltip("SP restored even during combat: share of Max SP per tick (HeroRegen). 0.04 = 4%.")]
         public float spCombatRegenRate = 0.025f;

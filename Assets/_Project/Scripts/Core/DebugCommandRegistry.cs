@@ -25,6 +25,7 @@ namespace Game.Core
             Register("skipprep", "PrepPhase スキップ", SkipPrepCmd);
             Register("usemp", "魔王 MP消費 [n=20]", UseMpCmd);
             Register("selfdamage", "自分にダメージ [n=50]", SelfDamageCmd);
+            Register("magichit", "自分に魔法攻撃 [n=10] (魔法陣の確認用。防御とブロックを通す)", MagicHitCmd);
             Register("skiplevel", "魔王 Lv+1", SkipLevelCmd);
             Register("switch", "ロール切替", SwitchCmd);
             Register("vision", "視野リング 表示切替", VisionCmd);
@@ -161,6 +162,18 @@ namespace Game.Core
             if (mp == null) return "ManaComponent not found";
             bool ok = mp.TryUseMana(n);
             return ok ? ("Used " + n + " MP, now " + mp.CurrentMP + "/" + mp.MaxMP) : ("Not enough MP (" + mp.CurrentMP + "/" + mp.MaxMP + ")");
+        }
+
+        private static string MagicHitCmd(string[] args)
+        {
+            int n = 10;
+            if (args.Length > 0) int.TryParse(args[0], out n);
+            var hero = FindHero();
+            var hc = hero != null ? hero.GetComponent<HealthComponent>() : null;
+            if (hc == null) return "Hero HC not found";
+            int before = hc.CurrentHP;
+            hc.TakeDamage(n, null, DamageType.Magical);
+            return $"Magic attack {n}: HP {before} -> {hc.CurrentHP}";
         }
 
         private static string SelfDamageCmd(string[] args)

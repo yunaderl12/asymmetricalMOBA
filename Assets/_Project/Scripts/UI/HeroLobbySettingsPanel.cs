@@ -40,6 +40,8 @@ namespace Game.UI
         private GameObject titleGO;
         private GameObject hintGO;
         private readonly List<SkillHoverTrigger> slotHoverTriggers = new List<SkillHoverTrigger>();
+        private RectTransform passiveRow;
+        private readonly List<GameObject> passiveButtons = new List<GameObject>();
 
         public static HeroLobbySettingsPanel Create(RectTransform parent)
         {
@@ -206,6 +208,18 @@ namespace Game.UI
                 slotHoverTriggers.Add(hover);
             }
 
+            // Passive choices, to the right of the skill slots.
+            var pvHGO = MakeText(root, "PassiveHeader", font, 14, FontStyle.Normal, "パッシブ（クリックで選択）");
+            var pvhRT = (RectTransform)pvHGO.transform;
+            pvhRT.anchorMin = new Vector2(0f, 1f); pvhRT.anchorMax = new Vector2(0f, 1f); pvhRT.pivot = new Vector2(0f, 1f);
+            pvhRT.sizeDelta = new Vector2(250f, 22f); pvhRT.anchoredPosition = new Vector2(PassiveRowLeft, -240f);
+            pvHGO.GetComponent<Text>().color = new Color(0.85f, 0.85f, 0.85f, 1f);
+
+            passiveRow = new GameObject("PassiveRow", typeof(RectTransform)).GetComponent<RectTransform>();
+            passiveRow.SetParent(root, false);
+            passiveRow.anchorMin = new Vector2(0f, 1f); passiveRow.anchorMax = new Vector2(0f, 1f); passiveRow.pivot = new Vector2(0f, 0.5f);
+            passiveRow.sizeDelta = new Vector2(250f, pentSize); passiveRow.anchoredPosition = new Vector2(PassiveRowLeft, -300f);
+
             // Notice line under the slots (e.g. "slots 1-4 are locked")
             var ntGO = MakeText(root, "Notice", font, 14, FontStyle.Bold, "");
             var ntRT = (RectTransform)ntGO.transform;
@@ -256,6 +270,10 @@ namespace Game.UI
             gameObject.SetActive(false);
         }
 
+        private const float PassiveRowLeft = 690f;
+        private const float PassiveSize = 56f;
+        private const float PassiveSpacing = 88f;
+
         private RectTransform _carouselContainer;
         private readonly List<GameObject> outlineHosts = new List<GameObject>();
 
@@ -283,6 +301,71 @@ namespace Game.UI
             SetCurrentClass(loadout.CurrentClass);
             SetSkillSet(loadout.Skills, loadout.ClassColor);
             PopulateAvailable(loadout.BuildAvailableSkills());
+            PopulatePassives();
+        }
+
+        private void OnPassiveClicked(PassiveData passive)
+        {
+            if (detailView != null) detailView.ShowPassive(passive);
+            if (loadout == null || loadout.Passive == passive) return;
+            loadout.SetPassive(passive);
+            PopulatePassives();
+            OnLoadoutChanged?.Invoke();
+        }
+
+        private void PopulatePassives()
+        {
+            for (int i = passiveButtons.Count - 1; i >= 0; i--) if (passiveButtons[i] != null) Destroy(passiveButtons[i]);
+            passiveButtons.Clear();
+            var cls = loadout != null ? loadout.CurrentClass : null;
+            if (passiveRow == null || cls == null) return;
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (cls.passives.Count == 0)
+            {
+                var none = MakeText(passiveRow, "None", font, 13, FontStyle.Normal, "このクラスにはまだありません");
+                var nRT = (RectTransform)none.transform;
+                nRT.anchorMin = Vector2.zero; nRT.anchorMax = Vector2.one;
+                nRT.offsetMin = Vector2.zero; nRT.offsetMax = Vector2.zero;
+                none.GetComponent<Text>().alignment = TextAnchor.MiddleLeft;
+                none.GetComponent<Text>().color = new Color(0.65f, 0.65f, 0.65f, 1f);
+                passiveButtons.Add(none);
+                return;
+            }
+            for (int i = 0; i < cls.passives.Count; i++)
+            {
+                var passive = cls.passives[i];
+                if (passive == null) continue;
+                Vector2 center = new Vector2(PassiveSize * 0.5f + i * PassiveSpacing, 0f);
+                if (passive == loadout.Passive) passiveButtons.Add(MakePassiveCircle("PassiveOutline", center, PassiveSize + 12f, SelectedOutlineColor).gameObject);
+                var circle = MakePassiveCircle("Passive_" + passive.passiveName, center, PassiveSize, passive.iconColor);
+                circle.raycastTarget = true;
+                passiveButtons.Add(circle.gameObject);
+
+                var label = MakeText(circle.transform, "Lbl", font, 11, FontStyle.Bold, passive.passiveName);
+                var lRT = (RectTransform)label.transform;
+                lRT.anchorMin = new Vector2(0.5f, 0f); lRT.anchorMax = new Vector2(0.5f, 0f); lRT.pivot = new Vector2(0.5f, 1f);
+                lRT.sizeDelta = new Vector2(PassiveSpacing, 24f); lRT.anchoredPosition = new Vector2(0f, -10f);
+                label.GetComponent<Text>().alignment = TextAnchor.UpperCenter;
+
+                var btn = circle.gameObject.AddComponent<Button>();
+                btn.targetGraphic = circle;
+                btn.onClick.AddListener(() => OnPassiveClicked(passive));
+            }
+        }
+
+        private EllipseGraphic MakePassiveCircle(string name, Vector2 center, float size, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer));
+            go.transform.SetParent(passiveRow, false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = new Vector2(0f, 0.5f); rt.anchorMax = new Vector2(0f, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(size, size);
+            rt.anchoredPosition = center;
+            var ellipse = go.AddComponent<EllipseGraphic>();
+            ellipse.color = color;
+            ellipse.raycastTarget = false;
+            return ellipse;
         }
 
         private void OnClassClicked(int index)
@@ -420,7 +503,7 @@ namespace Game.UI
             availableButtons.Clear();
             if (availableGrid == null || skills == null) return;
 
-            int columns = 5;
+            int columns = 6; // 3 rows must hold every skill: the detail box starts right below them.
             float size = 56f;
             float gapX = 24f;
             float gapY = 40f;

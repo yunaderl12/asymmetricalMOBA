@@ -59,6 +59,17 @@ namespace Game.Hero
                 Debug.Log($"[HeroClass] added CharacterModelAnimator ({classData.className}: {classData.modelPath})");
                 HeroViewModel.Attach(gameObject, classData);
             }
+
+            var passive = PickPassive();
+            if (passive != null) HeroPassive.Attach(gameObject, passive);
+        }
+
+        // ロビーで選んだパッシブ。このクラスのものでなければ、クラスの先頭のパッシブにする。
+        private PassiveData PickPassive()
+        {
+            var selected = GameSession.Instance != null ? GameSession.Instance.SelectedPassive : null;
+            if (selected != null && classData.passives.Contains(selected)) return selected;
+            return classData.passives.Count > 0 ? classData.passives[0] : null;
         }
 
         private void OnDestroy()

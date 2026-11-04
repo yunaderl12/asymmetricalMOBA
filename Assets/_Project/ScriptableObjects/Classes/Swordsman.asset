@@ -32,6 +32,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8e43e3485befb4351bd7cfe1134918e0, type: 2}
   - {fileID: 11400000, guid: a1a4a9c9ad15c489496fc3683fb0f2b5, type: 2}
   - {fileID: 11400000, guid: bbdbe2dc0f996427fb1604348cc195bc, type: 2}
+  exclusiveFreeSkills: []
+  passives:
+  - {fileID: 11400000, guid: a8017ceaba6fa479cad3c2deb180a51d, type: 2}
+  - {fileID: 11400000, guid: 61591f1f5ff0e4067af87f2b94d46c0f, type: 2}
   spCombatRegenRate: 0.025
   basicAttackMpCost: 0
   regenMultiplier: 2

@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using Game.Combat;
+using Game.Hero;
 using Game.Skill;
 
 namespace Game.UI
@@ -94,6 +95,18 @@ namespace Game.UI
             if (s.castTime > 0f) statsText.text += $"　　溜め {Num(s.castTime)}秒";
             effectText.text = EffectLine(s);
             descText.text = string.IsNullOrEmpty(s.description) ? "(説明なし)" : s.description;
+        }
+
+        public void ShowPassive(PassiveData p)
+        {
+            SkillIconView.Set(icon.rectTransform, null);
+            icon.enabled = true;
+            icon.color = p.iconColor;
+            nameText.text = p.passiveName;
+            ownerText.text = "パッシブ";
+            statsText.text = p.StatsLine();
+            effectText.text = p.howToUse;
+            descText.text = p.description;
         }
 
         private static string EffectLine(SkillData s)

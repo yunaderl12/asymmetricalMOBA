@@ -43,6 +43,10 @@ namespace Game.Hero
         public bool Suspended { get; set; }
         /// スキルが勇者を上下に動かしている間（Stomp の跳躍）は、視点だけ動かせて、移動と重力を止める。腕は見えたまま。
         public bool SkillMotion { get; set; }
+        /// パッシブの回避など、入力の代わりに体を動かす水平速度。ゼロなら入力で動く。
+        public Vector3 BurstVelocity { get; set; }
+        /// 空中でジャンプを押したときに呼ぶ。上昇速度を返す（0 なら跳ばない）。
+        public System.Func<float> AirJump { get; set; }
         public float LookPitch => pitch;
         public bool IsDashing => dashing;
         /// カメラの揺れを含まない照準方向。
@@ -221,7 +225,7 @@ namespace Game.Hero
             Vector2 input = inputs.Hero.Move.ReadValue<Vector2>();
             UpdateDash(input);
             float speed = dashing ? moveSpeed * Game.Core.BalanceConfig.Instance.dashSpeedMultiplier : moveSpeed;
-            Vector3 horizontal = (transform.right * input.x + transform.forward * input.y) * speed;
+            Vector3 horizontal = BurstVelocity != Vector3.zero ? BurstVelocity : (transform.right * input.x + transform.forward * input.y) * speed;
 
             if (controller.isGrounded)
             {
@@ -234,6 +238,11 @@ namespace Game.Hero
             else
             {
                 verticalVelocity += gravity * Time.deltaTime;
+                if (AirJump != null && inputs.Hero.Jump.WasPerformedThisFrame())
+                {
+                    float lift = AirJump();
+                    if (lift > 0f) verticalVelocity = lift;
+                }
             }
 
             Vector3 motion = IceField.ApplySlip(transform.position, horizontal, ref slipVelocity);

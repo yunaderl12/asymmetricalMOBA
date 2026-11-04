@@ -23,6 +23,8 @@ namespace Game.Hero
 
         public int Damage => damage;
         public void SetDamage(int value) { damage = value; }
+        /// false の間は押した瞬間に攻撃しない。斬撃のパッシブが、離したときに TryBasicAttack を呼ぶ。
+        public bool AttackOnPress { get; set; } = true;
 
         private const float BoltMuzzleForward = 0.7f;
         private const float BoltMuzzleRight = 0.34f;
@@ -70,6 +72,11 @@ namespace Game.Hero
         }
 
         private void OnAttackPerformed(InputAction.CallbackContext _)
+        {
+            if (AttackOnPress) TryBasicAttack();
+        }
+
+        public void TryBasicAttack()
         {
             if (Game.UI.ConsoleUI.IsConsoleActive) return;
             if (IsAnimLocked()) return;

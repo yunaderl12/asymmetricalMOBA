@@ -57,6 +57,8 @@ namespace Game.Combat
             int dmg = DamageCalculator.Calculate(attack, type, GetComponent<IDefenseSource>());
             var mods = GetComponent<StatModifierContainer>();
             if (mods != null) dmg = Mathf.Max(1, Mathf.RoundToInt(dmg * mods.TotalDamageTakenMultiplier));
+            var blocker = GetComponent<IDamageBlocker>();
+            if (blocker != null && blocker.TryBlock(dmg, attacker, type)) return;
             TakeDamage(dmg, attacker);
         }
 

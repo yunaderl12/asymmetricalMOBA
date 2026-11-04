@@ -16,6 +16,7 @@ namespace Game.Hero
         public IList<HeroClassData> Classes { get; }
         public SkillData[] Skills { get; } = new SkillData[5];
         public int ClassIndex { get; private set; }
+        public PassiveData Passive { get; private set; }
 
         private readonly IList<SkillData> commonSkills;
 
@@ -65,6 +66,7 @@ namespace Game.Hero
                 if (i >= 0) ClassIndex = i;
             }
             Skills[FreeSlot] = session != null ? session.SelectedCommonSkill : null;
+            Passive = session != null ? session.SelectedPassive : null;
             RefreshSkills();
         }
 
@@ -74,6 +76,7 @@ namespace Game.Hero
             if (session == null) return;
             if (CurrentClass != null) session.SelectedHeroClass = CurrentClass;
             session.SelectedCommonSkill = Skills[FreeSlot];
+            session.SelectedPassive = Passive;
         }
 
         public void SelectClass(int index)
@@ -86,6 +89,12 @@ namespace Game.Hero
         public void SetFreeSkill(SkillData skill)
         {
             if (skill != null) Skills[FreeSlot] = skill;
+        }
+
+        public void SetPassive(PassiveData passive)
+        {
+            var cls = CurrentClass;
+            if (cls != null && cls.passives.Contains(passive)) Passive = passive;
         }
 
         /// Skills that can go into slot 5. Equipped ones are left out, so a swap puts the old skill back into the list.
@@ -127,6 +136,10 @@ namespace Game.Hero
             var free = Skills[FreeSlot];
             if (free == null || (classSkills != null && classSkills.Contains(free)) || IsExclusiveToOtherClass(free))
                 Skills[FreeSlot] = commonSkills != null && commonSkills.Count > 0 ? commonSkills[0] : null;
+
+            // Passives belong to the class, so a class change falls back to the new class's first one.
+            if (cls == null || !cls.passives.Contains(Passive))
+                Passive = cls != null && cls.passives.Count > 0 ? cls.passives[0] : null;
         }
     }
 }

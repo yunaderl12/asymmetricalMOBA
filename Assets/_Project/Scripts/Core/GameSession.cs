@@ -18,6 +18,7 @@ namespace Game.Core
         public PlayerRole CurrentRole = PlayerRole.None;
         public HeroClassData SelectedHeroClass;
         public SkillData SelectedCommonSkill;
+        public PassiveData SelectedPassive;
         public List<MonsterData> DemonDeck = new List<MonsterData>();
         public List<MonsterData> SpawnerInitialMobs = new List<MonsterData>();
         public MatchStats LastMatchStats;
