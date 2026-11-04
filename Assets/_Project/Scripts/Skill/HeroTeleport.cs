@@ -102,6 +102,9 @@ namespace Game.Skill
         }
 
         /// tryPay は飛び立つ瞬間に呼ばれ、false なら取りやめる（溜めの中断ではSPを消費しない）。
+        /// スキルレベルによる着地の演出の大きさ。
+        public float EffectScale { get; set; } = 1f;
+
         public bool BeginCast(SkillData skillData, Transform cam, Func<bool> tryPay)
         {
             if (IsBusy) return false;
@@ -337,8 +340,8 @@ namespace Game.Skill
 
             Vector3 chest = p3 + Vector3.up;
             FireballVfx.SpawnSparks(p3 + Vector3.up * 0.2f, Vector3.up, 40, Neon, NeonDeep);
-            FireFlash.Spawn(chest, 4.5f, 0.24f, 0.6f, new Color(1.6f, 3f, 3f), new Color(0.1f, 1.4f, 1.8f), LightTint, FlashLightIntensity);
-            ShockRing.Spawn(p3, 0.4f, LandingRingRadius, 0.5f, 1.3f, Neon);
+            FireFlash.Spawn(chest, 4.5f * EffectScale, 0.24f, 0.6f, new Color(1.6f, 3f, 3f), new Color(0.1f, 1.4f, 1.8f), LightTint, FlashLightIntensity);
+            ShockRing.Spawn(p3, 0.4f, LandingRingRadius * EffectScale, 0.5f, 1.3f, Neon);
             ImpactPunch.Play(gameObject, transform.forward, 0f);
 
             phase = Phase.Landing;

@@ -35,6 +35,7 @@ namespace Game.Skill
         private SkillData skill;
         private Func<bool> tryPay;
         private Func<float> getFieldSeconds;
+        private float sizeScale = 1f;
         private Action<Vector3> onImpact;
         private float timer;
         private float shakeTimer;
@@ -59,9 +60,10 @@ namespace Game.Skill
         }
 
         /// tryPay は発射の瞬間に呼ばれ、false なら取りやめる。onImpact は氷が着弾点に届いたときに呼ばれる。
-        public bool BeginCast(SkillData skillData, Transform cam, Func<bool> tryPay, Func<float> getFieldSeconds, Action<Vector3> onImpact)
+        public bool BeginCast(SkillData skillData, Transform cam, float sizeScale, Func<bool> tryPay, Func<float> getFieldSeconds, Action<Vector3> onImpact)
         {
             if (phase == Phase.Charging) return false;
+            this.sizeScale = sizeScale;
             skill = skillData;
             this.tryPay = tryPay;
             this.getFieldSeconds = getFieldSeconds;
@@ -129,7 +131,7 @@ namespace Game.Skill
             FireFlash.Spawn(hold, 1.6f, 0.12f, 0f, new Color(1.2f, 2f, 2.4f), new Color(0.1f, 0.7f, 1.4f), IcePale, 0f);
             DestroyChargeVisuals();
 
-            BlizzardStrike.Spawn(transform.position, targetPoint, skill.areaRadius, getFieldSeconds(), HandleImpact);
+            BlizzardStrike.Spawn(transform.position, targetPoint, skill.areaRadius * sizeScale, sizeScale, getFieldSeconds(), HandleImpact);
 
             phase = Phase.Recover;
             timer = 0f;
@@ -189,7 +191,7 @@ namespace Game.Skill
         {
             targetRing = FireballVfx.NewMeshObject("BlizzardTarget", null, FireballVfx.QuadMesh, FireballVfx.GetMaterial("VFX/ShockRing"));
             targetRing.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
-            targetRing.transform.localScale = Vector3.one * (skill.areaRadius * 2f * (1f + RingWidth));
+            targetRing.transform.localScale = Vector3.one * (skill.areaRadius * sizeScale * 2f * (1f + RingWidth));
 
             handGlow = FireballVfx.NewMeshObject("BlizzardHandGlow", null, FireballVfx.QuadMesh, FireballVfx.Glow);
             var glowBlock = new MaterialPropertyBlock();

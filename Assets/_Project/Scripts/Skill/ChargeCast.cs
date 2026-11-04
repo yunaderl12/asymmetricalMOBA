@@ -51,8 +51,8 @@ namespace Game.Skill
             traveled = 0f;
             nextGhost = 0f;
             MeleeFx.DustBurst(transform.position, 0.4f, 14, 3.5f);
-            ShockRing.Spawn(transform.position, 0.3f, 2.4f, 0.28f, 0.25f, MeleeFx.SteelBlue);
-            if (IsLocalPlayer && CameraTransform != null) speedLines = SpawnSpeedLines();
+            ShockRing.Spawn(transform.position, 0.3f, 2.4f * SizeScale, 0.28f, 0.25f, MeleeFx.SteelBlue);
+            if (IsLocalPlayer && CameraTransform != null) speedLines = MeleeFx.SpawnSpeedLines(CameraTransform, MeleeFx.SteelLight);
         }
 
         protected override bool TickActive(float seconds)
@@ -87,7 +87,7 @@ namespace Game.Skill
             if (traveled >= Skill.range - 0.01f) { StopDash(); return false; }
             if (step > 0f && moved < step * StuckRatio)
             {
-                MeleeFx.Impact(Chest + direction * 0.7f, -direction, 1.2f);
+                MeleeFx.Impact(Chest + direction * 0.7f, -direction, 1.2f * SizeScale, Palette);
                 Shake(ShakeSeconds * 0.6f, ShakeSize * 0.5f);
                 StopDash();
                 return false;
@@ -114,12 +114,12 @@ namespace Game.Skill
             StopDash();
             var single = new System.Collections.Generic.List<Game.Combat.HealthComponent> { target };
             Vector3 point = Chest + direction * 0.7f;
-            int hits = HitEnemies(single, Chest, 3.2f);
+            int hits = HitEnemies(single, Chest, 3.2f * SizeScale);
             Debug.Log($"[Skill] Charge hit {hits} target(s)");
-            ShockRing.Spawn(target.transform.position, 0.4f, 3.6f, 0.34f, 0.35f, MeleeFx.SteelCore);
+            ShockRing.Spawn(target.transform.position, 0.4f, 3.6f * SizeScale, 0.34f, 0.35f, MeleeFx.SteelCore);
             MeleeFx.DustBurst(transform.position + direction, 0.8f, 18, 4.5f);
             FireballVfx.SpawnSparks(point, direction, 22, Color.white, new Color(0.45f, 0.75f, 1f));
-            Shake(ShakeSeconds, ShakeSize);
+            Shake(ShakeSeconds, ShakeSize * SizeScale);
         }
 
         private void StopDash()
@@ -141,42 +141,6 @@ namespace Game.Skill
         protected override void OnPoseEnd()
         {
             StopDash();
-        }
-
-        // 視界の外へ流れていく細い線。カメラの子に置いて、走っている間だけ出す。
-        private ParticleSystem SpawnSpeedLines()
-        {
-            var ps = FireballVfx.NewParticles("SpeedLines", CameraTransform);
-            ps.transform.localPosition = Vector3.forward * 7f;
-            ps.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
-
-            var main = ps.main;
-            main.duration = 1f;
-            main.loop = true;
-            main.simulationSpace = ParticleSystemSimulationSpace.Local;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.14f, 0.24f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(26f, 38f);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.025f, 0.05f);
-            main.startColor = MeleeFx.SteelLight;
-            main.maxParticles = 90;
-            main.stopAction = ParticleSystemStopAction.Destroy;
-
-            var emission = ps.emission;
-            emission.rateOverTime = 260f;
-
-            var shape = ps.shape;
-            shape.shapeType = ParticleSystemShapeType.Circle;
-            shape.radius = 4f;
-            shape.radiusThickness = 0.35f;
-
-            var r = ps.GetComponent<ParticleSystemRenderer>();
-            r.renderMode = ParticleSystemRenderMode.Stretch;
-            r.velocityScale = 0.05f;
-            r.lengthScale = 2f;
-
-            ps.gameObject.SetActive(true);
-            ps.Play();
-            return ps;
         }
     }
 }

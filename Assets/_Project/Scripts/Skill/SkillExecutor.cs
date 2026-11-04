@@ -88,6 +88,10 @@ namespace Game.Skill
             if (skill.skillName == "Charge") { TryMelee<ChargeCast>(idx, skill); return; }
             if (skill.skillName == "Whirlwind") { TryMelee<WhirlwindCast>(idx, skill); return; }
             if (skill.skillName == "Guard") { TryMelee<GuardCast>(idx, skill); return; }
+            if (skill.skillName == "Bash") { TryMelee<BashCast>(idx, skill); return; }
+            if (skill.skillName == "Stomp") { TryMelee<StompCast>(idx, skill); return; }
+            if (skill.skillName == "Taunt") { TryMelee<TauntCast>(idx, skill); return; }
+            if (skill.skillName == "IronWall") { TryMelee<IronWallCast>(idx, skill); return; }
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
@@ -152,7 +156,7 @@ namespace Game.Skill
             if (fireball == null) fireball = gameObject.AddComponent<FireballCast>();
 
             int dmg = 0;
-            fireball.BeginCast(skill, cameraTransform,
+            fireball.BeginCast(skill, cameraTransform, skill.GetSizeAtLevel(runtime.GetSkillLevel(idx)),
                 () =>
                 {
                     if (!runtime.CanCast(idx)) return false;
@@ -187,7 +191,8 @@ namespace Game.Skill
             if (blizzard == null) blizzard = gameObject.AddComponent<BlizzardCast>();
 
             int dmg = 0;
-            blizzard.BeginCast(skill, cameraTransform,
+            float size = skill.GetSizeAtLevel(runtime.GetSkillLevel(idx));
+            blizzard.BeginCast(skill, cameraTransform, size,
                 () =>
                 {
                     if (!runtime.CanCast(idx)) return false;
@@ -203,17 +208,17 @@ namespace Game.Skill
                 point =>
                 {
                     if (this == null) return;
-                    int hitCount = HitArea(skill, point, dmg);
+                    int hitCount = HitArea(skill, point, skill.areaRadius * size, dmg);
                     Debug.Log($"[Skill] Blizzard hit {hitCount} target(s)");
                     if (hitCount > 0 && GetComponent<HumanHeroMarker>() != null) HitStop.Play(skill.hitStopSeconds);
                 });
         }
 
         // 着弾点の範囲にいる敵へ。味方と自分は巻き込まない。
-        private int HitArea(SkillData skill, Vector3 point, int dmg)
+        private int HitArea(SkillData skill, Vector3 point, float radius, int dmg)
         {
             var damaged = new System.Collections.Generic.HashSet<HealthComponent>();
-            foreach (var col in Physics.OverlapSphere(point, skill.areaRadius, ~0, QueryTriggerInteraction.Collide))
+            foreach (var col in Physics.OverlapSphere(point, radius, ~0, QueryTriggerInteraction.Collide))
             {
                 var hp = col.GetComponentInParent<HealthComponent>();
                 if (hp == null || hp.IsDead || hp.CompareTag("Player") || hp.gameObject == gameObject || !damaged.Add(hp)) continue;
@@ -238,6 +243,7 @@ namespace Game.Skill
             }
             if (teleport == null) teleport = GetComponent<HeroTeleport>();
             if (teleport == null) teleport = gameObject.AddComponent<HeroTeleport>();
+            teleport.EffectScale = skill.GetSizeAtLevel(runtime.GetSkillLevel(idx));
             teleport.BeginCast(skill, cameraTransform, () =>
             {
                 if (!runtime.CanCast(idx)) return false;
@@ -263,7 +269,8 @@ namespace Game.Skill
             melee = cast;
 
             float value = 0f;
-            cast.BeginCast(skill, cameraTransform,
+            float size = skill.GetSizeAtLevel(runtime.GetSkillLevel(idx));
+            cast.BeginCast(skill, cameraTransform, size,
                 () =>
                 {
                     if (!runtime.CanCast(idx)) return false;
@@ -275,21 +282,21 @@ namespace Game.Skill
                     Debug.Log($"[Skill] {skill.skillName} released (value={value})");
                     return true;
                 },
-                hp =>
+                (hp, damageScale) =>
                 {
-                    hp.TakeDamage(Mathf.RoundToInt(value), gameObject, ToDamageType(skill.damageType));
+                    hp.TakeDamage(Mathf.RoundToInt(value * damageScale), gameObject, ToDamageType(skill.damageType));
                     ApplySkillStatus(skill, hp);
                 },
                 () =>
                 {
-                    if (skill.effectType == SkillEffectType.Buff) ExecuteBuff(skill, value);
+                    if (skill.skillName == "Taunt") ExecuteTaunt(skill, size);
+                    else if (skill.effectType == SkillEffectType.Buff) ExecuteBuff(skill, value);
                 });
         }
 
         private void Execute(SkillData skill, float effectValue)
         {
             // Special-case placeholders first
-            if (skill.skillName == "Taunt") { ExecuteTaunt(skill); return; }
             if (skill.skillName == "Detect") { ExecuteDetect(skill); return; }
 
             switch (skill.effectType)
@@ -341,6 +348,7 @@ namespace Game.Skill
         private void ApplySkillStatus(SkillData skill, HealthComponent target)
         {
             if (skill.statusEffect == StatusEffectType.None || target == null || target.IsDead) return;
+            if (Random.value > skill.statusChance) return;
             StatusEffectController.Apply(target.gameObject, skill.statusEffect, skill.statusDuration, skill.statusPower, gameObject);
         }
 
@@ -445,11 +453,11 @@ namespace Game.Skill
             Debug.Log($"[Skill] {skillName} expired");
         }
 
-        private void ExecuteTaunt(SkillData skill)
+        private void ExecuteTaunt(SkillData skill, float sizeScale)
         {
             // Adds hate only; monsters without hate (MonsterData.useHate off) ignore it.
             float amount = Game.Core.BalanceConfig.Instance.hateTauntAmount;
-            var hits = Physics.OverlapSphere(transform.position, skill.range);
+            var hits = Physics.OverlapSphere(transform.position, skill.range * sizeScale);
             var done = new System.Collections.Generic.HashSet<Game.Monster.MonsterHate>();
             foreach (var col in hits)
             {

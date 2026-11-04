@@ -40,6 +40,7 @@ namespace Game.Skill
         private SkillData skill;
         private Func<bool> tryPay;
         private Action<HealthComponent> onHit;
+        private float sizeScale = 1f;
         private FireballVisual visual;
         private float timer;
         private float shakeTimer;
@@ -63,8 +64,9 @@ namespace Game.Skill
         }
 
         /// tryPay は発射の瞬間に呼ばれ、false なら発射をやめる。onHit は敵に当たったときに呼ばれる。
-        public bool BeginCast(SkillData skillData, Transform cam, Func<bool> tryPay, Action<HealthComponent> onHit)
+        public bool BeginCast(SkillData skillData, Transform cam, float sizeScale, Func<bool> tryPay, Action<HealthComponent> onHit)
         {
+            this.sizeScale = sizeScale;
             if (phase == Phase.Charging) return false;
             skill = skillData;
             this.tryPay = tryPay;
@@ -114,7 +116,7 @@ namespace Game.Skill
 
             // 終盤ほど脈打ちを大きくして「もう放たれる」感を出す。
             float pulse = 1f + Mathf.Sin(timer * 34f) * 0.05f * k;
-            float radius = Mathf.Lerp(StartRadius, ChargedRadius, EaseOut(k)) * pulse;
+            float radius = Mathf.Lerp(StartRadius, ChargedRadius, EaseOut(k)) * sizeScale * pulse;
 
             lastHoldPoint = HoldPoint();
             visual.transform.position = lastHoldPoint;
@@ -145,7 +147,7 @@ namespace Game.Skill
             Vector3 direction = toAim.magnitude > 1.5f ? toAim.normalized : aimForward;
             var launched = visual;
             visual = null;
-            FireballProjectile.Launch(launched, direction, skill.projectileSpeed, skill.range, toAim.magnitude, ChargedRadius, FlightRadius, gameObject, OnProjectileHit);
+            FireballProjectile.Launch(launched, direction, skill.projectileSpeed, skill.range, toAim.magnitude, ChargedRadius * sizeScale, FlightRadius * sizeScale, gameObject, OnProjectileHit);
 
             phase = Phase.Recover;
             timer = 0f;

@@ -32,17 +32,17 @@ namespace Game.Skill
             if (ModelAnim != null) ModelAnim.SetMeleePose(0.3f * e, CoilDegrees * e, e, Chest + transform.right * 1.2f);
             SetCamera(new Vector3(0f, -0.08f * e, -0.05f * e), 0f, -3f * e, -3f * e);
             if (k > 0f && k - Time.deltaTime / Mathf.Max(Skill.castTime, 0.01f) <= 0f)
-                ShockRing.Spawn(transform.position, Skill.range, 0.4f, Skill.castTime, 0.2f, MeleeFx.SteelBlue);
+                ShockRing.Spawn(transform.position, ScaledRange, 0.4f, Skill.castTime, 0.2f, MeleeFx.SteelBlue);
         }
 
         protected override void OnRelease()
         {
             Quaternion rotation = Quaternion.Euler(0f, transform.eulerAngles.y, 0f);
-            SwordArc.Spawn(transform.position + Vector3.up * 0.2f, rotation, Skill.range, ArcWidth, SpinDegrees, SpinSeconds, ArcTailSeconds, true, MeleeFx.SteelCore, MeleeFx.SteelBlue, ArcLift);
-            ShockRing.Spawn(transform.position, 0.5f, Skill.range, 0.4f, 0.5f, MeleeFx.SteelLight);
+            SwordArc.Spawn(transform.position + Vector3.up * 0.2f, rotation, ScaledRange, ArcWidth * SizeScale, SpinDegrees, SpinSeconds, ArcTailSeconds, true, MeleeFx.SteelCore, MeleeFx.SteelBlue, ArcLift);
+            ShockRing.Spawn(transform.position, 0.5f, ScaledRange, 0.4f, 0.5f, MeleeFx.SteelLight);
             MeleeFx.DustBurst(transform.position, 1.2f, 26, 4f);
 
-            var targets = FindEnemies(Chest, Skill.range, transform.forward, -1f);
+            var targets = FindEnemies(Chest, ScaledRange, transform.forward, -1f);
             int hits = HitEnemies(targets, Chest, 2.2f);
             Debug.Log($"[Skill] Whirlwind hit {hits} target(s)");
             Shake(ShakeSeconds, hits > 0 ? ShakeSize : ShakeSize * 0.4f);

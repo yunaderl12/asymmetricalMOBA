@@ -31,6 +31,8 @@ namespace Game.Skill
         public float statusDuration;
         [Tooltip("Slow: speed reduction (0.4 = -40%) / DamageOverTime: damage per tick / others: unused")]
         public float statusPower;
+        [Tooltip("Chance that a hit applies the status (1 = always).")]
+        [Range(0f, 1f)] public float statusChance = 1f;
 
         [Header("Charged Projectile (Fireball)")]
         [Tooltip("Seconds the hero charges before release. 0 = no charge.")]
@@ -47,10 +49,20 @@ namespace Game.Skill
         public float coneAngle = 120f;
         [Tooltip("Dash speed in m/s (Charge). The dash stops after range metres.")]
         public float dashSpeed = 24f;
+        [Tooltip("How far enemies hit are pushed (m, Bash).")]
+        public float knockbackDistance;
+        [Tooltip("Height of the leap (m, Stomp). A normal jump is about 0.6 m.")]
+        public float leapHeight;
+        [Tooltip("Speed of the dive (m/s, Stomp).")]
+        public float diveSpeed;
+        [Tooltip("Damage multiplier for enemies directly under the landing (Stomp).")]
+        public float directHitMultiplier = 1f;
 
         [Header("Leveling")]
         public float levelGrowthRate = 0.2f;
         public int maxSkillLevel = 5;
+        [Tooltip("Size of the effect grows by this ratio per skill level above 1 (0.1 = Lv5 is 1.4x).")]
+        public float sizeGrowthPerLevel = 0.1f;
 
         [Header("Lobby Visual")]
         public Color iconColor = new Color(0f, 0f, 0f, 0f); // alpha=0 -> use ownerClass.avatarColor or effectType fallback
@@ -74,6 +86,12 @@ namespace Game.Skill
         {
             int lv = Mathf.Clamp(level, 1, maxSkillLevel);
             return duration + (lv - 1) * durationPerLevel;
+        }
+
+        public float GetSizeAtLevel(int level)
+        {
+            int lv = Mathf.Clamp(level, 1, maxSkillLevel);
+            return 1f + (lv - 1) * sizeGrowthPerLevel;
         }
 
         public Color EffectiveIconColor()

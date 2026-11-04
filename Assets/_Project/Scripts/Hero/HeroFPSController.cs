@@ -41,6 +41,8 @@ namespace Game.Hero
         public bool MovementLocked { get; set; }
         /// スキルが勇者を直接動かしている間（Teleport の飛行中）は、移動も視点も重力も止める。
         public bool Suspended { get; set; }
+        /// スキルが勇者を上下に動かしている間（Stomp の跳躍）は、視点だけ動かせて、移動と重力を止める。腕は見えたまま。
+        public bool SkillMotion { get; set; }
         public float LookPitch => pitch;
         public bool IsDashing => dashing;
         /// カメラの揺れを含まない照準方向。
@@ -172,6 +174,11 @@ namespace Game.Hero
                 return;
             }
             HandleLook();
+            if (SkillMotion)
+            {
+                verticalVelocity = 0f;
+                return;
+            }
             if (MovementLocked || StatusEffectController.IsStunnedObj(gameObject))
             {
                 SetDashing(false);

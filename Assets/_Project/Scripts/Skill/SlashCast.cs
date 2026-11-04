@@ -39,7 +39,7 @@ namespace Game.Skill
             Vector3 up = CameraTransform != null ? CameraTransform.up : Vector3.up;
             SpawnArc(eye, aim, up);
 
-            var targets = FindEnemies(Chest, Skill.range, aim, Skill.coneAngle);
+            var targets = FindEnemies(Chest, ScaledRange, aim, Skill.coneAngle);
             int hits = HitEnemies(targets, eye, 1.6f);
             Debug.Log($"[Skill] Slash hit {hits} target(s)");
             if (hits > 0) Shake(ShakeSeconds, ShakeSize);
@@ -47,13 +47,15 @@ namespace Game.Skill
         }
 
         // 視線にほぼ正対する面に描く。弧の中心を左上に置くと、画面の中央を右上から左下へ抜ける三日月になる。
-        private static void SpawnArc(Vector3 eye, Vector3 aim, Vector3 up)
+        private void SpawnArc(Vector3 eye, Vector3 aim, Vector3 up)
         {
             Vector3 side = Vector3.Cross(up, aim).normalized;
             Vector3 bulge = Quaternion.AngleAxis(ArcDiagonal, aim) * side;
             Vector3 normal = Quaternion.AngleAxis(ArcTiltBack, bulge) * -aim;
-            Vector3 center = eye + aim * ArcDistance - bulge * (ArcRadius - ArcWidth * 0.5f);
-            SwordArc.Spawn(center, Quaternion.LookRotation(bulge, normal), ArcRadius, ArcWidth, ArcDegrees, ArcSweepSeconds, ArcTailSeconds, true, MeleeFx.SteelCore, MeleeFx.SteelBlue);
+            float radius = ArcRadius * SizeScale;
+            float width = ArcWidth * SizeScale;
+            Vector3 center = eye + aim * ArcDistance - bulge * (radius - width * 0.5f);
+            SwordArc.Spawn(center, Quaternion.LookRotation(bulge, normal), radius, width, ArcDegrees, ArcSweepSeconds, ArcTailSeconds, true, MeleeFx.SteelCore, MeleeFx.SteelBlue);
         }
 
         protected override void OnRecover(float seconds, float k)

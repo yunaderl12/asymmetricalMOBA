@@ -9,6 +9,7 @@ namespace Game.Skill
         private const float FadeSeconds = 0.25f;
         private const float FlashDecay = 6f;
         private const float BaseAlpha = 0.55f;
+        private const float FilmGrowth = 0.4f;
 
         private static readonly Vector3 RaisedPosition = new Vector3(-0.14f, -0.14f, 0.4f);
         private static readonly Vector3 RaisedEuler = new Vector3(0f, -20f, 0f);
@@ -54,8 +55,8 @@ namespace Game.Skill
             guardSeconds = guardTimer = Skill.duration;
             flash = 1f;
             CreateFilms();
-            FireFlash.Spawn(Chest + transform.forward * 0.6f, 2.4f, 0.16f, 0f, MeleeFx.SteelCore, MeleeFx.SteelBlue, MeleeFx.SteelLight, 2f);
-            ShockRing.Spawn(transform.position, 0.3f, 2.2f, 0.3f, 0.2f, MeleeFx.SteelBlue);
+            FireFlash.Spawn(Chest + transform.forward * 0.6f, 2.4f * SizeScale, 0.16f, 0f, Palette.Core, Palette.Main, Palette.Light, 2f);
+            ShockRing.Spawn(transform.position, 0.3f, 2.2f * SizeScale, 0.3f, 0.2f, Palette.Main);
         }
 
         protected override void OnRecover(float seconds, float k) { }
@@ -85,7 +86,7 @@ namespace Game.Skill
         private void ApplyFilm(MeshRenderer film, float fade)
         {
             if (film == null) return;
-            var c = MeleeFx.SteelBlue;
+            var c = Palette.Main;
             c.a = BaseAlpha * fade;
             block.SetColor("_Color", c);
             block.SetFloat("_Hex", 1f);
@@ -100,7 +101,7 @@ namespace Game.Skill
             // 体の膜は他の人から見える分。自分のカメラには映さず、自分には盾の前の膜を見せる。
             bodyFilm = FireballVfx.NewMeshObject("GuardFilm", transform, FireballVfx.SphereMesh, material);
             bodyFilm.transform.localPosition = BodyFilmCenter;
-            bodyFilm.transform.localScale = BodyFilmScale;
+            bodyFilm.transform.localScale = BodyFilmScale * (1f + (SizeScale - 1f) * FilmGrowth);
             int layer = ModelAnim != null && ModelAnim.ModelRoot != null ? ModelAnim.ModelRoot.gameObject.layer : gameObject.layer;
             bodyFilm.gameObject.layer = layer;
 
@@ -125,7 +126,7 @@ namespace Game.Skill
             if (guardTimer <= 0f || target != health) return;
             flash = 1f;
             Vector3 point = Chest + transform.forward * 0.8f;
-            FireballVfx.SpawnSparks(point, transform.forward, 10, Color.white, new Color(0.45f, 0.75f, 1f));
+            FireballVfx.SpawnSparks(point, transform.forward, 10, Color.white, Palette.Spark);
             if (IsLocalPlayer) Shake(0.12f, 0.03f);
         }
 

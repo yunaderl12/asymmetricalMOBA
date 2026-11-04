@@ -23,6 +23,10 @@ namespace Game.Skill
         protected CharacterModelAnimator ModelAnim { get; private set; }
         protected HeroViewModel View { get; private set; }
         protected bool IsLocalPlayer { get; private set; }
+        /// スキルレベルによる大きさの倍率（Lv1 で 1）。
+        protected float SizeScale { get; private set; } = 1f;
+        protected float ScaledRange => Skill.range * SizeScale;
+        protected virtual MeleeFx.Palette Palette => MeleeFx.Steel;
 
         private HealthComponent health;
         private Camera heroCamera;
@@ -30,7 +34,7 @@ namespace Game.Skill
         private Phase phase = Phase.Idle;
         private float timer;
         private Func<bool> tryPay;
-        private Action<HealthComponent> onHit;
+        private Action<HealthComponent, float> onHit;
         private Action onReleased;
         private Vector3 cameraPosition;
         private float cameraPitch, cameraRoll, cameraFov;
@@ -60,10 +64,12 @@ namespace Game.Skill
             EndPose();
         }
 
-        public bool BeginCast(SkillData skillData, Transform cam, Func<bool> tryPay, Action<HealthComponent> onHit, Action onReleased)
+        /// onHit の第2引数はダメージの倍率。
+        public bool BeginCast(SkillData skillData, Transform cam, float sizeScale, Func<bool> tryPay, Action<HealthComponent, float> onHit, Action onReleased)
         {
             if (IsBusy) return false;
             Skill = skillData;
+            SizeScale = sizeScale;
             CameraTransform = cam;
             this.tryPay = tryPay;
             this.onHit = onHit;
@@ -239,7 +245,7 @@ namespace Game.Skill
         }
 
         /// ダメージと被弾の演出。当たった数を返す。
-        protected int HitEnemies(List<HealthComponent> targets, Vector3 from, float flashSize)
+        protected int HitEnemies(List<HealthComponent> targets, Vector3 from, float flashSize, float damageScale = 1f)
         {
             int count = targets.Count;
             for (int i = 0; i < count; i++)
@@ -247,8 +253,8 @@ namespace Game.Skill
                 var hp = targets[i];
                 Bounds body = FireballProjectile.BodyBoundsOf(hp.gameObject, null);
                 Vector3 point = body.ClosestPoint(from);
-                onHit?.Invoke(hp);
-                MeleeFx.Impact(point, point - from, flashSize);
+                onHit?.Invoke(hp, damageScale);
+                MeleeFx.Impact(point, point - from, flashSize, Palette);
                 if (hp == null) continue;
                 FireHitEffect.PlayFlash(hp.gameObject);
                 ImpactPunch.Play(hp.gameObject, hp.transform.position - transform.position);

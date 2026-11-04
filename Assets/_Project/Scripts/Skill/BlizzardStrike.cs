@@ -42,6 +42,7 @@ namespace Game.Skill
         private ParticleSystem shards;
         private Vector3 target;
         private float radius;
+        private float spikeScale = 1f;
         private float fieldSeconds;
         private Action<Vector3> onImpact;
         private float timer;
@@ -49,13 +50,14 @@ namespace Game.Skill
         private bool impacted;
         private float endTime;
 
-        public static void Spawn(Vector3 from, Vector3 target, float radius, float fieldSeconds, Action<Vector3> onImpact)
+        public static void Spawn(Vector3 from, Vector3 target, float radius, float spikeScale, float fieldSeconds, Action<Vector3> onImpact)
         {
             var go = new GameObject("BlizzardStrike");
             go.transform.position = target;
             var strike = go.AddComponent<BlizzardStrike>();
             strike.target = target;
             strike.radius = radius;
+            strike.spikeScale = spikeScale;
             strike.fieldSeconds = fieldSeconds;
             strike.onImpact = onImpact;
             strike.block = new MaterialPropertyBlock();
@@ -113,6 +115,7 @@ namespace Game.Skill
 
         private void AddSpike(Vector3 flatPosition, Vector3 leanDirection, float tilt, float height, float start)
         {
+            height *= spikeScale;
             Vector3 ground = IceField.SnapToGround(flatPosition);
             float width = height * WidthPerHeight * UnityEngine.Random.Range(0.8f, 1.2f);
             var renderer = FireballVfx.NewMeshObject("Spike", transform, GetSpikeMesh(UnityEngine.Random.Range(0, 3)), FireballVfx.GetMaterial("VFX/IceSpike"));
@@ -162,7 +165,7 @@ namespace Game.Skill
         private void Impact()
         {
             impacted = true;
-            FireFlash.Spawn(target + Vector3.up * 1.4f, 7f, 0.26f, 0.8f, new Color(1.5f, 2.4f, 2.8f), new Color(0.2f, 0.9f, 1.8f), IcePale, 2f);
+            FireFlash.Spawn(target + Vector3.up * 1.4f, 7f * spikeScale, 0.26f, 0.8f, new Color(1.5f, 2.4f, 2.8f), new Color(0.2f, 0.9f, 1.8f), IcePale, 2f);
             ShockRing.Spawn(target, 0.5f, radius * 1.15f, 0.42f, 1.1f, IcePale);
             FireballVfx.SpawnSparks(target + Vector3.up * 0.3f, Vector3.up, 46, IcePale, IceBlue);
             // ひび割れた地面から氷のかけらが跳ねる。
