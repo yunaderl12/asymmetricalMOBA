@@ -24,6 +24,13 @@ namespace Game.Core
         {
             if (!fallen)
             {
+                // 橋や島から海に落ちたら、そのまま復活地点へ戻る。
+                if (transform.position.y < BalanceConfig.Instance.deepWaterFallHeight && StageMap.IsDeepWater(transform.position))
+                {
+                    WaterRipple.Spawn(transform.position, BalanceConfig.Instance.rippleRadius * 3f);
+                    Respawn();
+                    return;
+                }
                 if (transform.position.y < fallThresholdY)
                 {
                     fallen = true;

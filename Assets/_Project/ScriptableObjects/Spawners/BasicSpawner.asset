@@ -16,9 +16,10 @@ MonoBehaviour:
   hp: 300
   atk: 15
   cool: 2
+  attackChargeSeconds: 0.75
   exp: 100
   maxCost: 2
   costPerDkLevel: 1
   inv: 3
-  attackRange: 20
-  detectRange: 15
+  attackRange: 40
+  detectRange: 30

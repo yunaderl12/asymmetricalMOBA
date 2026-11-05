@@ -82,7 +82,7 @@ namespace Game.Bot
         {
             if (Time.time < nextRegen) return;
             nextRegen = Time.time + BalanceConfig.Instance.botSpRegenInterval;
-            mana.RestoreMana(Mathf.CeilToInt(mana.MaxMP * classData.spCombatRegenRate));
+            mana.RestoreFraction(mana.MaxMP * classData.spCombatRegenRate);
         }
 
         private void SetCastingMotion(bool casting)

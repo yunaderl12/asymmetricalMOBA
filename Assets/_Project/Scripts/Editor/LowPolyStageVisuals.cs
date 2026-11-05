@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Game.Core;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -17,7 +18,9 @@ namespace Game.Editor
         private const string ModelDir = "Assets/_Project/Art/LowPoly/";
 
         // Mesh objects inside the models that block movement.
-        private static readonly string[] SolidMeshes = { "Town_Buildings", "Castle_Buildings" };
+        private static readonly string[] SolidMeshes = { "Town_Buildings", "Castle_Buildings", "Field_Mountains", "Field_Bridges", "Field_Barrier", "Field_TreeColliders", "Field_MountainFill" };
+        // 当たり判定だけで、見た目に出さないメッシュ。
+        private static readonly string[] HiddenMeshes = { "Field_Barrier", "Field_TreeColliders", "Field_MountainFill" };
 
         // Old placeholder objects whose MeshRenderer is replaced by the models.
         private static readonly string[] HiddenRoots = { "Ground", "Rocks", "Walls" };
@@ -61,6 +64,149 @@ namespace Game.Editor
             RebakeNavMesh();
         }
 
+        /// Resources/StageMap.json のとおりにシーンの物を置き直す。地形モデルを書き出したあとに実行する。
+        [MenuItem("Tools/LowPoly/Apply Stage Layout And Rebake NavMesh")]
+        public static void ApplyStageLayout()
+        {
+            var root = GameObject.Find(RootName);
+            if (root == null)
+            {
+                Debug.LogWarning("[LowPoly] " + RootName + " not found; run Apply MainStage Visuals first");
+                return;
+            }
+            AddBuildingColliders(root);
+            Physics.SyncTransforms();
+
+            var map = StageMap.Map;
+            var scene = root.scene;
+            var byName = new System.Collections.Generic.Dictionary<string, Transform>();
+            foreach (var r in scene.GetRootGameObjects())
+                foreach (var t in r.GetComponentsInChildren<Transform>(true))
+                    if (!byName.ContainsKey(t.name)) byName[t.name] = t;
+
+            // 門（モデルの +X / -X）が地図の中央を向くように、まちと城を45度回す。
+            var yaw = Quaternion.Euler(0f, 45f, 0f);
+            var town = new Vector3(map.townX, 0f, map.townZ);
+            var castle = new Vector3(map.castleX, map.castleHeight, map.castleZ);
+            Set(byName, "StartTown", town + Vector3.up, yaw);
+            // 配置済みのモデルは FBX の軸の都合で180度回っている。
+            var modelYaw = yaw * Quaternion.Euler(0f, 180f, 0f);
+            Set(byName, "LP_StartTown", town, modelYaw);
+            Set(byName, "ArcherTower_North", town + yaw * new Vector3(15.6f, 0f, 8.5f), yaw);
+            Set(byName, "ArcherTower_South", town + yaw * new Vector3(15.6f, 0f, -8.5f), yaw);
+            Set(byName, "Hero", town + Vector3.up + yaw * new Vector3(10f, 0f, 0f), Quaternion.identity);
+            Set(byName, "DemonCastle", castle + Vector3.up, yaw);
+            Set(byName, "LP_DemonCastle", castle, modelYaw);
+            Set(byName, "DemonKing", castle + Vector3.up + yaw * new Vector3(2.4f, 0f, 2.7f), Quaternion.identity);
+
+            foreach (var rock in map.rocks)
+            {
+                Transform t;
+                if (byName.TryGetValue(rock.name, out t)) t.position = new Vector3(rock.x, t.position.y, rock.z);
+            }
+
+            foreach (var entry in map.spawners)
+            {
+                Transform t;
+                if (!byName.TryGetValue(entry.name, out t)) continue;
+                t.position = new Vector3(entry.x, SurfaceY(entry.x, entry.z), entry.z);
+                var spawner = t.GetComponent<Game.Monster.Spawner>();
+                var so = new SerializedObject(spawner);
+                var list = so.FindProperty("waypointsToStartTown");
+                list.arraySize = entry.waypoints.Length / 2;
+                for (int i = 0; i < list.arraySize; i++)
+                {
+                    float x = entry.waypoints[i * 2], z = entry.waypoints[i * 2 + 1];
+                    list.GetArrayElementAtIndex(i).vector3Value = new Vector3(x, SurfaceY(x, z), z);
+                }
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            AddBiomeSpawner(byName);
+
+            Transform ground;
+            if (byName.TryGetValue("Ground", out ground)) ground.localScale = new Vector3(map.size / 10f, 1f, map.size / 10f);
+            Transform walls;
+            if (byName.TryGetValue("Walls", out walls)) Object.DestroyImmediate(walls.gameObject);
+            Transform bird;
+            if (byName.TryGetValue("BirdsEyeCamera", out bird))
+            {
+                bird.position = new Vector3(0f, 150f, 0f);
+                bird.GetComponent<Camera>().orthographicSize = map.size * 0.5f;
+            }
+
+            foreach (var r in scene.GetRootGameObjects())
+            {
+                foreach (var c in r.GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    if (c == null) continue;
+                    string type = c.GetType().Name;
+                    if (type != "BotSpawner" && type != "MatchItemGimmick") continue;
+                    var so = new SerializedObject(c);
+                    if (type == "BotSpawner")
+                    {
+                        var heroes = so.FindProperty("heroPositions");
+                        var locals = new[] { new Vector3(8f, 0f, 2f), new Vector3(8f, 0f, -2f), new Vector3(12f, 0f, 2f), new Vector3(12f, 0f, -2f) };
+                        for (int i = 0; i < heroes.arraySize && i < locals.Length; i++)
+                            heroes.GetArrayElementAtIndex(i).vector3Value = town + Vector3.up + yaw * locals[i];
+                        so.FindProperty("demonKingPosition").vector3Value = castle + Vector3.up + yaw * new Vector3(0f, 0f, 2.7f);
+                    }
+                    else
+                    {
+                        float reach = map.size * 0.5f - 10f;
+                        so.FindProperty("mapXRange").vector2Value = new Vector2(-reach, reach);
+                        so.FindProperty("mapZRange").vector2Value = new Vector2(-reach, reach);
+                    }
+                    so.ApplyModifiedPropertiesWithoutUndo();
+                }
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            Physics.SyncTransforms();
+            RebakeNavMesh();
+            Debug.Log("[LowPoly] stage layout applied. Save the scene after the bake finishes.");
+        }
+
+        // 森・山・砂漠の自然湧きを受け持つ空のオブジェクト。
+        private static void AddBiomeSpawner(System.Collections.Generic.Dictionary<string, Transform> byName)
+        {
+            Transform t;
+            var go = byName.TryGetValue("BiomeSpawner", out t) ? t.gameObject : new GameObject("BiomeSpawner");
+            var spawner = go.GetComponent<Game.Monster.BiomeSpawner>();
+            if (spawner == null) spawner = go.AddComponent<Game.Monster.BiomeSpawner>();
+            var so = new SerializedObject(spawner);
+            so.FindProperty("table").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Game.Monster.BiomeSpawnData>("Assets/_Project/ScriptableObjects/Biomes/BiomeSpawnTable.asset");
+            so.FindProperty("monsterPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/Monster.prefab");
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var guards = go.GetComponent<Game.Monster.BridgeGuardianSpawner>();
+            if (guards == null) guards = go.AddComponent<Game.Monster.BridgeGuardianSpawner>();
+            var guardSo = new SerializedObject(guards);
+            guardSo.FindProperty("defaultGuardian").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Game.Monster.MonsterData>("Assets/_Project/ScriptableObjects/Monsters/Golem.asset");
+            guardSo.FindProperty("monsterPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/Monster.prefab");
+            guardSo.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private static void Set(System.Collections.Generic.Dictionary<string, Transform> byName, string name, Vector3 position, Quaternion rotation)
+        {
+            Transform t;
+            if (!byName.TryGetValue(name, out t))
+            {
+                Debug.LogWarning("[LowPoly] " + name + " not found");
+                return;
+            }
+            t.SetPositionAndRotation(position, rotation);
+        }
+
+        // 山の上か平らな地面か。木や岩は数えない。
+        private static float SurfaceY(float x, float z)
+        {
+            float best = 0f;
+            foreach (var hit in Physics.RaycastAll(new Vector3(x, 300f, z), Vector3.down, 320f))
+                if (hit.collider.name == "Field_Mountains") best = Mathf.Max(best, hit.point.y);
+            return best;
+        }
+
         [MenuItem("Tools/LowPoly/Add Building Colliders And Rebake NavMesh")]
         public static void AddBuildingCollidersMenu()
         {
@@ -88,6 +234,11 @@ namespace Game.Editor
                     added++;
                 }
                 mc.sharedMesh = mf.sharedMesh;
+                if (System.Array.IndexOf(HiddenMeshes, mf.gameObject.name) >= 0)
+                {
+                    var hidden = mf.GetComponent<MeshRenderer>();
+                    if (hidden != null) hidden.enabled = false;
+                }
             }
             Debug.Log($"[LowPoly] building colliders: added {added}");
         }

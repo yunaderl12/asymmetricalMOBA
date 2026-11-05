@@ -38,7 +38,13 @@ namespace Game.Core
             var town = GameObject.Find("StartTown");
             center = castle != null ? castle.transform.position : Vector3.zero;
             center.y = 0f;
-            unitDistance = castle != null && town != null ? Vector3.Distance(castle.transform.position, town.transform.position) : 160f;
+            unitDistance = 160f;
+            if (castle != null && town != null)
+            {
+                Vector3 between = castle.transform.position - town.transform.position;
+                between.y = 0f;
+                unitDistance = between.magnitude;
+            }
 
             var config = BalanceConfig.Instance;
             float largest = 0f;

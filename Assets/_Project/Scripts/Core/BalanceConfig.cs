@@ -12,13 +12,15 @@ namespace Game.Core
 
         [Header("Exp Share")]
         [Tooltip("Supporters (healed a combatant) within this radius of the kill get a share")]
-        public float expShareRadius = 15f;
+        public float expShareRadius = 30f;
         [Tooltip("Share of the monster's exp given to each supporter (0.25 = 25%)")]
         public float expShareRatio = 0.25f;
         [Tooltip("How recent the heal must be (seconds), same as the assist window")]
         public float expShareSupportWindow = 10f;
 
         [Header("Dash")]
+        [Tooltip("Playback speed of the running clips. Keeps the feet in step with the doubled move speed.")]
+        public float runAnimationSpeed = 1.7f;
         [Tooltip("Speed multiplier while dashing")]
         public float dashSpeedMultiplier = 1.6f;
         [Tooltip("Second press of forward within this time (seconds) starts the dash")]
@@ -52,19 +54,19 @@ namespace Game.Core
 
         [Header("Archer Tower")]
         [Tooltip("Enemies inside this radius get shot (m)")]
-        public float archerTowerRange = 22f;
+        public float archerTowerRange = 44f;
         [Tooltip("Physical attack value of one arrow")]
         public int archerTowerDamage = 15;
         [Tooltip("Seconds between shots of one tower")]
         public float archerTowerInterval = 1.5f;
         [Tooltip("Arrow flight speed (m/s)")]
-        public float archerArrowSpeed = 32f;
+        public float archerArrowSpeed = 64f;
 
         [Header("Blizzard Skill")]
         [Tooltip("How fast the line of ice spikes runs along the ground (m/s)")]
         public float blizzardSpikeSpeed = 40f;
         [Tooltip("On ice, how quickly speed can change (m/s^2). Lower is more slippery. Applies to heroes, the demon king, monsters and bots.")]
-        public float iceAcceleration = 3f;
+        public float iceAcceleration = 6f;
 
         [Header("Teleport Skill")]
         [Tooltip("Time to climb straight up from the ground to the hover point (seconds)")]
@@ -90,17 +92,35 @@ namespace Game.Core
 
         [Header("Monster Hate (smart monsters only)")]
         [Tooltip("Heals cast within this radius (m) of a monster add hate to the healer")]
-        public float hateHealRadius = 10f;
+        public float hateHealRadius = 20f;
         [Tooltip("Hate per point healed (damage adds 1 per point)")]
         public float hateHealRatio = 0.5f;
         [Tooltip("Fraction of hate lost per second (0.1 = 10%/s)")]
         public float hateDecayPerSecond = 0.1f;
         [Tooltip("A hero farther than this (m), or dead, has their hate reset to 0")]
-        public float hateResetDistance = 10f;
+        public float hateResetDistance = 20f;
         [Tooltip("Hate added by Taunt to each monster in range")]
         public float hateTauntAmount = 100f;
         [Tooltip("A new hero must exceed the current target's hate by this ratio to steal aggro")]
         public float hateSwitchRatio = 1.1f;
+
+        [Header("Biome Spawn")]
+        [Tooltip("Natural spawns appear at least this far (m) from every hero.")]
+        public float biomeSpawnMinHeroDistance = 35f;
+        [Tooltip("Natural spawns stay this far (m) from water.")]
+        public float biomeSpawnMinWaterDistance = 5f;
+        [Tooltip("Tries per check to find a place for a natural spawn.")]
+        public int biomeSpawnAttempts = 8;
+
+        [Header("Bot Hunting")]
+        [Tooltip("Seconds between choosing where to go next when no enemy is close.")]
+        public float botGoalInterval = 2f;
+        [Tooltip("Demon King level at which bots stop hunting and attack towers, then the castle. Bots have no level of their own.")]
+        public int botPushDkLevel = 5;
+        [Tooltip("Goes back to town below this share of HP.")]
+        public float botRetreatHpRatio = 0.3f;
+        [Tooltip("Leaves town again above this share of HP.")]
+        public float botReturnHpRatio = 0.8f;
 
         [Header("Bot Skills")]
         [Tooltip("How often a bot hero considers using a skill (seconds).")]
@@ -112,9 +132,9 @@ namespace Game.Core
         [Tooltip("Bots use defensive buffs below this share of HP while an enemy is close.")]
         public float botDefendHpRatio = 0.7f;
         [Tooltip("An enemy this close counts as attacking the bot (metres).")]
-        public float botDefendEnemyRange = 5f;
+        public float botDefendEnemyRange = 10f;
         [Tooltip("Bots sprint when their target is farther than this (metres).")]
-        public float botSprintTargetDistance = 6f;
+        public float botSprintTargetDistance = 12f;
         [Tooltip("Bots with Teleport escape below this share of HP while an enemy is close.")]
         public float botEscapeHpRatio = 0.3f;
         [Tooltip("Mage bots stop this far from their target and shoot magic bolts (metres).")]
@@ -154,6 +174,35 @@ namespace Game.Core
         [Tooltip("Keep-out along the outer edge of the field (m).")]
         public float digEdgeMargin = 3f;
 
+        [Header("Terrain")]
+        [Tooltip("Speed multiplier while walking in a shallow river.")]
+        public float shallowSpeedMultiplier = 0.925f;
+        [Tooltip("Seconds between ripples while walking in a shallow river.")]
+        public float rippleInterval = 0.32f;
+        [Tooltip("Radius a ripple grows to (m).")]
+        public float rippleRadius = 1.6f;
+        [Tooltip("Below this height, being over deep water counts as falling in (m).")]
+        public float deepWaterFallHeight = 1.5f;
+        [Tooltip("Speed lost by the Demon King on a 30 degree climb (0.25 = 25%).")]
+        public float demonKingSlopePenalty = 0.25f;
+
+        [Header("Hero SP")]
+        [Tooltip("SP restored when a basic attack hits a monster, as a share of Max SP.")]
+        public float spPerBasicHit = 0.06f;
+        [Tooltip("Inside this radius of StartTown (m), SP is refilled.")]
+        public float townRefillRadius = 26f;
+
+        [Header("Monster Behaviour")]
+        [Tooltip("Until the last sky stage, monsters wander inside this radius of their spawner (m).")]
+        public float monsterWanderRadius = 18f;
+        [Tooltip("Seconds a wandering monster waits between moves.")]
+        public float monsterWanderWaitMin = 1f;
+        public float monsterWanderWaitMax = 3.5f;
+        [Tooltip("Field of view for noticing a hero (degrees, total). A hero behind the monster goes unnoticed.")]
+        public float monsterSightDegrees = 180f;
+        [Tooltip("Height of the ! mark above the top of a monster (m).")]
+        public float monsterAlertMarkLift = 0.5f;
+
         [Header("Storm Sky")]
         [Tooltip("Radius of the red sky and clouds for each stage, as a share of the castle-to-town distance. 1 = reaches the town.")]
         public float[] stormStageRadius = { 0.2f, 0.3f, 0.45f, 0.6f, 0.8f, 1.1f };
@@ -162,7 +211,7 @@ namespace Game.Core
         [Tooltip("Seconds the radius takes to grow to the next stage.")]
         public float stormGrowSeconds = 20f;
         [Tooltip("Height of the bottom of the clouds (m).")]
-        public float stormCloudHeight = 36f;
+        public float stormCloudHeight = 65f;
         [Tooltip("Rotation speed of the whole swirl (radians per second).")]
         public float stormSpinSpeed = 0.04f;
         [Tooltip("Seconds a cloud takes to travel from the outer edge to the center along an arm.")]

@@ -61,6 +61,8 @@ MeshRenderer:
   m_RayTracingAccelStructBuildFlagsOverride: 0
   m_RayTracingAccelStructBuildFlags: 1
   m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
@@ -82,9 +84,11 @@ MeshRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
+  m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!1 &7591807908439482892
 GameObject:
@@ -194,10 +198,20 @@ MonoBehaviour:
   lookSensitivity: 0.1
   pitchMin: -85
   pitchMax: 85
-  moveSpeed: 5
+  moveSpeed: 10
   jumpPower: 5
   gravity: -20
   groundedStickForce: -2
+  stepLength: 1.7
+  dashStepLength: 2.2
+  stepDip: 0.045
+  stepSway: 0.018
+  stepRollDegrees: 0.45
+  dashStartKick: 5
+  dashStopKick: 2
+  dashLagSmoothing: 0.2
+  dashLagBack: 0.32
+  dashLagForward: 0.14
 --- !u!114 &7225855180580156294
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -350,7 +364,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraTransform: {fileID: 4596248169901172145}
-  flySpeed: 14
+  flySpeed: 28
   lookSensitivity: 0.12
 --- !u!114 &1074371357851417444
 MonoBehaviour:
@@ -405,7 +419,6 @@ MonoBehaviour:
   regenMultiplier: 1.1
   regenTickInterval: 1
   mpAlwaysRegenInterval: 1.5
-  mpAlwaysRegenRate: 0.04
 --- !u!114 &6670793998070019982
 MonoBehaviour:
   m_ObjectHideFlags: 0

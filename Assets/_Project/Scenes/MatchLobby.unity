@@ -5989,7 +5989,6 @@ MonoBehaviour:
   timer: {fileID: 1277622258}
   readyButton: {fileID: 1925939782}
   readyButtonLabel: {fileID: 48774991}
-  matchSceneName: MainStage
 --- !u!4 &1277622260
 Transform:
   m_ObjectHideFlags: 0
@@ -7273,6 +7272,8 @@ MonoBehaviour:
   - {fileID: 893043734}
   - {fileID: 398585434}
   - {fileID: 1507835209}
+  availableGuardians:
+  - {fileID: 11400000, guid: 129070e637ea64ed6b83f5e6719ad03a, type: 2}
   spawnerLabels:
   - NW
   - NE

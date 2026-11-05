@@ -16,7 +16,11 @@ namespace Game.UI
         [SerializeField] private MatchLobbyTimer timer;
         [SerializeField] private Button readyButton;
         [SerializeField] private Text readyButtonLabel;
-        [SerializeField] private string matchSceneName = "MainStage";
+
+        private const int WorldButtonFontSize = 26;
+        private static readonly Vector2 WorldButtonSize = new Vector2(290f, 60f);
+        private static readonly Vector2 WorldButtonPosition = new Vector2(-40f, -220f);
+        private static readonly Color WorldButtonColor = new Color(0.2f, 0.32f, 0.5f, 1f);
 
         private bool ready;
         private bool botMatched;
@@ -48,7 +52,11 @@ namespace Game.UI
                 timer.OnExpired += OnTimerExpired;
                 timer.StartCountdown();
             }
-            if (readyButton != null) readyButton.onClick.AddListener(OnReadyClicked);
+            if (readyButton != null)
+            {
+                readyButton.onClick.AddListener(OnReadyClicked);
+                BuildWorldButton();
+            }
         }
 
         private void OnDestroy()
@@ -104,6 +112,41 @@ namespace Game.UI
             SaveAndStart();
         }
 
+        // ワールドを選ぶボタン。準備完了ボタンを手本にして、右の列に置く。押すたびに次のワールドへ。
+        private void BuildWorldButton()
+        {
+            var canvas = readyButton.GetComponentInParent<Canvas>();
+            var button = Instantiate(readyButton, canvas.rootCanvas.transform);
+            button.name = "WorldButton";
+            button.onClick = new Button.ButtonClickedEvent();
+            var rect = button.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.pivot = new Vector2(1f, 1f);
+            rect.sizeDelta = WorldButtonSize;
+            rect.anchoredPosition = WorldButtonPosition;
+            var colors = button.colors;
+            colors.normalColor = colors.highlightedColor = colors.selectedColor = WorldButtonColor;
+            button.colors = colors;
+            var image = button.GetComponent<Image>();
+            if (image != null) image.color = Color.white;
+            var label = button.GetComponentInChildren<Text>();
+            label.fontSize = WorldButtonFontSize;
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            button.onClick.AddListener(() =>
+            {
+                var session = GameSession.GetOrCreate();
+                session.WorldIndex = (session.WorldIndex + 1) % WorldCatalog.All.Length;
+                ShowWorld(label);
+            });
+            ShowWorld(label);
+        }
+
+        private static void ShowWorld(Text label)
+        {
+            int world = GameSession.Instance != null ? GameSession.Instance.WorldIndex : 0;
+            label.text = "ワールド: " + WorldCatalog.All[world].label;
+        }
+
         private void OnTimerExpired()
         {
             SaveAndStart();
@@ -114,7 +157,8 @@ namespace Game.UI
             if (heroLoadout != null && heroPanel != null && heroPanel.activeSelf) heroLoadout.SaveToSession();
             if (demonLoadout != null && demonPanel != null && demonPanel.activeSelf) demonLoadout.SaveToSession();
             if (GameSession.Instance != null) GameSession.Instance.SkipPrepPhase = true;
-            SceneManager.LoadScene(matchSceneName);
+            int world = GameSession.Instance != null ? GameSession.Instance.WorldIndex : 0;
+            SceneManager.LoadScene(WorldCatalog.All[world].sceneName);
         }
     }
 }

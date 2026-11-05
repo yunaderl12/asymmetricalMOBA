@@ -9,7 +9,7 @@ Shader "Game/VFX/StormCloud"
         _TopColor ("Top", Color) = (0.8, 0.78, 0.8, 1)
         _RedTint ("Red Tint", Color) = (0.55, 0.12, 0.1, 1)
         _RedAmount ("Red Amount", Range(0, 1)) = 0.3
-        _EyeRadius ("Eye Radius", Float) = 6
+        _EyeRadius ("Eye Radius", Float) = 12
         _MaxRadius ("Max Radius", Float) = 200
         _Winding ("Arm Winding", Float) = 2.5
         _Height ("Height", Float) = 36

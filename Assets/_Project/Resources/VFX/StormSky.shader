@@ -9,9 +9,9 @@ Shader "Game/VFX/StormSky"
         _RedLowColor ("Red Low", Color) = (0.75, 0.2, 0.14, 1)
         _RedHighColor ("Red High", Color) = (0.42, 0.04, 0.07, 1)
         _MidColor ("Between Red And Blue", Color) = (0.52, 0.34, 0.58, 1)
-        _RedCeiling ("Height Of The Red (m)", Float) = 50
+        _RedCeiling ("Height Of The Red (m)", Float) = 85
         _RedInner ("Fully Red Inside (x radius)", Float) = 1.1
-        _RedOuter ("Fully Blue Outside (x radius)", Float) = 4
+        _RedOuter ("Fully Blue Outside (x radius)", Float) = 3
     }
     SubShader
     {

@@ -21,6 +21,9 @@ namespace Game.UI
         [SerializeField] private Image[] deckSlotBackgrounds;
         [SerializeField] private Text[] deckSlotLabels;
 
+        [Header("Bridge Guardians (3)")]
+        [SerializeField] private List<MonsterData> availableGuardians = new List<MonsterData>();
+
         [Header("Spawner Initial (5)")]
         [SerializeField] private string[] spawnerLabels = new string[] { "NW", "NE", "Center", "SW", "SE" };
         [SerializeField] private Button[] spawnerButtons;
@@ -63,6 +66,7 @@ namespace Game.UI
             BuildAvailableList();
             WireDeckSlots();
             WireSpawnerSlots();
+            if (spawnerButtons != null && spawnerButtons.Length > 0) BridgeGuardianSlots.Build(spawnerButtons[0], pickerUI, availableGuardians);
             RefreshAll();
         }
 

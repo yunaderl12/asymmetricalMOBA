@@ -34,6 +34,7 @@ namespace Game.Core
             Register("skillup", "スキル [1-5] レベルアップ", SkillUpCmd);
             Register("status", "状態異常付与 [stun|slow|dot|silence] [秒=3] [self|near=self]", StatusCmd);
             Register("warp", "ワープ地点 [info|set|go|clear] (set は範囲無視、go は詠唱なし)", WarpCmd);
+            Register("biome", "自然湧きの数をバイオームごとに表示", BiomeCmd);
             Register("hate", "ヘイト [info|on|off] (on で全魔物がヘイトを使う、info は最寄りの魔物のヘイト表)", HateCmd);
         }
 
@@ -214,6 +215,12 @@ namespace Game.Core
             if (pms.Length == 0) return "PrepPhaseManager not in scene";
             pms[0].SwitchRole();
             return "Role switched -> " + pms[0].EffectiveRole;
+        }
+
+        private static string BiomeCmd(string[] args)
+        {
+            var spawner = Object.FindFirstObjectByType<Game.Monster.BiomeSpawner>();
+            return spawner != null ? spawner.Describe() : "BiomeSpawner not in scene";
         }
 
         private static string VisionCmd(string[] args)

@@ -96,7 +96,9 @@ namespace Game.Core
                 Vector3 candidate = new Vector3(x, 0f, z);
                 if (NavMesh.SamplePosition(candidate, out var hit, 5f, NavMesh.AllAreas))
                 {
-                    if (IsFarFromImportant(hit.position))
+                    // 川や海の底、山の中には置かない。
+                    bool underSomething = Physics.Raycast(hit.position + Vector3.up * 200f, Vector3.down, out var top, 300f, ~0, QueryTriggerInteraction.Ignore) && top.point.y > hit.position.y + 1f;
+                    if (!underSomething && StageMap.DistanceToWater(hit.position) > 2f && IsFarFromImportant(hit.position))
                     {
                         pos = hit.position;
                         return true;

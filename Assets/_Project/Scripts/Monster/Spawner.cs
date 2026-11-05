@@ -31,6 +31,10 @@ namespace Game.Monster
         [SerializeField] private float spawnRadiusMin = 2f;
         [SerializeField] private float spawnRadiusMax = 3f;
 
+        private static readonly List<Spawner> all = new List<Spawner>();
+        /// 今シーンにある塔すべて。
+        public static IReadOnlyList<Spawner> All => all;
+
         public bool IsFunctional { get; private set; } = true;
         public IReadOnlyList<Monster> SpawnedMonsters => spawnedMonsters;
         public IReadOnlyList<MonsterData> Inv => inv;
@@ -93,11 +97,13 @@ namespace Game.Monster
 
         private void OnEnable()
         {
+            all.Add(this);
             if (health != null) health.OnDeath += OnDestroyedByDamage;
         }
 
         private void OnDisable()
         {
+            all.Remove(this);
             if (health != null) health.OnDeath -= OnDestroyedByDamage;
         }
 

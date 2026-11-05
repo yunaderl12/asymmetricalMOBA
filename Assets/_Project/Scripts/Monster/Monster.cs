@@ -11,7 +11,7 @@ namespace Game.Monster
     [RequireComponent(typeof(HealthComponent))]
     public class Monster : MonoBehaviour, IDefenseSource
     {
-        private enum BehaviorState { FollowingPath, ChasingHero }
+        private enum BehaviorState { Wandering, FollowingPath, ChasingHero }
 
         [SerializeField] private MonsterData data;
         [SerializeField] private string targetTag = "StartTown";
@@ -28,6 +28,8 @@ namespace Game.Monster
 
         public MonsterData Data => data;
         public Spawner SpawnedBy { get; private set; }
+        /// 橋の番人のように、別のコンポーネントが動かす魔物。うろつきや進軍はしない。
+        public bool ExternallyControlled { get; set; }
         /// ポータルから這い出している間は何もしない（MonsterEmerge が管理する）。
         public bool IsEmerging { get; set; }
         /// 攻撃を受けた直後のごく短いのけぞり。スタンとは別物で、スタン耐性を作らない。
@@ -72,12 +74,17 @@ namespace Game.Monster
         private float chaseRefreshTimer;
         private MonsterHate hate;
         private MonsterHitReaction hitReaction;
+        private TerrainWalker terrain;
+        private Vector3 wanderCenter;
+        private float wanderWait;
 
         private bool UsesHate => hate != null && ((data != null && data.useHate) || MonsterHate.ForceAll);
 
         private void Awake()
         {
             gameObject.AddComponent<Game.Core.GroundFollower>();
+            terrain = TerrainWalker.For(gameObject);
+            terrain.FactorChanged += ApplySpeed;
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<HealthComponent>();
             mods = GetComponent<StatModifierContainer>();
@@ -97,12 +104,14 @@ namespace Game.Monster
         private void OnEnable()
         {
             if (health != null) health.OnDeath += OnDied;
+            HealthComponent.AnyDamage += OnAnyDamage;
             if (mods != null) mods.OnModifiersChanged += OnModsChanged;
         }
 
         private void OnDisable()
         {
             if (health != null) health.OnDeath -= OnDied;
+            HealthComponent.AnyDamage -= OnAnyDamage;
             if (mods != null) mods.OnModifiersChanged -= OnModsChanged;
         }
 
@@ -135,7 +144,13 @@ namespace Game.Monster
             }
 
             AcquireFinalTarget();
-            SetNextDestination();
+            wanderCenter = spawner != null ? spawner.transform.position : transform.position;
+            if (DemonKingLevel.IsFinalPhase)
+            {
+                currentState = BehaviorState.FollowingPath;
+                SetNextDestination();
+            }
+            else currentState = BehaviorState.Wandering;
 
             VisionRing.Create(transform, aggroRadius, new Color(1f, 1f, 0f, 0.8f));
             VisionRing.Create(transform, deaggroRadius, new Color(1f, 0.5f, 0f, 0.8f));
@@ -165,7 +180,7 @@ namespace Game.Monster
         {
             if (data == null || agent == null) return;
             float mul = mods != null ? mods.TotalSpdMultiplier : 1f;
-            agent.speed = data.spd * mul;
+            agent.speed = data.spd * mul * (terrain != null ? terrain.SpeedFactor : 1f);
         }
 
         private void OnModsChanged()
@@ -197,7 +212,7 @@ namespace Game.Monster
 
         private void Update()
         {
-            if (destroyed || agent == null || IsEmerging) return;
+            if (destroyed || agent == null || IsEmerging || ExternallyControlled) return;
 
             if (StatusEffectController.IsStunnedObj(gameObject) || IsFlinching)
             {
@@ -213,6 +228,18 @@ namespace Game.Monster
 
             RefreshHeroRef();
             EvaluateState();
+
+            if (currentState == BehaviorState.Wandering)
+            {
+                if (DemonKingLevel.IsFinalPhase)
+                {
+                    currentState = BehaviorState.FollowingPath;
+                    SetNextDestination();
+                    return;
+                }
+                TickWander();
+                return;
+            }
 
             if (currentState == BehaviorState.ChasingHero)
             {
@@ -244,6 +271,51 @@ namespace Game.Monster
                 remainingWaypoints.Dequeue();
                 SetNextDestination();
             }
+        }
+
+        // 最終フェーズまでは、スポナーの周りをうろうろする。
+        private void TickWander()
+        {
+            if (!agent.isOnNavMesh || agent.pathPending) return;
+            if (agent.hasPath && agent.remainingDistance > arriveDistance) return;
+            wanderWait -= Time.deltaTime;
+            if (wanderWait > 0f) return;
+
+            var config = BalanceConfig.Instance;
+            wanderWait = Random.Range(config.monsterWanderWaitMin, config.monsterWanderWaitMax);
+            Vector2 offset = Random.insideUnitCircle * config.monsterWanderRadius;
+            Vector3 point = wanderCenter + new Vector3(offset.x, 0f, offset.y);
+            if (NavMesh.SamplePosition(point, out var hit, 4f, NavMesh.AllAreas))
+            {
+                agent.isStopped = false;
+                agent.SetDestination(hit.position);
+            }
+        }
+
+        // 正面の視野に入っている勇者だけに気づく。
+        private bool InSight(Transform target)
+        {
+            Vector3 toTarget = target.position - transform.position;
+            toTarget.y = 0f;
+            if (toTarget.sqrMagnitude < 0.01f) return true;
+            return Vector3.Angle(transform.forward, toTarget) <= BalanceConfig.Instance.monsterSightDegrees * 0.5f;
+        }
+
+        private void OnAnyDamage(HealthComponent target, int amount, GameObject attacker)
+        {
+            if (target != health || attacker == null || destroyed || ExternallyControlled || currentState == BehaviorState.ChasingHero) return;
+            if (!attacker.CompareTag(heroTag)) return;
+            heroGO = attacker;
+            heroTransform = attacker.transform;
+            heroHealth = attacker.GetComponent<HealthComponent>();
+            Notice();
+        }
+
+        private void Notice()
+        {
+            currentState = BehaviorState.ChasingHero;
+            chaseRefreshTimer = 0f;
+            if (agent != null) AlertMark.Show(transform, agent.height + BalanceConfig.Instance.monsterAlertMarkLift);
         }
 
         private void RefreshHeroRef()
@@ -282,6 +354,7 @@ namespace Game.Monster
                 if (hc != null && hc.IsDead) continue;
                 float d = Vector3.Distance(transform.position, go.transform.position);
                 if (d > radius) continue;
+                if (currentState != BehaviorState.ChasingHero && !InSight(go.transform)) continue;
                 if (go == heroGO) currentInRange = true;
                 if (d < nearestDist) { nearestDist = d; nearest = go; }
                 if (useHate)
@@ -302,15 +375,14 @@ namespace Game.Monster
         {
             bool heroValid = heroTransform != null && (heroHealth == null || !heroHealth.IsDead);
 
-            if (currentState == BehaviorState.FollowingPath)
+            if (currentState != BehaviorState.ChasingHero)
             {
                 if (!heroValid) return;
                 float d = Vector3.Distance(transform.position, heroTransform.position);
-                if (d <= aggroRadius)
+                if (d <= aggroRadius && InSight(heroTransform))
                 {
-                    currentState = BehaviorState.ChasingHero;
-                    chaseRefreshTimer = 0f;
-                    Debug.Log($"[Monster] {name} aggro on Hero (d={d:F1})");
+                    Notice();
+                    Debug.Log($"[Monster] {name} noticed a hero (d={d:F1})");
                 }
                 return;
             }
@@ -330,9 +402,18 @@ namespace Game.Monster
 
         private void ResumePath(string reason)
         {
-            currentState = BehaviorState.FollowingPath;
-            SetNextDestination();
-            Debug.Log($"[Monster] {name} deaggro, resuming path ({reason})");
+            if (DemonKingLevel.IsFinalPhase)
+            {
+                currentState = BehaviorState.FollowingPath;
+                SetNextDestination();
+            }
+            else
+            {
+                currentState = BehaviorState.Wandering;
+                wanderWait = 0f;
+                if (agent.isOnNavMesh) agent.SetDestination(wanderCenter);
+            }
+            Debug.Log($"[Monster] {name} deaggro, resuming ({reason})");
         }
 
         private bool atTarget;

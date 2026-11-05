@@ -14,6 +14,7 @@ namespace Game.Bot
         public enum BotState { Idle, EngagingMonster }
 
         [SerializeField] private HeroClassData classData;
+        private Game.Core.TerrainWalker terrain;
         [SerializeField] private float patrolRadius = 8f;
         [SerializeField] private float engageRadius = 12f;
         [SerializeField] private float attackRange = 3f;
@@ -30,6 +31,7 @@ namespace Game.Bot
         private const float BoltPoseSeconds = 0.35f;
         private const float BoltPoseLean = 0.4f;
         private const float TurnDegreesPerSecond = 360f;
+        private const string CastleCoreName = "DemonCastle_Core";
 
         private NavMeshAgent agent;
         private CharacterModelAnimator modelAnim;
@@ -43,6 +45,8 @@ namespace Game.Bot
         private BotSkillUser skills;
         private SkillData freeSlotSkill;
         private float baseSpeed;
+        private bool retreating;
+        private float nextGoalTime;
 
         public Transform EngagementTarget => engagementTarget;
         public float AttackRange => IsMage ? BalanceConfig.Instance.botMageAttackRange : attackRange;
@@ -58,6 +62,7 @@ namespace Game.Bot
         public void SetClass(HeroClassData c)
         {
             classData = c;
+            if (c != null) Game.Core.TerrainWalker.For(gameObject).SlopePenalty = c.slopeSpeedPenalty;
             if (health != null && c != null) health.SetMaxHP(c.initialHP);
             if (classData != null) attackDamage = Mathf.Max(1, classData.initialAtk);
         }
@@ -71,6 +76,7 @@ namespace Game.Bot
         private void Awake()
         {
             gameObject.AddComponent<Game.Core.GroundFollower>();
+            terrain = Game.Core.TerrainWalker.For(gameObject);
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<HealthComponent>();
             mods = gameObject.AddComponent<StatModifierContainer>();
@@ -121,7 +127,8 @@ namespace Game.Bot
         private void Tick()
         {
             if (dead || agent == null || !agent.isOnNavMesh) return;
-            agent.speed = baseSpeed * mods.TotalSpdMultiplier;
+            agent.speed = baseSpeed * mods.TotalSpdMultiplier * terrain.SpeedFactor;
+            HeroSpRecovery.RefillInTown(gameObject, GetComponent<ManaComponent>());
             if (StatusEffectController.IsStunnedObj(gameObject)) { agent.SetDestination(transform.position); return; }
             if (skills != null && skills.IsCasting) return;
 
@@ -138,13 +145,23 @@ namespace Game.Bot
                 state = BotState.EngagingMonster;
                 engagementTarget = best;
             }
+            else if (state == BotState.Idle && !retreating && WantsToPush)
+            {
+                // 近くに魔物がいなければ、届く所にある塔やコアを殴る。
+                Transform building = NearestBuilding();
+                if (building != null && DistanceTo(building) <= AttackRange)
+                {
+                    state = BotState.EngagingMonster;
+                    engagementTarget = building;
+                }
+            }
 
             if (state == BotState.EngagingMonster)
             {
-                if (engagementTarget == null) { state = BotState.Idle; ReturnHome(); return; }
+                if (engagementTarget == null) { state = BotState.Idle; nextGoalTime = 0f; return; }
                 var hp = engagementTarget.GetComponentInParent<HealthComponent>();
-                if (hp == null || hp.IsDead) { engagementTarget = null; state = BotState.Idle; ReturnHome(); return; }
-                float d = Vector3.Distance(transform.position, engagementTarget.position);
+                if (hp == null || hp.IsDead) { engagementTarget = null; state = BotState.Idle; nextGoalTime = 0f; return; }
+                float d = DistanceTo(engagementTarget);
                 if (d > AttackRange)
                 {
                     agent.SetDestination(engagementTarget.position);
@@ -158,6 +175,7 @@ namespace Game.Bot
                         else
                         {
                             hp.TakeDamage(Mathf.RoundToInt(attackDamage * mods.TotalAtkMultiplier), gameObject, DamageType.Physical);
+                            HeroSpRecovery.OnBasicHit(gameObject, hp);
                             lastAttackTime = Time.time;
                             if (modelAnim != null) modelAnim.PlayAttack();
                         }
@@ -166,14 +184,71 @@ namespace Game.Bot
             }
             else
             {
-                if (!agent.pathPending && agent.remainingDistance < 1.0f)
-                {
-                    float ang = Random.Range(0f, Mathf.PI * 2f);
-                    float r = Random.Range(1f, patrolRadius);
-                    Vector3 dest = homePosition + new Vector3(Mathf.Cos(ang) * r, 0f, Mathf.Sin(ang) * r);
-                    agent.SetDestination(dest);
-                }
+                TickRoam();
             }
+        }
+
+        private static bool WantsToPush => DemonKingLevel.Current >= BalanceConfig.Instance.botPushDkLevel;
+
+        // 敵が近くにいないときの行き先。序盤は魔物を探して狩り、魔王が育ったら塔、塔がなければ魔王城へ。
+        private void TickRoam()
+        {
+            var config = BalanceConfig.Instance;
+            if (health != null && health.MaxHP > 0)
+            {
+                float ratio = (float)health.CurrentHP / health.MaxHP;
+                if (ratio < config.botRetreatHpRatio) retreating = true;
+                else if (ratio >= config.botReturnHpRatio) retreating = false;
+            }
+            if (Time.time < nextGoalTime) return;
+            nextGoalTime = Time.time + config.botGoalInterval;
+
+            if (retreating) { ReturnHome(); return; }
+            Transform goal = WantsToPush ? NearestBuilding() : NearestMonster();
+            if (goal != null) agent.SetDestination(goal.position);
+            else if (!agent.pathPending && agent.remainingDistance < 1.0f)
+            {
+                float ang = Random.Range(0f, Mathf.PI * 2f);
+                float r = Random.Range(1f, patrolRadius);
+                agent.SetDestination(homePosition + new Vector3(Mathf.Cos(ang) * r, 0f, Mathf.Sin(ang) * r));
+            }
+        }
+
+        private Transform NearestMonster()
+        {
+            Transform best = null;
+            float bestDist = float.MaxValue;
+            foreach (var m in GameObject.FindGameObjectsWithTag("Monster"))
+            {
+                if (m.GetComponent<Game.Monster.BridgeGuardian>() != null) continue; // 番人は狩りの相手にしない
+                float d = Vector3.Distance(transform.position, m.transform.position);
+                if (d < bestDist) { bestDist = d; best = m.transform; }
+            }
+            return best;
+        }
+
+        // いちばん近い動いている塔。全部壊れていたら魔王城のコア。
+        private Transform NearestBuilding()
+        {
+            Transform best = null;
+            float bestDist = float.MaxValue;
+            foreach (var s in Game.Monster.Spawner.All)
+            {
+                if (!s.IsFunctional) continue;
+                float d = Vector3.Distance(transform.position, s.transform.position);
+                if (d < bestDist) { bestDist = d; best = s.transform; }
+            }
+            if (best != null) return best;
+            var core = GameObject.Find(CastleCoreName);
+            return core != null ? core.transform : null;
+        }
+
+        // 塔やコアは大きいので、中心ではなく表面までの距離で測る。
+        private float DistanceTo(Transform target)
+        {
+            var col = target.GetComponent<Collider>();
+            Vector3 point = col != null && !col.isTrigger ? col.ClosestPoint(transform.position) : target.position;
+            return Vector3.Distance(transform.position, point);
         }
 
         // 人間の魔法使いと同じ弾を、杖のあたりから相手の体の中心へ撃つ。消費SPも同じ。

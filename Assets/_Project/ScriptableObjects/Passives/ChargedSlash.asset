@@ -19,11 +19,12 @@ MonoBehaviour:
   iconColor: {r: 0.45, g: 0.7, b: 1, a: 1}
   spCost: 8
   cooldown: 0
+  doubleTapSeconds: 0.5
   dodgeDistance: 4.5
   dodgeSeconds: 0.2
   holdSeconds: 1
   slashDamageScale: 3
-  slashSpeed: 30
+  slashSpeed: 60
   slashRange: 25
   slashHitRadius: 1.5
   airJumpSpeed: 6.5

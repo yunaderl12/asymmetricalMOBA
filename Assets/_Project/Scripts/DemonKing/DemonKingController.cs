@@ -36,7 +36,8 @@ namespace Game.DemonKing
         private bool cursorLocked;
 
         public bool MovementEnabled { get; set; } = true;
-        public float EffectiveMoveSpeed => moveSpeed * (mods != null ? mods.TotalSpdMultiplier : 1f);
+        public float EffectiveMoveSpeed => moveSpeed * (mods != null ? mods.TotalSpdMultiplier : 1f) * (terrain != null ? terrain.SpeedFactor : 1f);
+        private Game.Core.TerrainWalker terrain;
 
         public DemonKingInputActions Inputs
         {
@@ -51,6 +52,9 @@ namespace Game.DemonKing
         {
             controller = GetComponent<CharacterController>();
             mods = GetComponent<StatModifierContainer>();
+            terrain = Game.Core.TerrainWalker.For(gameObject);
+            terrain.SlopePenalty = Game.Core.BalanceConfig.Instance.demonKingSlopePenalty;
+            if (GetComponent<Game.Core.FallRespawn>() == null) gameObject.AddComponent<Game.Core.FallRespawn>();
             if (inputs == null) inputs = new DemonKingInputActions();
             var cam = pitchTarget != null ? pitchTarget.GetComponentInChildren<Camera>(true) : null;
             if (cam != null)

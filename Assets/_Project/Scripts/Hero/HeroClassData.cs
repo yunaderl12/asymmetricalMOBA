@@ -27,6 +27,9 @@ namespace Game.Hero
         public int mDfGrowthPerLevel;
         public float spdGrowthPerLevel;
 
+        [Tooltip("Speed lost on a 30 degree climb (0.45 = 45% slower). Heavy classes struggle in the mountains.")]
+        public float slopeSpeedPenalty = 0.2f;
+
         [Header("Skills")]
         public List<SkillData> classSkills = new List<SkillData>();
         [Tooltip("Skills only this class can pick for the free slot (slot 5).")]

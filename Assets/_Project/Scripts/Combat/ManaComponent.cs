@@ -28,6 +28,17 @@ namespace Game.Combat
             return true;
         }
 
+        /// 1未満の回復をためておき、1になったら回復する。微量の自然回復に使う。
+        public void RestoreFraction(float amount)
+        {
+            fractionalRestore += amount;
+            int whole = Mathf.FloorToInt(fractionalRestore);
+            if (whole <= 0) return;
+            fractionalRestore -= whole;
+            RestoreMana(whole);
+        }
+        private float fractionalRestore;
+
         public void RestoreMana(int amount)
         {
             if (amount <= 0) return;

@@ -14,6 +14,7 @@ namespace Game.Core
 
         public const int SPAWNER_COUNT = 5;
         public const int DECK_MAX = 20;
+        public const int BRIDGE_COUNT = 3;
 
         public PlayerRole CurrentRole = PlayerRole.None;
         public HeroClassData SelectedHeroClass;
@@ -21,6 +22,10 @@ namespace Game.Core
         public PassiveData SelectedPassive;
         public List<MonsterData> DemonDeck = new List<MonsterData>();
         public List<MonsterData> SpawnerInitialMobs = new List<MonsterData>();
+        /// 橋ごとの番人（山・砂漠・森の順）。未設定の橋には標準の番人が立つ。
+        public MonsterData[] BridgeGuardians = new MonsterData[BRIDGE_COUNT];
+        /// 試合をするワールド（WorldCatalog.All の番号）。
+        public int WorldIndex;
         public MatchStats LastMatchStats;
         public MatchManager.Winner LastWinner = MatchManager.Winner.None;
         public bool SkipPrepPhase = false;

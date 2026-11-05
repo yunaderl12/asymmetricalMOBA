@@ -16,6 +16,24 @@ namespace Game.Core
             }
         }
 
+        /// 最後の空の段階か。魔物はここからはじまりのまちへ進軍する。
+        public static bool IsFinalPhase
+        {
+            get
+            {
+                if (Time.time >= nextPhaseCheck)
+                {
+                    nextPhaseCheck = Time.time + PhaseCheckInterval;
+                    var radii = BalanceConfig.Instance.stormStageRadius;
+                    finalPhase = SkyPalette.StageForLevel(Current) >= radii.Length - 1;
+                }
+                return finalPhase;
+            }
+        }
+        private const float PhaseCheckInterval = 0.5f;
+        private static float nextPhaseCheck;
+        private static bool finalPhase;
+
         /// Multiplier for monster HP / Atk: 1 + rate * (Lv - 1).
         public static float MonsterStatMultiplier(int dkLevel)
         {

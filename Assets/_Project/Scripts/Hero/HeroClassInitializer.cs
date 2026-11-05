@@ -96,6 +96,7 @@ namespace Game.Hero
             CurrentMDf = classData.initialMDf;
             CurrentSpd = classData.initialSpd;
             ApplyMoveSpeed();
+            Game.Core.TerrainWalker.For(gameObject).SlopePenalty = classData.slopeSpeedPenalty;
 
             Debug.Log($"[HeroClass] {classData.className} initialized: HP={classData.initialHP}, SP={classData.initialSP}, Atk={CurrentAtk}, MAtk={CurrentMAtk}, Df={CurrentDf}, MDf={CurrentMDf}, Spd={CurrentSpd}");
         }

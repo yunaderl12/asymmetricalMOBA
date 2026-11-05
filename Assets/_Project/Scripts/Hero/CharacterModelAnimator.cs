@@ -484,6 +484,8 @@ namespace Game.Hero
             // Reset all triggers to avoid stacking (e.g. if multiple frames flipped quickly).
             for (int i = 0; i < TriggerNames.Length; i++) animator.ResetTrigger(TriggerNames[i]);
             animator.SetTrigger(TriggerNames[(int)s]);
+            bool running = s == AnimState.Forward || s == AnimState.BackLeft || s == AnimState.BackRight;
+            animator.speed = running ? Game.Core.BalanceConfig.Instance.runAnimationSpeed : 1f;
         }
 
         private void OnDeath()

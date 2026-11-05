@@ -17,7 +17,7 @@ MonoBehaviour:
   atk: 10
   df: 0
   mDf: 0
-  spd: 3.5
+  spd: 7
   cost: 1
   spwnCool: 1
   maxSpwn: 10

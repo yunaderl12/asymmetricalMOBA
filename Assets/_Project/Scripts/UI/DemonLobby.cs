@@ -30,6 +30,9 @@ namespace Game.UI
         [SerializeField] private SpawnerData initialSpawnerData;
         [SerializeField] private int fallbackMaxCost = 2;
 
+        [Header("Bridge Guardians (3)")]
+        [SerializeField] private List<MonsterData> availableGuardians = new List<MonsterData>();
+
         [Header("Monster Picker")]
         [SerializeField] private DemonMonsterPickerUI pickerUI;
 
@@ -75,6 +78,7 @@ namespace Game.UI
             BuildAvailableList();
             WireDeckSlots();
             WireSpawnerSlots();
+            if (spawnerButtons != null && spawnerButtons.Length > 0) BridgeGuardianSlots.Build(spawnerButtons[0], pickerUI, availableGuardians);
 
             if (startMatchButton != null) startMatchButton.onClick.AddListener(OnStartClicked);
             if (backToTitleButton != null) backToTitleButton.onClick.AddListener(OnBackToTitleClicked);

@@ -42,6 +42,7 @@ namespace Game.Editor
                     AssetDatabase.CreateAsset(data, AssetPath);
                 }
                 data.treePositions = positions;
+                BakeBlocked(data, scene);
                 EditorUtility.SetDirty(data);
                 AssetDatabase.SaveAssets();
                 Debug.Log($"[GroundDigBake] saved {positions.Count} tree position(s).");
@@ -50,6 +51,44 @@ namespace Game.Editor
             {
                 EditorSceneManager.CloseScene(scene, true);
             }
+        }
+
+        // 水辺の近くと、山・橋・見えない壁の真下は削らない。
+        private static void BakeBlocked(GroundDigData data, UnityEngine.SceneManagement.Scene scene)
+        {
+            const float waterMargin = 4f;
+            Physics.SyncTransforms();
+            float half = StageMap.Map.size * 0.5f;
+            data.blockedOrigin = new Vector2(-half, -half);
+            data.blockedCell = 2.5f;
+            data.blockedColumns = data.blockedRows = Mathf.CeilToInt(StageMap.Map.size / data.blockedCell);
+            data.blockedBits = new byte[(data.blockedColumns * data.blockedRows + 7) / 8];
+            int count = 0;
+            var physics = scene.GetPhysicsScene();
+            var hits = new RaycastHit[8];
+            for (int z = 0; z < data.blockedRows; z++)
+            {
+                for (int x = 0; x < data.blockedColumns; x++)
+                {
+                    float wx = data.blockedOrigin.x + (x + 0.5f) * data.blockedCell;
+                    float wz = data.blockedOrigin.y + (z + 0.5f) * data.blockedCell;
+                    bool blocked = StageMap.DistanceToWater(new Vector3(wx, 0f, wz)) < waterMargin;
+                    if (!blocked)
+                    {
+                        int n = physics.Raycast(new Vector3(wx, 300f, wz), Vector3.down, hits, 310f);
+                        for (int i = 0; i < n && !blocked; i++)
+                        {
+                            string name = hits[i].collider.name;
+                            blocked = name == "Field_Mountains" || name == "Field_Bridges" || name == "Field_Barrier";
+                        }
+                    }
+                    if (!blocked) continue;
+                    int bit = x + z * data.blockedColumns;
+                    data.blockedBits[bit >> 3] |= (byte)(1 << (bit & 7));
+                    count++;
+                }
+            }
+            Debug.Log($"[GroundDigBake] blocked {count} / {data.blockedColumns * data.blockedRows} cells.");
         }
 
         private static List<Vector2> FindTrunks(MeshFilter trees)

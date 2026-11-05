@@ -143,7 +143,7 @@ namespace Game.Core
             foreach (string root in BlockerRoots) BlockCollidersUnder(root, config.digKeepOutMargin);
             BlockCollidersUnder(SpawnerRoot, config.digSpawnerMargin);
 
-            var data = Resources.Load<GroundDigData>(GroundDigData.ResourcePath);
+            var data = Resources.Load<GroundDigData>(WorldCatalog.ForActiveScene().digResource);
             if (data != null)
             {
                 foreach (var tree in data.treePositions)
@@ -151,6 +151,9 @@ namespace Game.Core
                     float r = config.digTreeMargin;
                     BlockArea(tree.x - r, tree.y - r, tree.x + r, tree.y + r);
                 }
+                for (int z = 0; z < vertsZ; z++)
+                    for (int x = 0; x < vertsX; x++)
+                        if (data.IsBlocked(origin.x + x * cellSize, origin.y + z * cellSize)) blocked[x + z * vertsX] = true;
             }
             else Debug.LogWarning("[GroundDig] Resources/GroundDigData not found; trees are not protected.");
 
@@ -167,6 +170,8 @@ namespace Game.Core
             if (root == null) return;
             foreach (var collider in root.GetComponentsInChildren<Collider>(true))
             {
+                // 山・橋・見えない壁はフィールド全体に広がるので、GroundDigData の範囲で判定する。
+                if (collider.name.StartsWith("Field_")) continue;
                 Bounds b = collider.bounds;
                 BlockArea(b.min.x - margin, b.min.z - margin, b.max.x + margin, b.max.z + margin);
             }

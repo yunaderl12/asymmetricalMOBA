@@ -35,6 +35,7 @@ namespace Game.Hero
         [SerializeField] private float dashLagForward = 0.14f;
 
         public float MoveSpeed => moveSpeed;
+        private Game.Core.TerrainWalker terrain;
         public void SetMoveSpeed(float value) { moveSpeed = value; }
         public bool LookEnabled { get; set; } = true;
         /// 溜め中など、視点だけ動かせて移動できない状態。
@@ -83,6 +84,7 @@ namespace Game.Hero
         private void Awake()
         {
             controller = GetComponent<CharacterController>();
+            terrain = Game.Core.TerrainWalker.For(gameObject);
             inputs = new HeroInputActions();
             if (cameraTransform != null) cameraBaseLocalPosition = cameraTransform.localPosition;
         }
@@ -225,6 +227,7 @@ namespace Game.Hero
             Vector2 input = inputs.Hero.Move.ReadValue<Vector2>();
             UpdateDash(input);
             float speed = dashing ? moveSpeed * Game.Core.BalanceConfig.Instance.dashSpeedMultiplier : moveSpeed;
+            speed *= terrain.SpeedFactor;
             Vector3 horizontal = BurstVelocity != Vector3.zero ? BurstVelocity : (transform.right * input.x + transform.forward * input.y) * speed;
 
             if (controller.isGrounded)

@@ -49,8 +49,7 @@ namespace Game.Hero
             if (mana == null) return;
             if (classInit == null || classInit.ClassData == null) return;
             if (Time.time < nextMpAlwaysTickTime) return;
-            int restore = Mathf.CeilToInt(mana.MaxMP * classInit.ClassData.spCombatRegenRate);
-            if (restore > 0) mana.RestoreMana(restore);
+            mana.RestoreFraction(mana.MaxMP * classInit.ClassData.spCombatRegenRate);
             nextMpAlwaysTickTime = Time.time + mpAlwaysRegenInterval;
         }
 
@@ -63,16 +62,15 @@ namespace Game.Hero
         {
             if (health == null) return;
             TickMpAlwaysRegen();
+            HeroSpRecovery.RefillInTown(gameObject, mana);
             if (Time.time - lastActionTime < idleThreshold) return;
             if (Time.time < nextTickTime) return;
 
             float classMul = (classInit != null && classInit.ClassData != null) ? classInit.ClassData.regenMultiplier : 1f;
             float rate = baseRegenRate * Mathf.Pow(regenMultiplier, regenStep) * classMul;
             int hpRestore = health != null ? Mathf.CeilToInt(health.MaxHP * rate) : 0;
-            int mpRestore = mana != null ? Mathf.CeilToInt(mana.MaxMP * rate) : 0;
             if (health != null) health.Heal(hpRestore);
-            if (mana != null) mana.RestoreMana(mpRestore);
-            Debug.Log($"[HeroRegen] tick step={regenStep} rate={rate:F4} +{hpRestore}HP +{mpRestore}MP");
+            Debug.Log($"[HeroRegen] tick step={regenStep} rate={rate:F4} +{hpRestore}HP");
             regenStep++;
             nextTickTime = Time.time + regenTickInterval;
         }

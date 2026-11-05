@@ -4,6 +4,7 @@
 # Giving only.fbx exports just that model and leaves the other FBX files and the .blend untouched.
 # Coordinates: Blender (x, y, z) = Unity (x, z, y) before import. Each model has Marker_PlusX / Marker_PlusZ
 # empties so the Unity placer can fix any axis flip from the FBX conversion.
+import json
 import bpy
 import bmesh
 import math
@@ -18,15 +19,14 @@ OUT_FBX = os.path.join(ROOT, "Assets", "_Project", "Art", "LowPoly")
 OUT_SRC = os.path.join(ROOT, "ArtSource", "lowpoly")
 os.makedirs(OUT_FBX, exist_ok=True)
 
-TOWN = Vector((-80.0, 0.0))
-CASTLE = Vector((80.0, 0.0))
-SPAWNERS = [Vector(p) for p in [(-40, 40), (-40, -40), (0, 0), (40, 40), (40, -40)]]
-# Scene rocks (Unity x, z, size x, size y, size z) and lane walls; visuals sit on the existing colliders.
-ROCKS = [(-95, 55, 8, 5, 8), (95, 55, 8, 5, 8), (-95, -55, 8, 5, 8), (95, -55, 8, 5, 8),
-         (-60, 55, 6, 4, 5), (60, 55, 6, 4, 5), (-60, -55, 6, 4, 5), (60, -55, 6, 4, 5),
-         (-20, 20, 4, 3, 4), (25, -15, 3.5, 3, 4.5)]
-WALLS_Y = (20.0, -20.0)
-WALL_HALF_LEN = 40.0
+with open(os.path.join(ROOT, "Assets", "_Project", "Resources", "StageMap.json"), encoding="utf-8") as _f:
+    MAP = json.load(_f)
+TOWN = Vector((MAP["townX"], MAP["townZ"]))
+CASTLE = Vector((MAP["castleX"], MAP["castleZ"]))
+SPAWNERS = [Vector((sp["x"], sp["z"])) for sp in MAP["spawners"]]
+# Rocks (Unity x, z, size x, size y, size z); visuals sit on the existing colliders, sizes follow the scene's Rock_00..09.
+_ROCK_SIZES = [(8, 5, 8)] * 4 + [(6, 4, 5)] * 4 + [(4, 3, 4), (3.5, 3, 4.5)]
+ROCKS = [(r["x"], r["z"], *_ROCK_SIZES[i]) for i, r in enumerate(MAP["rocks"])]
 
 # Start from an empty scene (materials below must be created after the reset).
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -60,6 +60,7 @@ class Group:
         self.bm = bmesh.new()
         self.mats = []
         self.rng = rng
+        self.force_up = False
 
     def _mi(self, m):
         if m not in self.mats:
@@ -117,6 +118,10 @@ class Group:
         bm = self.bm
         bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0001)
         bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+        if self.force_up:
+            for f in bm.faces:
+                if f.normal.z < 0:
+                    f.normal_flip()
         me = bpy.data.meshes.new(self.name)
         bm.to_mesh(me)
         bm.free()
@@ -166,6 +171,20 @@ P = {
     "grass_c": mat("GrassC", (0.10, 0.28, 0.05)),
     "grass_dry": mat("GrassDry", (0.36, 0.42, 0.10)),
     "tuft": mat("Tuft", (0.15, 0.48, 0.07)),
+    "sand": mat("Sand", (0.72, 0.56, 0.28)),
+    "sand_b": mat("SandB", (0.80, 0.63, 0.32)),
+    "sand_c": mat("SandC", (0.62, 0.46, 0.22)),
+    "sand_wet": mat("SandWet", (0.42, 0.34, 0.20)),
+    "forest_a": mat("ForestA", (0.05, 0.17, 0.05)),
+    "forest_b": mat("ForestB", (0.08, 0.22, 0.05)),
+    "snow": mat("Snow", (0.85, 0.87, 0.90)),
+    "cactus": mat("Cactus", (0.10, 0.32, 0.12)),
+    "water_shallow": mat("WaterShallow", (0.05, 0.30, 0.46)),
+    "water_shallow_b": mat("WaterShallowB", (0.08, 0.36, 0.52)),
+    "water_deep": mat("WaterDeep", (0.02, 0.07, 0.30)),
+    "water_deep_b": mat("WaterDeepB", (0.03, 0.10, 0.36)),
+    "water_sea": mat("WaterSea", (0.02, 0.12, 0.40)),
+    "water_sea_b": mat("WaterSeaB", (0.03, 0.17, 0.48)),
     "dirt": mat("Dirt", (0.38, 0.24, 0.11)),
     "dirt_dark": mat("DirtDark", (0.24, 0.15, 0.07)),
     "ash": mat("Ash", (0.06, 0.05, 0.06)),
@@ -185,6 +204,8 @@ P = {
     "plaster": mat("Plaster", (0.85, 0.78, 0.62)),
     "wood": mat("Wood", (0.33, 0.19, 0.08)),
     "wood_dark": mat("WoodDark", (0.17, 0.09, 0.04)),
+    "wood_light": mat("WoodLight", (0.46, 0.30, 0.15)),
+    "rope": mat("Rope", (0.55, 0.45, 0.28)),
     "roof_r": mat("RoofRed", (0.55, 0.12, 0.07)),
     "roof_b": mat("RoofBlue", (0.10, 0.20, 0.50)),
     "roof_o": mat("RoofOrange", (0.70, 0.30, 0.08)),
@@ -208,29 +229,26 @@ def ground_height(x, y, rng):
     return -0.05 + 0.06 * noise.noise(Vector((x * 0.06, y * 0.06, 0.3))) + rng.uniform(-0.015, 0.015)
 
 
-def path_y(x):
-    return 1.5 * math.sin(x * 0.045)
-
-
 def on_path(x, y, margin=0.0):
-    return -73 < x < 70 and abs(y - path_y(x)) < 2.4 + margin
+    p = Vector((x, y))
+    return any(line_dist(p, pts)[0] < 2.6 + margin for pts in ROADS.values())
 
 
 def near_spawner(p, r):
     return any((p - s).length < r for s in SPAWNERS)
 
 
-def tree(g, rng, x, y, s=1.0, kind=None):
+def tree(g, rng, x, y, s=1.0, kind=None, base=0.0):
     kind = kind or rng.choice(["round", "round", "pine"])
     h = rng.uniform(2.2, 3.0) * s
-    g.cyl(P["bark"], (x, y, -0.1), 0.22 * s, h, n=6, r2=0.15 * s)
+    g.cyl(P["bark"], (x, y, base - 0.1), 0.22 * s, h, n=6, r2=0.15 * s)
     if kind == "pine":
         for i, (r, z) in enumerate([(1.6, 0.55), (1.25, 1.35), (0.85, 2.1)]):
-            g.cone(P["leaf_pine"], (x, y, h * 0.55 + z * s), r * s, 1.6 * s, n=7, rotz=rng.random() * 6, jitter=0.08 * s)
+            g.cone(P["leaf_pine"], (x, y, base + h * 0.55 + z * s), r * s, 1.6 * s, n=7, rotz=rng.random() * 6, jitter=0.08 * s)
     else:
         leaf = P["leaf_a"] if rng.random() < 0.5 else P["leaf_b"]
-        g.ico(leaf, (x, y, h + 0.6 * s), 1.4 * s, sub=1, scale=(1, 1, 0.9), jitter=0.18 * s, rotz=rng.random() * 6)
-        g.ico(leaf, (x + 0.7 * s, y + 0.3 * s, h + 0.1 * s), 0.9 * s, sub=1, jitter=0.12 * s)
+        g.ico(leaf, (x, y, base + h + 0.6 * s), 1.4 * s, sub=0, scale=(1, 1, 0.9), jitter=0.18 * s, rotz=rng.random() * 6)
+        g.ico(leaf, (x + 0.7 * s, y + 0.3 * s, base + h + 0.1 * s), 0.9 * s, sub=0, jitter=0.12 * s)
 
 
 def dead_tree(g, rng, x, y, s=1.0):
@@ -243,6 +261,298 @@ def dead_tree(g, rng, x, y, s=1.0):
 
 
 # ================================================================ FIELD
+# 地図の構成は Assets/_Project/Resources/StageMap.json にまとめてあり、Unity 側（StageMap.cs）も同じものを読む。
+def _pairs(flat):
+    return [Vector((flat[i], flat[i + 1])) for i in range(0, len(flat), 2)]
+
+
+def smooth(a, b, x):
+    t = max(0.0, min(1.0, (x - a) / (b - a)))
+    return t * t * (3 - 2 * t)
+
+
+def line_dist(p, pts):
+    """(distance to the polyline, distance along it to the nearest point)"""
+    best, best_s, s = 1e9, 0.0, 0.0
+    for a, b in zip(pts, pts[1:]):
+        ab = b - a
+        l = ab.length
+        t = max(0.0, min(1.0, (p - a).dot(ab) / (l * l)))
+        d = (a + ab * t - p).length
+        if d < best:
+            best, best_s = d, s + t * l
+        s += l
+    return best, best_s
+
+
+def line_length(pts):
+    return sum((b - a).length for a, b in zip(pts, pts[1:]))
+
+
+def in_poly(p, poly):
+    inside = False
+    j = len(poly) - 1
+    for i in range(len(poly)):
+        a, b = poly[i], poly[j]
+        if (a.y > p.y) != (b.y > p.y) and p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x:
+            inside = not inside
+        j = i
+    return inside
+
+
+SHALLOW = [(l["width"], _pairs(l["points"])) for l in MAP["shallow"]]
+DEEP = [(l["width"], _pairs(l["points"])) for l in MAP["deep"]]
+SHORE = _pairs(MAP["seaShore"])
+SEA_POLY = SHORE + [Vector(MAP["seaCorner"])]
+ROADS = {r["name"]: _pairs(r["points"]) for r in MAP["roads"]}
+H_CASTLE = float(MAP["castleHeight"])
+R_ISLAND = float(MAP["islandRadius"])
+BRIDGE_W = float(MAP["bridgeWidth"])
+BRIDGE_TAN = math.tan(math.radians(MAP["bridgeSlopeDegrees"]))
+BRIDGE_STARTS = _pairs(MAP["bridgeStarts"])
+BRIDGE_ISLAND_OVERLAP = 2.0  # 橋の先端は島の縁より内側まで入れる
+BRIDGE_POST_INSET = 2.5
+BRIDGE_POST_HEIGHT = 11.0
+BRIDGE_CABLE_LOW = 2.6  # 主ロープがいちばんたるんだ所の高さ
+BRIDGE_HANGER_SPACING = 3.5
+BRIDGE_RAIL_HEIGHT = 1.15
+BIOMES = {b["name"]: b for b in MAP["biomes"]}
+HALF = MAP["size"] / 2.0
+
+
+def is_sea(p):
+    return in_poly(p, SEA_POLY)
+
+
+def deep_gap(p):
+    """Distance to the bank of the deep rivers (negative in the water)."""
+    return min(line_dist(p, pts)[0] - w / 2 for w, pts in DEEP)
+
+
+def shallow_gap(p):
+    return min(line_dist(p, pts)[0] - w / 2 for w, pts in SHALLOW)
+
+
+def shore_dist(p):
+    return line_dist(p, SHORE)[0]
+
+
+def road_dist(p):
+    return min(line_dist(p, pts)[0] for pts in ROADS.values())
+
+
+def in_ellipse(p, cx, cz, rx, rz, wobble=0.0):
+    e = math.sqrt(((p.x - cx) / rx) ** 2 + ((p.y - cz) / rz) ** 2)
+    if wobble:
+        e += noise.noise(Vector((p.x * 0.03, p.y * 0.03, 4.2))) * wobble
+    return e
+
+
+def in_desert(p):
+    b = BIOMES["desert"]
+    return in_ellipse(p, b["x"], b["z"], b["rx"], b["rz"], 0.16) < 1.0
+
+
+def in_forest(p):
+    b = BIOMES["forest"]
+    return in_ellipse(p, b["x"], b["z"], b["rx"], b["rz"], 0.12) < 1.0 and deep_gap(p) > 2 and not is_sea(p)
+
+
+# ---------------------------------------------------------------- mountains
+MOUNTAIN_ROAD = _pairs(sum([[p.x, p.y] for p in ROADS["mountain"][3:]], []))
+MOUNTAIN_LEN = line_length(MOUNTAIN_ROAD)
+BIG_PEAK = Vector((165.0, 178.0))
+SUB_PEAKS = [(95, 205, 34, 26), (228, 205, 42, 34), (238, 118, 34, 28), (125, 240, 30, 22), (232, 42, 24, 18), (58, 232, 24, 14)]
+RIVER_A = DEEP[0][1]
+
+
+def north_of_river_a(p):
+    """山は深い川の北東側だけ。川の進行方向の左側。"""
+    best, side = 1e9, 0.0
+    for a, b in zip(RIVER_A, RIVER_A[1:]):
+        ab = b - a
+        t = max(0.0, min(1.0, (p - a).dot(ab) / ab.dot(ab)))
+        d = (a + ab * t - p).length
+        if d < best:
+            best, side = d, ab.x * (p.y - a.y) - ab.y * (p.x - a.x)
+    return side > 0.0
+
+
+def road_height(s):
+    window = smooth(0, 50, s) * smooth(0, 50, MOUNTAIN_LEN - s)
+    return window * (8.0 + 6.0 * math.sin(s * 0.05) + 2.0 * math.sin(s * 0.11 + 1.0))
+
+
+def mountain_height(p):
+    b = BIOMES["mountain"]
+    e = in_ellipse(p, b["x"], b["z"], b["rx"], b["rz"])
+    mask = 1.0 - smooth(0.72, 1.0, e)
+    mask *= smooth(6, 28, shore_dist(p)) * smooth(10, 34, line_dist(p, RIVER_A)[0] - 13)
+    if mask <= 0.0 or not north_of_river_a(p):
+        return -0.2
+    n = noise.noise(Vector((p.x * 0.017, p.y * 0.017, 2.0)))
+    ridged = 1.0 - abs(n) * 2.2
+    fine = noise.noise(Vector((p.x * 0.06, p.y * 0.06, 5.0)))
+    h = mask * (8.0 + 20.0 * max(ridged, 0.0) ** 2 + 5.0 * fine)
+    h += mask * 88.0 * math.exp(-(((p - BIG_PEAK).length / 46.0) ** 1.6))
+    for x, z, r, a in SUB_PEAKS:
+        h += mask * a * math.exp(-(((p - Vector((x, z))).length / r) ** 2))
+    d, s = line_dist(p, MOUNTAIN_ROAD)
+    h = road_height(s) + (h - road_height(s)) * smooth(4.0, 28, d)
+    return h
+
+
+def terrain_y(p):
+    if p.x > -70 and p.y > -45:
+        return max(0.0, mountain_height(p))
+    return 0.0
+
+
+def ribbon(g, pts, width, y, mats, rng, step=7.0):
+    stations = []
+    for a, b in zip(pts, pts[1:]):
+        n = max(1, int((b - a).length / step))
+        for i in range(n):
+            stations.append(a + (b - a) * (i / n))
+    stations.append(pts[-1])
+    rows = []
+    for i, c in enumerate(stations):
+        t = stations[min(i + 1, len(stations) - 1)] - stations[max(i - 1, 0)]
+        t.normalize()
+        side = Vector((-t.y, t.x))
+        rows.append([g.bm.verts.new((*(c + side * ((k - 1) * width / 2 + rng.uniform(-0.7, 0.7) * (1 if k != 1 else 2))), y + rng.uniform(-0.03, 0.03))) for k in range(3)])
+    for r0, r1 in zip(rows, rows[1:]):
+        for k in range(2):
+            for tri in ((r0[k], r0[k + 1], r1[k + 1]), (r0[k], r1[k + 1], r1[k])):
+                f = g.bm.faces.new(tri)
+                f.material_index = g._mi(rng.choice(mats))
+
+
+def wall_segment(g, m, a, b, z0, z1, thick=1.5, extend=1.0):
+    d = b - a
+    l = d.length
+    if l < 0.01:
+        return
+    c = (a + b) / 2
+    g.box(m, (c.x, c.y, (z0 + z1) / 2), (l + extend * 2, thick, z1 - z0), rotz=math.atan2(d.y, d.x))
+
+
+def prism(g, m, a0, a1, b0, b1, z_a, z_b, height):
+    """Solid strip section between the left/right points a0,a1 and b0,b1; top at z_a / z_b."""
+    vs = [g.bm.verts.new((*q, z)) for q, z in ((a0, z_a - height), (a1, z_a - height), (b1, z_b - height), (b0, z_b - height),
+                                               (a0, z_a), (a1, z_a), (b1, z_b), (b0, z_b))]
+    for f in ((0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)):
+        face = g.bm.faces.new([vs[i] for i in f])
+        face.material_index = g._mi(m)
+
+
+def bridge_profile(length):
+    """Height along the bridge: hangs in a curve from the land and meets the island edge at the fixed slope."""
+    span = length - BRIDGE_ISLAND_OVERLAP
+    start_slope = max(0.0, 2.0 * H_CASTLE / span - BRIDGE_TAN)
+    bend = (BRIDGE_TAN - start_slope) / (2.0 * span)
+    return lambda s: H_CASTLE if s >= span else bend * s * s + start_slope * s
+
+
+def rope_line(g, m, points, side, half_width):
+    """A thin rope through the given (position, height) points."""
+    for (p0, z0), (p1, z1) in zip(points, points[1:]):
+        prism(g, m, p0 - side * half_width, p0 + side * half_width, p1 - side * half_width, p1 + side * half_width, z0, z1, half_width * 2)
+
+
+def build_bridge(g, ropes, rng, start, end):
+    d = end - start
+    length = d.length
+    d.normalize()
+    side = Vector((-d.y, d.x))
+    profile = bridge_profile(length)
+    hw = BRIDGE_W / 2
+    # 歩く面。隙間のない1枚の板で、当たり判定と NavMesh はこれを使う。
+    n = int(length / 3.0)
+    for i in range(n):
+        s0, s1 = length * i / n, length * (i + 1) / n
+        p0, p1 = start + d * s0, start + d * s1
+        prism(g, P["wood_dark"], p0 - side * hw, p0 + side * hw, p1 - side * hw, p1 + side * hw, profile(s0), profile(s1), 0.35)
+    # 踏み板。少しずつ長さと向きを変えて、手で並べたように見せる。
+    s = 0.2
+    while s < length - BRIDGE_ISLAND_OVERLAP:
+        w = rng.uniform(0.95, 1.2)
+        s1 = s + w
+        c0, c1 = start + d * s, start + d * s1
+        over_a, over_b = rng.uniform(-0.25, 0.25), rng.uniform(-0.25, 0.25)
+        skew = rng.uniform(-0.07, 0.07)
+        m = P["wood"] if rng.random() < 0.72 else P["wood_light"]
+        prism(g=ropes, m=m,
+              a0=c0 - side * (hw + over_a) + d * skew, a1=c0 + side * (hw + over_b) - d * skew,
+              b0=c1 - side * (hw + over_a) + d * skew, b1=c1 + side * (hw + over_b) - d * skew,
+              z_a=profile(s) + 0.07, z_b=profile(s1) + 0.07, height=0.14)
+        s = s1 + rng.uniform(0.08, 0.2)
+    # 両岸の門柱。橋の入口と島の縁に2本ずつ立てて、上に横木を渡す。
+    tower_at = (BRIDGE_POST_INSET, length - BRIDGE_ISLAND_OVERLAP + 1.0)
+    post_x = hw + 0.9
+    for at in tower_at:
+        c = start + d * at
+        base = profile(at)
+        for sgn in (-1, 1):
+            q = c + side * sgn * post_x
+            g.box(P["wood_dark"], (q.x, q.y, base + (BRIDGE_POST_HEIGHT - 4.0) / 2), (1.0, 1.0, BRIDGE_POST_HEIGHT + 4.0), rotz=math.atan2(d.y, d.x), jitter=0.04)
+        ropes.box(P["wood"], (c.x, c.y, base + BRIDGE_POST_HEIGHT - 0.9), (0.7, BRIDGE_W + 3.4, 0.7), rotz=math.atan2(d.y, d.x), jitter=0.04)
+        ropes.box(P["wood"], (c.x, c.y, base + BRIDGE_POST_HEIGHT - 2.3), (0.45, BRIDGE_W + 2.6, 0.45), rotz=math.atan2(d.y, d.x), jitter=0.03)
+    # 主ロープは門柱の上から大きくたるみ、そこから吊りロープで踏み板を吊る。手すりは腰の高さのロープ。
+    s_a, s_b = tower_at
+    steps = int((s_b - s_a) / BRIDGE_HANGER_SPACING)
+    for sgn in (-1, 1):
+        cable, rail, foot = [], [], []
+        for i in range(steps + 1):
+            at = s_a + (s_b - s_a) * i / steps
+            t = i / steps * 2.0 - 1.0
+            clearance = BRIDGE_CABLE_LOW + (BRIDGE_POST_HEIGHT - BRIDGE_CABLE_LOW) * t * t
+            base = start + d * at + side * sgn * (hw + 0.25)
+            deck_z = profile(at)
+            cable.append((base, deck_z + clearance))
+            rail.append((base, deck_z + BRIDGE_RAIL_HEIGHT))
+            foot.append((base, deck_z + 0.25))
+            ropes.box(P["rope"], (base.x, base.y, deck_z + clearance / 2), (0.1, 0.1, clearance), rotz=math.atan2(d.y, d.x))
+        rope_line(ropes, P["rope"], cable, side, 0.13)
+        rope_line(ropes, P["rope"], rail, side, 0.07)
+        rope_line(ropes, P["wood_dark"], foot, side, 0.14)
+
+
+def build_island(g, rng, castle, angles):
+    rings = [(R_ISLAND, 0.0), (R_ISLAND * 0.92, -5.0), (R_ISLAND * 0.68, -13.0), (R_ISLAND * 0.4, -21.0), (R_ISLAND * 0.12, -27.0)]
+    n = 28
+    bm = g.bm
+    top = bm.verts.new((castle.x, castle.y, H_CASTLE))
+    rows = []
+    for ri, (r, dz) in enumerate(rings):
+        row = []
+        for i in range(n):
+            a = i / n * math.tau
+            w = 1.0 + rng.uniform(-0.05, 0.05) * (1 if ri else 0.35)
+            row.append(bm.verts.new((castle.x + math.cos(a) * r * w, castle.y + math.sin(a) * r * w, H_CASTLE + dz + (rng.uniform(-1.5, 1.5) if ri else 0.0))))
+        rows.append(row)
+    tip = bm.verts.new((castle.x + 2, castle.y - 1, H_CASTLE - 31))
+    for i in range(n):
+        j = (i + 1) % n
+        f = bm.faces.new((top, rows[0][i], rows[0][j]))
+        f.material_index = g._mi(P["scorched"])
+        for ri in range(len(rows) - 1):
+            m = P["stone_dark"] if (i + ri) % 3 else P["obsidian"]
+            f = bm.faces.new((rows[ri][i], rows[ri + 1][i], rows[ri + 1][j], rows[ri][j]))
+            f.material_index = g._mi(m if ri else P["scorched"])
+        f = bm.faces.new((rows[-1][i], tip, rows[-1][j]))
+        f.material_index = g._mi(P["obsidian"])
+    # 低い縁。橋の出入口だけ開ける。
+    for i in range(n):
+        a0, a1 = i / n * math.tau, (i + 1) / n * math.tau
+        mid = (a0 + a1) / 2
+        if any(abs((mid - b + math.pi) % math.tau - math.pi) < math.radians(9) for b in angles):
+            continue
+        q0 = castle + Vector((math.cos(a0), math.sin(a0))) * (R_ISLAND - 1.2)
+        q1 = castle + Vector((math.cos(a1), math.sin(a1))) * (R_ISLAND - 1.2)
+        wall_segment(g, P["stone_dark"], q0, q1, H_CASTLE - 0.2, H_CASTLE + 0.6, thick=1.0, extend=0.2)
+
+
 def build_field():
     rng = random.Random(11)
     col, root = new_model("LP_Field")
@@ -250,33 +560,50 @@ def build_field():
     decor = Group("Field_Decor", rng)
     trees = Group("Field_Trees", rng)
     walls = Group("Field_Walls", rng)
+    water = Group("Field_Water", rng)
+    mountains = Group("Field_Mountains", rng)
+    bridges = Group("Field_Bridges", rng)
+    bridge_ropes = Group("Field_BridgeRopes", rng)
+    barrier = Group("Field_Barrier", rng)
+    tree_cols = Group("Field_TreeColliders", rng)
+    mountain_fill = Group("Field_MountainFill", rng)
 
-    # Ground: 200 x 120 triangulated grid, flat shaded, material picked per triangle.
-    nx, ny, w, d = 100, 60, 200.0, 120.0
+    def add_tree(g, x, y, s, kind=None, z=0.0):
+        tree(g, rng, x, y, s, kind, z)
+        tree_cols.cyl(P["bark"], (x, y, z - 0.5), 0.26 * s + 0.12, 7.0, n=6)
+
+    # Ground: triangulated grid, flat shaded, material picked per triangle.
+    nx, ny, w, d = 125, 125, float(MAP["size"]), float(MAP["size"])
     bm = ground.bm
     grid = [[bm.verts.new((-w / 2 + i * w / nx, -d / 2 + j * d / ny, 0.0)) for j in range(ny + 1)] for i in range(nx + 1)]
     for col_v in grid:
         for v in col_v:
-            x, y = v.co.x, v.co.y
-            h = ground_height(x, y, rng)
-            if on_path(x, y, 0.5):
+            p = Vector((v.co.x, v.co.y))
+            h = ground_height(p.x, p.y, rng)
+            if is_sea(p) or deep_gap(p) < -1.0:
+                h = -3.0
+            elif on_path(p.x, p.y, 0.5):
                 h -= 0.03
             v.co.z = h
 
     def face_mat(cx, cy):
         p = Vector((cx, cy))
-        dc = (p - CASTLE).length
-        if dc < 18:
-            return P["ash"]
-        if dc < 30:
-            return P["ash"] if rng.random() < (30 - dc) / 14 else P["scorched"]
+        if is_sea(p) or deep_gap(p) < 3.5 or shore_dist(p) < 5.0:
+            return P["sand"]
+        if shallow_gap(p) < 1.5:
+            return P["sand_wet"]
         if on_path(cx, cy):
             return P["dirt"]
-        if near_spawner(p, 4.5):
+        if near_spawner(p, 7.0):
             return P["dirt_dark"]
         if (p - TOWN).length < 9:
             return P["grass_b"]
-        n = noise.noise(Vector((cx * 0.035, cy * 0.035, 1.7))) + rng.uniform(-0.25, 0.25)
+        if in_desert(p):
+            n = noise.noise(Vector((cx * 0.05, cy * 0.05, 3.1))) + rng.uniform(-0.2, 0.2)
+            return P["sand_b"] if n > 0.2 else (P["sand_c"] if n < -0.25 else P["sand"])
+        if in_forest(p):
+            return P["forest_a"] if rng.random() < 0.6 else P["forest_b"]
+        n = noise.noise(Vector((cx * 0.02, cy * 0.02, 1.7))) + rng.uniform(-0.25, 0.25)
         if n > 0.45:
             return P["grass_dry"]
         if n > 0.1:
@@ -295,12 +622,126 @@ def build_field():
                 cy = sum(v.co.y for v in t) / 3
                 f.material_index = ground._mi(face_mat(cx, cy))
 
+    # Water: 海と深い川は地面より下、浅瀬は足首が隠れる高さ（当たり判定の地面は y=0）。
+    ws, wd, wm = [P["water_shallow"], P["water_shallow_b"]], [P["water_deep"], P["water_deep_b"]], [P["water_sea"], P["water_sea_b"]]
+    for width, pts in DEEP:
+        ribbon(water, pts, width + 6, -0.5, wd, rng)
+    for width, pts in SHALLOW:
+        ribbon(water, pts, width, 0.12, ws, rng)
+    cell = 12.0
+    x = -60.0
+    while x < 430:
+        z = -430.0
+        while z < 0:
+            corners = [Vector((x, z)), Vector((x + cell, z)), Vector((x + cell, z + cell)), Vector((x, z + cell))]
+            if any(is_sea(q) for q in corners):
+                # 隣の四角と角の高さをそろえて、継ぎ目に隙間が出ないようにする。
+                vs = [water.bm.verts.new((q.x, q.y, -0.5 + 0.1 * noise.noise(Vector((q.x * 0.31, q.y * 0.31, 7.0))))) for q in corners]
+                for tri in ((vs[0], vs[1], vs[2]), (vs[0], vs[2], vs[3])):
+                    f = water.bm.faces.new(tri)
+                    f.material_index = water._mi(rng.choice(wm))
+            z += cell
+        x += cell
+
+    # Mountains: 道は起伏のある尾根道。平らな地面の上にかぶせる。
+    mx0, mx1, mz0, mz1, mc = -60.0, 250.0, -44.0, 250.0, 4.0
+    cols, rows = int((mx1 - mx0) / mc), int((mz1 - mz0) / mc)
+    heights = [[mountain_height(Vector((mx0 + i * mc, mz0 + j * mc))) for j in range(rows + 1)] for i in range(cols + 1)]
+    mverts = {}
+
+    def mv(i, j):
+        k = (i, j)
+        if k not in mverts:
+            jx = rng.uniform(-0.9, 0.9) if 0 < i < cols and 0 < j < rows else 0.0
+            jz = rng.uniform(-0.9, 0.9) if 0 < i < cols and 0 < j < rows else 0.0
+            mverts[k] = mountains.bm.verts.new((mx0 + i * mc + jx, mz0 + j * mc + jz, heights[i][j]))
+        return mverts[k]
+
+    def mountain_mat(t):
+        cx = sum(v.co.x for v in t) / 3
+        cy = sum(v.co.y for v in t) / 3
+        hi = max(v.co.z for v in t)
+        lo = min(v.co.z for v in t)
+        n = (t[1].co - t[0].co).cross(t[2].co - t[0].co)
+        steep = 1.0 - abs(n.z) / max(n.length, 1e-5)
+        if line_dist(Vector((cx, cy)), MOUNTAIN_ROAD)[0] < 3.8 and steep < 0.12:
+            return P["dirt"]
+        if hi > 62:
+            return P["snow"]
+        if steep > 0.22 or hi > 38:
+            return P["stone"] if rng.random() < 0.7 else P["stone_dark"]
+        if lo > 16:
+            return P["grass_dry"]
+        return P["grass_c"] if rng.random() < 0.5 else P["grass_a"]
+
+    for i in range(cols):
+        for j in range(rows):
+            cells = [(i, j), (i + 1, j), (i + 1, j + 1), (i, j + 1)]
+            tris = [(0, 1, 2), (0, 2, 3)] if (i + j) % 2 == 0 else [(0, 1, 3), (1, 2, 3)]
+            for tr in tris:
+                ids = [cells[k] for k in tr]
+                if all(heights[a][b] <= 0.02 for a, b in ids):
+                    continue
+                t = [mv(a, b) for a, b in ids]
+                f = mountains.bm.faces.new(t)
+                f.material_index = mountains._mi(mountain_mat(t))
+
+    # 山の中身。地面と山の間に歩ける空間（NavMesh）ができないように埋める。見た目には出さない。
+    fill = 8.0
+    fx = mx0
+    while fx < mx1:
+        fz = mz0
+        while fz < mz1:
+            samples = [mountain_height(Vector((fx + fill * a / 2, fz + fill * b / 2))) for a in range(3) for b in range(3)]
+            top = min(samples) - 1.5
+            if top > 0.8:
+                mountain_fill.box(P["stone"], (fx + fill / 2, fz + fill / 2, (top - 1.0) / 2), (fill + 0.5, fill + 0.5, top + 1.0))
+            fz += fill
+        fx += fill
+
+    # Sky island and the three bridges
+    castle = CASTLE
+    angles = []
+    for start in BRIDGE_STARTS:
+        dirv = (start - castle).normalized()
+        angles.append(math.atan2(dirv.y, dirv.x))
+        build_bridge(bridges, bridge_ropes, rng, start, castle + dirv * (R_ISLAND - BRIDGE_ISLAND_OVERLAP))
+    build_island(bridges, rng, castle, angles)
+
+    def on_bridge(p, margin):
+        for start in BRIDGE_STARTS:
+            if line_dist(p, [start, castle])[0] < BRIDGE_W / 2 + margin:
+                return True
+        return False
+
+    # Invisible walls: 深い川の両岸、海岸（橋の下だけ開ける）、地図の外周。
+    for width, pts in DEEP:
+        for sign in (-1, 1):
+            for a, b in zip(pts, pts[1:]):
+                t = (b - a).normalized()
+                n = Vector((-t.y, t.x)) * sign * (width / 2 + 0.5)
+                wall_segment(barrier, P["stone"], a + n, b + n, -1, 6)
+        for a, b in ((pts[0], pts[1]), (pts[-1], pts[-2])):
+            t = (b - a).normalized()
+            n = Vector((-t.y, t.x)) * (width / 2 + 1)
+            wall_segment(barrier, P["stone"], a - n, a + n, -1, 6)
+    shore = SHORE[1:-1]
+    for a, b in zip(shore, shore[1:]):
+        n = max(1, int((b - a).length / 3.0))
+        for i in range(n):
+            q0, q1 = a + (b - a) * (i / n), a + (b - a) * ((i + 1) / n)
+            if on_bridge((q0 + q1) / 2, 0.2):
+                continue
+            wall_segment(barrier, P["stone"], q0, q1, -1, 6, extend=0.3)
+    for a, b in (((-HALF, -HALF), (shore[0].x, -HALF)), ((-HALF, -HALF), (-HALF, HALF)), ((-HALF, HALF), (HALF, HALF)), ((HALF, HALF), (HALF, shore[-1].y))):
+        wall_segment(barrier, P["stone"], Vector(a), Vector(b), -1, 130, thick=2.0)
+
     def blocked(p, extra=0.0):
-        if (p - TOWN).length < 17 + extra or (p - CASTLE).length < 23 + extra:
+        if (p - TOWN).length < 22 + extra:
             return True
-        if on_path(p.x, p.y, 0.8 + extra) or near_spawner(p, 6 + extra):
+        if is_sea(p) or shore_dist(p) < 6 + extra or deep_gap(p) < 3 + extra or shallow_gap(p) < 1.5 + extra:
             return True
-        if abs(p.x) < WALL_HALF_LEN + 1.5 and any(abs(p.y - wy) < 1.8 + extra for wy in WALLS_Y):
+        if on_path(p.x, p.y, 0.8 + extra) or near_spawner(p, 8 + extra):
             return True
         for rx, rz, sx, sy, sz in ROCKS:
             if abs(p.x - rx) < sx / 2 + 1.5 + extra and abs(p.y - rz) < sz / 2 + 1.5 + extra:
@@ -310,11 +751,19 @@ def build_field():
     def rand_point(margin=2.0):
         return Vector((rng.uniform(-w / 2 + margin, w / 2 - margin), rng.uniform(-d / 2 + margin, d / 2 - margin)))
 
+    def on_mountain(p):
+        return p.x > -60 and p.y > -44 and mountain_height(p) > 0.02
+
+    def meadow(p):
+        return not in_desert(p) and not in_forest(p) and not on_mountain(p)
+
     # Grass tufts
     placed = 0
-    while placed < 2400:
+    while placed < 8000:
         p = rand_point()
-        if blocked(p):
+        if blocked(p) or in_desert(p) or on_mountain(p):
+            continue
+        if in_forest(p) and rng.random() < 0.7:
             continue
         placed += 1
         z = ground_height(p.x, p.y, rng) - 0.05
@@ -325,9 +774,9 @@ def build_field():
 
     # Flowers, in loose clusters
     flower_mats = [P["flower_w"], P["flower_y"], P["flower_p"], P["flower_b"]]
-    for _ in range(70):
+    for _ in range(170):
         c = rand_point()
-        if blocked(c):
+        if blocked(c) or not meadow(c):
             continue
         fm = rng.choice(flower_mats)
         for _ in range(rng.randint(4, 9)):
@@ -340,73 +789,140 @@ def build_field():
             decor.ico(fm, (p.x, p.y, z + sh), 0.09, sub=0, rotz=rng.random() * 6)
 
     # Small stones and bushes
-    for _ in range(90):
+    for _ in range(260):
         p = rand_point()
-        if blocked(p):
+        if blocked(p) or on_mountain(p):
             continue
         s = rng.uniform(0.2, 0.55)
         decor.ico(P["stone"], (p.x, p.y, -0.05), s, sub=0, scale=(1, 1, 0.6), jitter=s * 0.25, rotz=rng.random() * 6)
-    for _ in range(45):
+    for _ in range(170):
         p = rand_point()
-        if blocked(p, 1.0):
+        if blocked(p, 1.0) or in_desert(p) or on_mountain(p):
             continue
         s = rng.uniform(0.6, 1.0)
         leaf = P["leaf_a"] if rng.random() < 0.5 else P["leaf_b"]
         decor.ico(leaf, (p.x, p.y, 0.25 * s), 0.9 * s, sub=1, scale=(1.2, 1, 0.75), jitter=0.12 * s)
 
-    # Trees: map border bands and a few groves away from the lanes
-    def place_trees(count, xr, yr, scale_r=(0.9, 1.3)):
-        n = 0
-        tries = 0
-        while n < count and tries < count * 30:
-            tries += 1
-            p = Vector((rng.uniform(*xr), rng.uniform(*yr)))
-            if blocked(p, 2.0):
-                continue
-            tree(trees, rng, p.x, p.y, rng.uniform(*scale_r))
-            n += 1
-
-    place_trees(22, (-96, 96), (47, 58))
-    place_trees(22, (-96, 96), (-58, -47))
-    place_trees(6, (-96, -88), (-40, 40))
-    place_trees(4, (88, 97), (-40, 40), (0.8, 1.0))
-    place_trees(5, (-70, -50), (24, 42))
-    place_trees(5, (-70, -50), (-42, -24))
-    place_trees(4, (10, 30), (24, 36))
-    place_trees(4, (10, 30), (-36, -24))
-    for _ in range(10):
-        a = rng.random() * math.tau
-        r = rng.uniform(24, 32)
-        p = CASTLE + Vector((math.cos(a) * r, math.sin(a) * r))
-        if abs(p.y) < 4 or abs(p.x) > 98 or abs(p.y) > 58:
+    # Meadow trees
+    placed = tries = 0
+    while placed < 110 and tries < 4000:
+        tries += 1
+        p = rand_point(3.0)
+        if blocked(p, 2.0) or not meadow(p) or (p - TOWN).length < 30:
             continue
-        dead_tree(trees, rng, p.x, p.y, rng.uniform(0.9, 1.2))
+        add_tree(trees, p.x, p.y, rng.uniform(0.9, 1.3))
+        placed += 1
 
-    # Low hills just outside the play area so the edge is not a hard line
-    for _ in range(46):
+    # Forest: 太い幹が魔法を遮る。地面は平らなので歩きやすい。
+    cell_size = 5.5
+    used = {}
+    forest_count = 0
+    for _ in range(26000):
+        p = rand_point(3.0)
+        if not in_forest(p) or blocked(p, 1.5) or road_dist(p) < 5.5:
+            continue
+        key = (int(p.x // cell_size), int(p.y // cell_size))
+        near = False
+        for ox in (-1, 0, 1):
+            for oy in (-1, 0, 1):
+                q = used.get((key[0] + ox, key[1] + oy))
+                if q is not None and (q - p).length < cell_size:
+                    near = True
+        if near:
+            continue
+        used[key] = p
+        add_tree(trees, p.x, p.y, rng.uniform(1.6, 2.3), "pine" if rng.random() < 0.55 else "round")
+        forest_count += 1
+    print("FOREST_TREES", forest_count)
+
+    # Mountain pines: まばらなので見通しが良い。
+    placed = tries = 0
+    while placed < 45 and tries < 3000:
+        tries += 1
+        p = Vector((rng.uniform(-40, 245), rng.uniform(-30, 245)))
+        h = mountain_height(p)
+        if h < 3 or h > 32 or line_dist(p, MOUNTAIN_ROAD)[0] < 9 or blocked(p):
+            continue
+        add_tree(trees, p.x, p.y, rng.uniform(0.8, 1.1), "pine", h - 0.2)
+        placed += 1
+
+    # Road markers: どこを歩けばいいか分かるように、道の両脇に目印を立てる。
+    for name, pts in ROADS.items():
+        total = line_length(pts)
+        s = 16.0
+        side = 1
+        while s < total - 6:
+            remain = s
+            for a, b in zip(pts, pts[1:]):
+                l = (b - a).length
+                if remain <= l:
+                    t = (b - a).normalized()
+                    q = a + (b - a) * (remain / l) + Vector((-t.y, t.x)) * side * 4.6
+                    break
+                remain -= l
+            side = -side
+            s += 13.0 if name == "mountain" else 19.0
+            if shallow_gap(q) < 1.5 or deep_gap(q) < 2 or is_sea(q):
+                continue
+            z = terrain_y(q)
+            if name == "desert":
+                decor.ico(P["stone"], (q.x, q.y, z + 0.15), 0.42, sub=0, scale=(1, 1, 0.8), jitter=0.06)
+                decor.ico(P["stone_dark"], (q.x, q.y, z + 0.62), 0.28, sub=0, jitter=0.04)
+            else:
+                decor.cyl(P["wood"], (q.x, q.y, z - 0.1), 0.09, 1.5, n=5)
+                decor.box(P["wood_dark"], (q.x, q.y, z + 1.32), (0.75, 0.1, 0.24), rotz=rng.random() * 6)
+                if name == "forest":
+                    decor.ico(P["lamp"], (q.x, q.y, z + 1.62), 0.16, sub=0)
+
+    # Desert
+    def cactus(x, y):
+        h = rng.uniform(1.6, 3.0)
+        decor.cyl(P["cactus"], (x, y, -0.1), 0.22, h, n=6, r2=0.17, jitter=0.02)
+        for sgn in (-1, 1):
+            if rng.random() < 0.75:
+                az = rng.random() * 6
+                ax, ay = math.cos(az) * sgn, math.sin(az) * sgn
+                z = h * rng.uniform(0.4, 0.6)
+                decor.box(P["cactus"], (x + ax * 0.32, y + ay * 0.32, z), (0.6, 0.2, 0.2), rotz=az)
+                decor.cyl(P["cactus"], (x + ax * 0.6, y + ay * 0.6, z - 0.1), 0.12, rng.uniform(0.6, 1.0), n=5, r2=0.09)
+
+    def in_desert_clear(p, margin=2.0):
+        return in_desert(p) and not blocked(p, margin)
+
+    placed = tries = 0
+    while placed < 90 and tries < 4000:
+        tries += 1
+        p = Vector((rng.uniform(-90, 80), rng.uniform(-60, 95)))
+        if in_desert_clear(p):
+            cactus(p.x, p.y)
+            placed += 1
+    placed = tries = 0
+    while placed < 60 and tries < 3000:
+        tries += 1
+        p = Vector((rng.uniform(-90, 80), rng.uniform(-60, 95)))
+        if not in_desert_clear(p):
+            continue
+        r = rng.uniform(4, 11)
+        decor.ico(rng.choice([P["sand_b"], P["sand_c"]]), (p.x, p.y, -0.04), r, sub=1, scale=(1.3, 0.8, 0.045), jitter=0.03 * r, rotz=rng.random() * 6)
+        placed += 1
+    for _ in range(14):
+        p = Vector((rng.uniform(-80, 70), rng.uniform(-50, 85)))
+        if in_desert_clear(p):
+            for k in range(4):
+                decor.box(P["bone"], (p.x + k * 0.5 - 0.8, p.y + rng.uniform(-0.2, 0.2), 0.06), (0.1, 1.2, 0.08), rotz=rng.uniform(-0.3, 0.3))
+
+    # Low hills just outside the map so the edge is not a hard line
+    for _ in range(110):
         side = rng.randint(0, 3)
         if side < 2:
-            p = Vector((rng.uniform(-120, 120), (66 if side == 0 else -66) + rng.uniform(-3, 6) * (1 if side == 0 else -1)))
+            p = Vector((rng.uniform(-300, 300), (HALF + 18 if side == 0 else -HALF - 18) + rng.uniform(-3, 12) * (1 if side == 0 else -1)))
         else:
-            p = Vector(((108 if side == 2 else -108) + rng.uniform(-3, 6) * (1 if side == 2 else -1), rng.uniform(-70, 70)))
-        r = rng.uniform(8, 16)
+            p = Vector(((HALF + 18 if side == 2 else -HALF - 18) + rng.uniform(-3, 12) * (1 if side == 2 else -1), rng.uniform(-300, 300)))
+        if is_sea(p) or shore_dist(p) < 30:
+            continue
+        r = rng.uniform(12, 26)
         leaf = rng.choice([P["grass_a"], P["grass_c"], P["leaf_pine"]])
         decor.ico(leaf, (p.x, p.y, -r * 0.45), r, sub=1, scale=(1.3, 1.0, 0.6), jitter=r * 0.08, rotz=rng.random() * 6)
-
-    # Lane walls -> field-stone walls on the existing 80 x 4 x 1 colliders
-    for wy in WALLS_Y:
-        x = -WALL_HALF_LEN
-        while x < WALL_HALF_LEN - 0.1:
-            seg = min(rng.uniform(1.8, 2.8), WALL_HALF_LEN - x)
-            cx = x + seg / 2
-            walls.box(P["stone"], (cx, wy, 0.95), (seg - 0.05, 1.25, 1.9), jitter=0.07)
-            walls.box(P["stone_dark"] if rng.random() < 0.3 else P["stone"],
-                      (cx + rng.uniform(-0.3, 0.3), wy, 2.85), (seg * 0.95, 1.15, 1.9), jitter=0.07)
-            walls.box(P["moss"], (cx, wy, 3.9), (seg * 0.98, 1.2, 0.25), jitter=0.04)
-            x += seg
-        for ex in (-WALL_HALF_LEN, WALL_HALF_LEN):
-            walls.cyl(P["stone_dark"], (ex, wy, 0), 0.95, 4.5, n=7, jitter=0.05)
-            walls.cone(P["moss"], (ex, wy, 4.5), 1.0, 0.5, n=7)
 
     # Rocks on the existing box colliders
     for rx, rz, sx, sy, sz in ROCKS:
@@ -417,7 +933,10 @@ def build_field():
         walls.ico(P["moss"], (rx - sx * 0.1, rz + sz * 0.1, sy * 0.78), 0.5, sub=0,
                   scale=(sx * 0.6, sz * 0.55, sy * 0.25), jitter=0.1)
 
-    for g in (ground, decor, trees, walls):
+    ground.force_up = True
+    water.force_up = True
+    mountains.force_up = True
+    for g in (ground, decor, trees, walls, water, mountains, bridges, bridge_ropes, barrier, tree_cols, mountain_fill):
         g.build(root, col)
     add_markers(col, root, 100.0, 60.0)
     return col, root

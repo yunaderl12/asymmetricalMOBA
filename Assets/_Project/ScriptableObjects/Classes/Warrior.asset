@@ -19,7 +19,7 @@ MonoBehaviour:
   initialMAtk: 3
   initialDf: 15
   initialMDf: 5
-  initialSpd: 3.5
+  initialSpd: 7
   hpGrowthPerLevel: 15
   spGrowthPerLevel: 3
   atkGrowthPerLevel: 2
@@ -27,12 +27,15 @@ MonoBehaviour:
   dfGrowthPerLevel: 2
   mDfGrowthPerLevel: 0
   spdGrowthPerLevel: 0
+  slopeSpeedPenalty: 0.45
   classSkills:
   - {fileID: 11400000, guid: 7c40fde44eced4a95bb7a726f66bdedf, type: 2}
   - {fileID: 11400000, guid: 7b3c544d5062b4677bfb825f5ea37ef7, type: 2}
   - {fileID: 11400000, guid: 607725091e58d428286f7bd46defd9e2, type: 2}
   - {fileID: 11400000, guid: 6b76f33f4a2c4464abeb1a85526755ce, type: 2}
-  spCombatRegenRate: 0.025
+  exclusiveFreeSkills: []
+  passives: []
+  spCombatRegenRate: 0.0025
   basicAttackMpCost: 0
   regenMultiplier: 2
   avatarColor: {r: 0.2, g: 0.85, b: 0.3, a: 1}
