@@ -1,0 +1,16 @@
+{
+  "size": 200,
+  "townX": -80, "townZ": 0,
+  "townGateX": -64, "townGateZ": 0,
+  "castleX": 80, "castleZ": 0,
+  "castleHeight": 0,
+  "islandRadius": 0,
+  "shallow": [],
+  "deep": [],
+  "seaShore": [],
+  "seaCorner": [0, 0],
+  "bridgeStarts": [],
+  "biomes": [],
+  "spawners": [],
+  "rocks": []
+}
