@@ -13,6 +13,7 @@ namespace Game.Core
         [SerializeField] private Color flashColor = Color.white;
 
         public bool IsActive { get; set; }
+        public bool IsFlashing => flashing;
 
         private float timer;
         private bool flashing;
@@ -35,7 +36,7 @@ namespace Game.Core
             float prevIntensity = targetLight.intensity;
             targetLight.color = flashColor;
             targetLight.intensity = flashIntensity;
-            yield return new WaitForSeconds(flashDuration);
+            yield return new WaitForSecondsRealtime(flashDuration);
             targetLight.color = prevColor;
             targetLight.intensity = prevIntensity;
             flashing = false;

@@ -154,6 +154,29 @@ namespace Game.Core
         [Tooltip("Keep-out along the outer edge of the field (m).")]
         public float digEdgeMargin = 3f;
 
+        [Header("Storm Sky")]
+        [Tooltip("Radius of the red sky and clouds for each stage, as a share of the castle-to-town distance. 1 = reaches the town.")]
+        public float[] stormStageRadius = { 0.2f, 0.3f, 0.45f, 0.6f, 0.8f, 1.1f };
+        [Tooltip("Demon King levels per stage.")]
+        public int stormLevelsPerStage = 3;
+        [Tooltip("Seconds the radius takes to grow to the next stage.")]
+        public float stormGrowSeconds = 20f;
+        [Tooltip("Height of the bottom of the clouds (m).")]
+        public float stormCloudHeight = 36f;
+        [Tooltip("Rotation speed of the whole swirl (radians per second).")]
+        public float stormSpinSpeed = 0.04f;
+        [Tooltip("Seconds a cloud takes to travel from the outer edge to the center along an arm.")]
+        public float stormInflowSeconds = 900f;
+        [Tooltip("Number of cloud lumps in the whole swirl. Each is 20 triangles.")]
+        public int stormCloudLumps = 2100;
+        [Tooltip("How much longer a lump is along the flow than across it.")]
+        public float stormCloudStretch = 2.2f;
+        public int stormArmCount = 3;
+        [Tooltip("Width of a spiral arm (radians, standard deviation).")]
+        public float stormArmWidth = 0.24f;
+        [Tooltip("Share of lumps scattered outside the arms.")]
+        [Range(0f, 1f)] public float stormScatter = 0.12f;
+
         public static BalanceConfig Instance
         {
             get
