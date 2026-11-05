@@ -52,6 +52,12 @@ CHARS = {
         shoulder=(0.04, -0.01, 0.455), arm=(0.14, 0.45), elbow=(0.235, 0.425), wrist=(0.325, 0.42), tip=(0.44, 0.41),
         items=[dict(src="right", hand="Right", name="Sword", length=2.0, target=2000, up=(0, -0.25, 0.97), front=(-1, 0, 0), grip=0.115, palm=0.45),
                dict(src="left", hand="Left", name="Shield", length=1.25, target=1500, up=UP, front=(0.45, -0.89, 0), grip=0.5, plate=True, upright=True)]),
+    "golem": dict(
+        folder="Golem", fbx="golem.fbx", blend="golem_tripo.blend", prefix="Golem", height=2.8, target=7000, head_z=0.555, sharpen=4,
+        hip_center=(0, 0.03, 0.34), hip=(0.09, 0.03, 0.32), knee=(0.145, 0.0, 0.16), ankle=(0.16, 0.02, 0.055),
+        toe=(0.165, -0.05, 0.02), toe_tip=(0.17, -0.12, 0.015), neck=(0, -0.04, 0.58), head=(0, -0.12, 0.61),
+        shoulder=(0.07, 0.03, 0.63), arm=(0.24, 0.64), elbow=(0.34, 0.47), wrist=(0.38, 0.29), tip=(0.41, 0.11),
+        items=[]),
     "goblin": dict(
         folder="Goblin", fbx="goblin.fbx", blend="goblin_tripo.blend", prefix="Goblin", height=2.8, target=3500, head_z=0.67,
         hip_center=(0, 0.03, 0.37), hip=(0.07, 0.03, 0.345), knee=(0.10, 0.01, 0.19), ankle=(0.11, 0.044, 0.06),
@@ -279,6 +285,12 @@ bpy.ops.object.mode_set(mode="OBJECT")
 # ---------------------------------------------------------------- items
 for name in NAMES:
     body.vertex_groups.new(name=name)
+if CFG.get("sharpen"):
+    # 岩の体は関節のまわりだけで曲げる。腕を大きく上げても、付け根が潰れにくい。
+    W = W ** CFG["sharpen"]
+    W = W / W.sum(axis=1, keepdims=True)
+    W[W < 0.02] = 0.0
+    W = W / W.sum(axis=1, keepdims=True)
 for i, row in enumerate(W):
     for j in np.nonzero(row)[0]:
         body.vertex_groups[NAMES[j]].add([i], float(row[j]), "REPLACE")
