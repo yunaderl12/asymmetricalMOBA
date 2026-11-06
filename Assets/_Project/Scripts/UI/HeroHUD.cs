@@ -52,12 +52,20 @@ namespace Game.UI
             if (mana != null) mana.OnMPChanged += OnMPChanged;
             if (level != null) level.OnLevelChanged += OnLevelChanged;
             if (exp != null) exp.OnExpChanged += OnExpChanged;
-            if (runtime != null)
-            {
-                var canvas = GetComponentInParent<Canvas>();
-                if (canvas != null) SkillCardRow.Create(canvas.rootCanvas.transform, hpText != null ? hpText.font : null, runtime);
-            }
+            // 見た目は HeroStatusHud と SkillCardRow（布と紙のHUD）が出す。シーンに置いた古いバーと文字、味方一覧は隠す。照準は残す。
+            HideLegacyChildren();
+            HeroStatusHud.Create(hero);
+            if (runtime != null) SkillCardRow.Create(runtime);
             UpdateAll();
+        }
+
+        private void HideLegacyChildren()
+        {
+            foreach (Transform child in transform)
+            {
+                if (child.GetComponent<CrosshairUI>() != null) continue;
+                child.gameObject.SetActive(false);
+            }
         }
 
         private void OnDestroy()

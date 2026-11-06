@@ -14,6 +14,8 @@ namespace Game.Core
         public int CurrentLevel => currentLevel;
         public int MaxLevel => maxLevel;
         public bool IsMaxLevel => currentLevel >= maxLevel;
+        /// 時間で上がるときの1レベルあたりの秒数。魔王のHUDで次のレベルまでの時間を出すのに使う。
+        public float SecondsPerLevel => autoLevelUpByTime ? secondsPerLevel : 0f;
 
         public event Action<int> OnLevelChanged;
 

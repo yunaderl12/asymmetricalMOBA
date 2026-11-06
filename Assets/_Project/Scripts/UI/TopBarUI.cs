@@ -21,6 +21,10 @@ namespace Game.UI
 
         private void Start()
         {
+            // 戦況は MatchStatusHud（時計・まちとコアのHP）が出す。シーンに置いた古い帯は隠す。
+            MatchStatusHud.Create(HudStyle.CurrentTheme);
+            foreach (Transform child in transform) child.gameObject.SetActive(false);
+
             HealthBarGraphic.Adopt(startTownFill);
             HealthBarGraphic.Adopt(demonKingFill);
             BindStartTown();

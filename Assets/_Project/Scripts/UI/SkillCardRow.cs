@@ -1,163 +1,125 @@
 using UnityEngine;
 using UnityEngine.UI;
+using Game.Combat;
 using Game.Skill;
 
 namespace Game.UI
 {
-    /// 試合中のスキル表示。縦長のカードを並べ、左上にレベル、中央にイラスト、下部に名前を出す。
-    /// 選択中のカードは浮き上がる。クールダウン中はグレーの幕が下がっていく。コードだけで組み立てる。
+    /// 試合中のスキル表示。紙のカードを5枚、少し傾けてテープで貼ったように並べる。
+    /// 左上にキー番号、右上にLv、中央にイラスト、下に名前と消費SP。選択中は浮き上がって金の縁がつき、まっすぐになる。
+    /// クールダウン中はグレーの幕が下がっていき、残り秒を出す。SPが足りないときはイラストを灰色にして消費SPを赤くする。
     public class SkillCardRow : MonoBehaviour
     {
-        private const float CardWidth = 100f;
-        private const float CardHeight = 150f;
+        private const float CardWidth = 118f;
+        private const float CardHeight = 168f;
         private const float CardGap = 10f;
-        private const float Margin = 24f;
-        private const float SelectedLift = 16f;
-        private const float SelectedScale = 1.12f;
+        private const float Margin = 40f;
+        private const float SelectedLift = 26f;
+        private const float SelectedScale = 1.06f;
+        private const float Tilt = 1.3f;
         private const float HoverSharpness = 16f;
-        private const float BorderSize = 3f;
-        private const float GlowSize = 9f;
 
-        private static readonly Color BodyTop = new Color(0.2f, 0.22f, 0.3f, 0.96f);
-        private static readonly Color BodyBottom = new Color(0.07f, 0.08f, 0.12f, 0.96f);
-        private static readonly Color BorderNormal = new Color(0.32f, 0.34f, 0.42f, 1f);
-        private static readonly Color BorderSelected = new Color(1f, 0.82f, 0.3f, 1f);
-        private static readonly Color GlowSelected = new Color(1f, 0.75f, 0.2f, 0.4f);
-        private static readonly Color Shade = new Color(0.16f, 0.16f, 0.18f, 0.74f);
-        private static readonly Color ChipColor = new Color(0f, 0f, 0f, 0.6f);
-        private static readonly Color NameNormal = new Color(0.85f, 0.87f, 0.92f, 1f);
-        private static readonly Color CostColor = new Color(0.55f, 0.8f, 1f, 1f);
+        private static readonly Color Shade = new Color(0.12f, 0.08f, 0.2f, 0.72f);
+        private static readonly Color IconOff = new Color(0.55f, 0.55f, 0.6f, 0.45f);
+        private static readonly Color[] Tapes =
+        {
+            new Color(0.35f, 0.75f, 0.75f, 0.8f),
+            new Color(0.91f, 0.36f, 0.47f, 0.8f),
+            new Color(0.96f, 0.72f, 0.16f, 0.8f),
+            new Color(0.47f, 0.47f, 0.86f, 0.8f),
+            new Color(0.35f, 0.75f, 0.75f, 0.8f),
+        };
 
         private class Card
         {
             public RectTransform Root;
-            public RoundedCardGraphic Glow, Border;
-            public DiamondGraphic Icon;
+            public HudShape Gold;
+            public Image Icon;
+            public HudShape IconFallback;
             public Text Level, Name, Cost, Cooldown;
+            public HudShape CostPill;
             public RectTransform ShadeRect;
             public SkillData Shown;
             public int ShownLevel = -1;
+            public bool ShownShort;
             public float Hover;
             public float BaseX;
+            public float RestTilt;
         }
 
+        private readonly HudStyle.Palette pal = HudStyle.HeroPalette;
         private SkillRuntime runtime;
+        private ManaComponent mana;
         private Card[] cards;
         private int lastSelected = -1;
 
-        public static SkillCardRow Create(Transform canvas, Font font, SkillRuntime runtime)
+        public static SkillCardRow Create(SkillRuntime runtime)
         {
-            var go = new GameObject("SkillCards", typeof(RectTransform));
-            go.transform.SetParent(canvas, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 0f);
+            var canvas = HudStyle.Canvas.transform;
             int count = SkillRuntime.SLOT_COUNT;
-            rt.sizeDelta = new Vector2(count * CardWidth + (count - 1) * CardGap, CardHeight);
-            rt.anchoredPosition = new Vector2(-Margin, Margin);
+            float width = count * CardWidth + (count - 1) * CardGap;
+            var rt = HudStyle.Place(canvas, "SkillCards", new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-Margin, Margin), new Vector2(width, CardHeight));
 
-            var row = go.AddComponent<SkillCardRow>();
+            var row = rt.gameObject.AddComponent<SkillCardRow>();
             row.runtime = runtime;
+            row.mana = runtime.GetComponent<ManaComponent>();
             row.cards = new Card[count];
-            for (int i = 0; i < count; i++) row.cards[i] = row.BuildCard(i, font);
+            for (int i = 0; i < count; i++) row.cards[i] = row.BuildCard(i);
+
+            HudStyle.Label(rt, "WheelHint", new Vector2(0f, 1f), Vector2.zero, new Vector2(0f, 40f), new Vector2(300f, 30f),
+                "SHIFT スキルホイール", 21, Color.white, TextAnchor.LowerLeft, 4f, row.pal.Outline);
             return row;
         }
 
-        private Card BuildCard(int index, Font font)
+        private Card BuildCard(int index)
         {
             var card = new Card();
-            var root = new GameObject("Card_" + index, typeof(RectTransform));
-            root.transform.SetParent(transform, false);
-            card.Root = (RectTransform)root.transform;
-            card.Root.anchorMin = card.Root.anchorMax = Vector2.zero;
-            // 下辺の中央を軸にして、選択時に上へ向かって大きくする。
-            card.Root.pivot = new Vector2(0.5f, 0f);
-            card.Root.sizeDelta = new Vector2(CardWidth, CardHeight);
+            card.Root = HudStyle.Place(transform, "Card_" + index, Vector2.zero, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(CardWidth, CardHeight));
             card.BaseX = index * (CardWidth + CardGap) + CardWidth * 0.5f;
+            card.RestTilt = index % 2 == 0 ? Tilt : -Tilt;
             card.Root.anchoredPosition = new Vector2(card.BaseX, 0f);
 
-            card.Glow = MakeCard(card.Root, "Glow", GlowSize, 14f + GlowSize);
-            card.Border = MakeCard(card.Root, "Border", BorderSize, 12f);
-            var body = MakeCard(card.Root, "Body", 0f, 10f);
-            body.color = Color.white;
-            body.topTint = BodyTop;
-            body.bottomTint = BodyBottom;
+            card.Gold = HudStyle.Shape(card.Root, "Gold", HudShape.Kind.RoundRect, HudStyle.Gold, 15f);
+            HudStyle.Stretch(card.Gold.rectTransform, 5f);
+            HudStyle.Paper(card.Root, pal, HudShape.Kind.RoundRect, 10f);
 
-            var icon = new GameObject("Icon", typeof(RectTransform), typeof(CanvasRenderer));
-            icon.transform.SetParent(card.Root, false);
-            var iconRt = (RectTransform)icon.transform;
-            iconRt.anchorMin = iconRt.anchorMax = iconRt.pivot = new Vector2(0.5f, 0.5f);
-            iconRt.sizeDelta = new Vector2(78f, 82f);
-            iconRt.anchoredPosition = new Vector2(0f, 8f);
-            card.Icon = icon.AddComponent<DiamondGraphic>();
-            card.Icon.raycastTarget = false;
+            var top = new Vector2(0.5f, 1f);
+            var topLeft = new Vector2(0f, 1f);
+            var tape = HudStyle.Place(card.Root, "Tape", top, top, new Vector2(0f, 9f), new Vector2(40f, 18f));
+            tape.localEulerAngles = new Vector3(0f, 0f, 4f);
+            HudStyle.Shape(tape, "Tape", HudShape.Kind.RoundRect, Tapes[index % Tapes.Length], 0f);
 
-            var strip = MakeCard(card.Root, "NameStrip", 0f, 10f);
-            strip.color = ChipColor;
-            var stripRt = strip.rectTransform;
-            stripRt.anchorMin = Vector2.zero;
-            stripRt.anchorMax = new Vector2(1f, 0f);
-            stripRt.offsetMin = Vector2.zero;
-            stripRt.offsetMax = new Vector2(0f, 36f);
-            card.Name = MakeText(stripRt, font, "Name", 15, FontStyle.Bold, TextAnchor.MiddleCenter, NameNormal);
-            card.Name.rectTransform.offsetMin = new Vector2(4f, 12f);
-            card.Name.rectTransform.offsetMax = new Vector2(-4f, 0f);
+            var icon = HudStyle.Place(card.Root, "Icon", top, top, new Vector2(0f, -22f), new Vector2(76f, 76f));
+            card.IconFallback = HudStyle.Shape(icon, "Fallback", HudShape.Kind.Circle, Color.gray);
+            var iconImage = HudStyle.AddGraphic<Image>(HudStyle.Filled(icon, "Image"));
+            iconImage.preserveAspect = true;
+            iconImage.raycastTarget = false;
+            card.Icon = iconImage;
+
+            card.Level = HudStyle.Label(card.Root, "Level", Vector2.one, Vector2.one, new Vector2(-7f, -4f), new Vector2(60f, 24f), "", 17, HudStyle.Brown, TextAnchor.MiddleRight);
+            card.Name = HudStyle.Label(card.Root, "Name", top, top, new Vector2(0f, -100f), new Vector2(CardWidth - 8f, 30f), "", 22, pal.Ink, TextAnchor.MiddleCenter);
+            card.Name.horizontalOverflow = HorizontalWrapMode.Wrap;
             card.Name.resizeTextForBestFit = true;
-            card.Name.resizeTextMinSize = 10;
-            card.Name.resizeTextMaxSize = 15;
-            card.Cost = MakeText(stripRt, font, "Cost", 11, FontStyle.Normal, TextAnchor.LowerCenter, CostColor);
-            card.Cost.rectTransform.offsetMin = new Vector2(4f, 1f);
-            card.Cost.rectTransform.offsetMax = new Vector2(-4f, -22f);
+            card.Name.resizeTextMinSize = 14;
+            card.Name.resizeTextMaxSize = 22;
 
-            var chip = MakeCard(card.Root, "LevelChip", 0f, 6f);
-            chip.color = ChipColor;
-            var chipRt = chip.rectTransform;
-            chipRt.anchorMin = chipRt.anchorMax = chipRt.pivot = new Vector2(0f, 1f);
-            chipRt.sizeDelta = new Vector2(46f, 20f);
-            chipRt.anchoredPosition = new Vector2(5f, -5f);
-            card.Level = MakeText(chipRt, font, "Level", 12, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.45f, 1f));
+            var pill = HudStyle.Place(card.Root, "Cost", top, top, new Vector2(0f, -134f), new Vector2(76f, 24f));
+            card.CostPill = HudStyle.Shape(pill, "Pill", HudShape.Kind.RoundRect, HudStyle.CostPill, 12f);
+            card.Cost = HudStyle.AddText(HudStyle.Filled(pill, "Text"), "", 17, HudStyle.CostText, TextAnchor.MiddleCenter);
+
+            // キー番号の札。カードの左上からはみ出させる。
+            var key = HudStyle.Place(card.Root, "Key", topLeft, topLeft, new Vector2(-8f, 8f), new Vector2(38f, 38f));
+            HudStyle.Shape(key, "Felt", HudShape.Kind.RoundRect, pal.Felt, 10f, HudStyle.FeltTexture);
+            HudStyle.AddText(HudStyle.Filled(key, "Text"), (index + 1).ToString(), 22, Color.white, TextAnchor.MiddleCenter);
 
             // 最前面の幕。カードの下辺から伸び、残り時間に合わせて縮む。
-            var shade = MakeCard(card.Root, "Cooldown", 0f, 10f);
-            shade.color = Shade;
+            var shade = HudStyle.Shape(card.Root, "Cooldown", HudShape.Kind.RoundRect, Shade, 10f);
             card.ShadeRect = shade.rectTransform;
             card.ShadeRect.gameObject.SetActive(false);
-            card.Cooldown = MakeText(card.Root, font, "CooldownText", 30, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
-            card.Cooldown.gameObject.AddComponent<Outline>().effectColor = new Color(0f, 0f, 0f, 0.8f);
+            card.Cooldown = HudStyle.Label(card.Root, "CooldownText", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 14f), new Vector2(CardWidth, 60f),
+                "", 44, Color.white, TextAnchor.MiddleCenter, 5f, pal.Outline);
             card.Cooldown.gameObject.SetActive(false);
             return card;
-        }
-
-        private static RoundedCardGraphic MakeCard(RectTransform parent, string name, float outset, float radius)
-        {
-            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer));
-            go.transform.SetParent(parent, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = new Vector2(-outset, -outset);
-            rt.offsetMax = new Vector2(outset, outset);
-            var g = go.AddComponent<RoundedCardGraphic>();
-            g.cornerRadius = radius;
-            g.raycastTarget = false;
-            return g;
-        }
-
-        private static Text MakeText(RectTransform parent, Font font, string name, int size, FontStyle style, TextAnchor anchor, Color color)
-        {
-            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-            go.transform.SetParent(parent, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = rt.offsetMax = Vector2.zero;
-            var t = go.GetComponent<Text>();
-            t.font = font;
-            t.fontSize = size;
-            t.fontStyle = style;
-            t.alignment = anchor;
-            t.color = color;
-            t.raycastTarget = false;
-            return t;
         }
 
         // スキルの装備は試合開始の前後で変わるので、毎フレーム見比べて変わったカードだけ更新する。
@@ -171,7 +133,8 @@ namespace Game.UI
                 var skill = runtime.EquippedSkills.Count > i ? runtime.EquippedSkills[i] : null;
                 RefreshContent(cards[i], skill, i);
                 UpdateHover(cards[i], i == selected, blend);
-                UpdateCooldown(cards[i], skill, i);
+                bool cooling = UpdateCooldown(cards[i], skill, i);
+                UpdateAffordable(cards[i], skill, cooling);
             }
             // 選択中のカードは隣より手前に描く。
             if (selected != lastSelected && selected >= 0 && selected < cards.Length)
@@ -187,20 +150,28 @@ namespace Game.UI
             if (card.Shown == skill && card.ShownLevel == level) return;
             card.Shown = skill;
             card.ShownLevel = level;
+            card.ShownShort = false;
 
-            card.Icon.enabled = skill != null;
-            SkillIconView.Set(card.Icon.rectTransform, skill);
+            bool hasIcon = skill != null && skill.icon != null;
+            card.Icon.enabled = hasIcon;
+            card.Icon.sprite = hasIcon ? skill.icon : null;
+            card.Icon.color = Color.white;
+            card.IconFallback.enabled = skill != null && !hasIcon;
             if (skill == null)
             {
                 card.Name.text = "-";
                 card.Cost.text = "";
+                card.CostPill.enabled = false;
                 card.Level.text = "";
                 return;
             }
-            card.Icon.color = skill.EffectiveIconColor();
-            card.Name.text = skill.skillName;
+            card.IconFallback.color = skill.EffectiveIconColor();
+            card.Name.text = skill.DisplayName;
             card.Cost.text = "SP " + skill.spCost;
-            card.Level.text = level >= skill.maxSkillLevel ? "MAX" : "Lv " + level;
+            card.CostPill.enabled = true;
+            card.CostPill.color = HudStyle.CostPill;
+            card.Cost.color = HudStyle.CostText;
+            card.Level.text = level >= skill.maxSkillLevel ? "MAX" : "Lv" + level;
         }
 
         private static void UpdateHover(Card card, bool selected, float blend)
@@ -208,22 +179,34 @@ namespace Game.UI
             card.Hover = Mathf.Lerp(card.Hover, selected ? 1f : 0f, blend);
             card.Root.anchoredPosition = new Vector2(card.BaseX, SelectedLift * card.Hover);
             card.Root.localScale = Vector3.one * Mathf.Lerp(1f, SelectedScale, card.Hover);
-            card.Border.color = Color.Lerp(BorderNormal, BorderSelected, card.Hover);
-            var glow = GlowSelected;
-            glow.a *= card.Hover;
-            card.Glow.color = glow;
+            card.Root.localEulerAngles = new Vector3(0f, 0f, card.RestTilt * (1f - card.Hover));
+            var gold = HudStyle.Gold;
+            gold.a = card.Hover;
+            card.Gold.color = gold;
         }
 
-        private void UpdateCooldown(Card card, SkillData skill, int index)
+        private bool UpdateCooldown(Card card, SkillData skill, int index)
         {
             float remaining = skill != null ? runtime.GetCooldownRemaining(index) : 0f;
             bool cooling = remaining > 0f;
             if (card.ShadeRect.gameObject.activeSelf != cooling) card.ShadeRect.gameObject.SetActive(cooling);
             if (card.Cooldown.gameObject.activeSelf != cooling) card.Cooldown.gameObject.SetActive(cooling);
-            if (!cooling) return;
+            if (!cooling) return false;
             float ratio = skill.cooldown > 0f ? Mathf.Clamp01(remaining / skill.cooldown) : 0f;
             card.ShadeRect.anchorMax = new Vector2(1f, ratio);
-            card.Cooldown.text = remaining.ToString("F1");
+            card.Cooldown.text = remaining >= 10f ? Mathf.CeilToInt(remaining).ToString() : remaining.ToString("F1");
+            return true;
+        }
+
+        /// SPが足りないカード。クールダウン中は幕で十分なので変えない。
+        private void UpdateAffordable(Card card, SkillData skill, bool cooling)
+        {
+            bool shortOfSp = skill != null && !cooling && mana != null && mana.CurrentMP < skill.spCost;
+            if (shortOfSp == card.ShownShort) return;
+            card.ShownShort = shortOfSp;
+            card.Icon.color = shortOfSp ? IconOff : Color.white;
+            card.CostPill.color = shortOfSp ? HudStyle.Danger : HudStyle.CostPill;
+            card.Cost.color = shortOfSp ? Color.white : HudStyle.CostText;
         }
     }
 }

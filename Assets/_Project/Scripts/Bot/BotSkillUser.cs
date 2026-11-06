@@ -33,6 +33,8 @@ namespace Game.Bot
         private float nextRegen;
 
         public bool IsCasting => executor != null && executor.IsBusy;
+        /// このBOTのクラス。HUDの味方一覧で肖像とクラス名を出すのに使う。
+        public HeroClassData ClassData => classData;
 
         public void Init(BotHero owner, HeroClassData data, SkillData freeSlotSkill)
         {

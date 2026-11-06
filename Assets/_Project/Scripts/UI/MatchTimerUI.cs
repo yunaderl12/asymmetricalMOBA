@@ -56,6 +56,10 @@ namespace Game.UI
             var m = MatchManager.Instance;
             bool inPrep = m.CurrentState == MatchManager.MatchState.DemonPrepPhase;
             if (prepHintRoot != null && prepHintRoot.activeSelf != inPrep) prepHintRoot.SetActive(inPrep);
+            // 残り時間は MatchStatusHud の丸い時計が出すので、こちらの文字は隠す。
+            bool replaced = MatchStatusHud.Instance != null;
+            if (timerText.gameObject.activeSelf == replaced) timerText.gameObject.SetActive(!replaced);
+            if (replaced) return;
             switch (m.CurrentState)
             {
                 case MatchManager.MatchState.WaitingForStart:
