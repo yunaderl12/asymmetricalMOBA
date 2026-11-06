@@ -30,6 +30,9 @@ namespace Game.DemonKing
         /// 0..1, fraction of maxDebuff currently applied.
         public float Stack { get; private set; }
         public float CurrentDebuff => maxDebuff * Stack;
+        /// 城外にいてMPが減っている最中か（Lv が上がって城外の罰がなくなったら false）。HUDの表示用。
+        public bool IsDraining => currentlyDebuffed;
+        public int MpDrainPerSecond => mpDrainPerSecond;
         private int appliedPercent = -1;
 
         private void Start()

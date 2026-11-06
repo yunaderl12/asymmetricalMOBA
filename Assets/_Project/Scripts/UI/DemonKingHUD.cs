@@ -29,6 +29,13 @@ namespace Game.UI
                 Debug.LogWarning($"[DemonKingHUD] no GO with tag '{targetTag}'");
                 return;
             }
+            // 人間が魔王のときは DemonKingStatusHud（布と紙のHUD）が出す。シーンに置いた古いバーと文字は隠す。
+            if (GameSession.Instance != null && GameSession.Instance.CurrentRole == GameSession.PlayerRole.DemonKing)
+            {
+                foreach (Transform child in transform) child.gameObject.SetActive(false);
+                DemonKingStatusHud.Create(go);
+            }
+
             health = go.GetComponent<HealthComponent>();
             mana = go.GetComponent<ManaComponent>();
             level = go.GetComponent<LevelComponent>();
