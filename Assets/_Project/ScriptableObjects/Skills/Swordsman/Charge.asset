@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Charge
   m_EditorClassIdentifier: 
   skillName: Charge
+  displayName: "\u7A81\u9032"
   description: Dash forward and slam the first enemy in your way.
   spCost: 20
   cooldown: 8
@@ -27,14 +28,22 @@ MonoBehaviour:
   statusEffect: 0
   statusDuration: 0
   statusPower: 0
+  statusChance: 1
   castTime: 0.4
   projectileSpeed: 28
   castLocksMovement: 1
   hitStopSeconds: 0.09
   coneAngle: 120
   dashSpeed: 24
+  knockbackDistance: 0
+  leapHeight: 0
+  diveSpeed: 0
+  directHitMultiplier: 1
+  digRadius: 0
+  digDepth: 0
   levelGrowthRate: 0.2
   maxSkillLevel: 5
+  sizeGrowthPerLevel: 0.1
   iconColor: {r: 0, g: 0, b: 0, a: 0}
   ownerClass: {fileID: 11400000, guid: 6210ec3a6f1d2460e90b0ca56b16bb2a, type: 2}
   icon: {fileID: 21300000, guid: 1d1bb76b144c14fc2b316f67f6160c13, type: 3}

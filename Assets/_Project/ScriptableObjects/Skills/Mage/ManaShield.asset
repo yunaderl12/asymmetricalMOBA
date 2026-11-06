@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: ManaShield
   m_EditorClassIdentifier: 
   skillName: ManaShield
+  displayName: "\u9B54\u529B\u306E\u76FE"
   description: Halves damage taken for 8s.
   spCost: 25
   cooldown: 20
@@ -38,6 +39,8 @@ MonoBehaviour:
   leapHeight: 0
   diveSpeed: 0
   directHitMultiplier: 1
+  digRadius: 0
+  digDepth: 0
   levelGrowthRate: -0.1
   maxSkillLevel: 5
   sizeGrowthPerLevel: 0.1

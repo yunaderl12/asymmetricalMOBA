@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Fireball
   m_EditorClassIdentifier: 
   skillName: Fireball
+  displayName: "\u706B\u7403"
   description: Magical fireball.
   spCost: 15
   cooldown: 3

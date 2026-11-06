@@ -12,6 +12,10 @@ namespace Game.Skill
     public class SkillData : ScriptableObject
     {
         public string skillName;
+        [Tooltip("Name shown on screen (Japanese). Empty = skillName. skillName stays English because code checks it.")]
+        public string displayName;
+
+        public string DisplayName => string.IsNullOrEmpty(displayName) ? skillName : displayName;
         [TextArea] public string description;
         public int spCost;
         public float cooldown;

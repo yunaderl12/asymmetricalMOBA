@@ -128,7 +128,7 @@ namespace Game.UI
             {
                 var s = runtime.EquippedSkills.Count > i ? runtime.EquippedSkills[i] : null;
                 if (slotNameTexts != null && i < slotNameTexts.Length && slotNameTexts[i] != null)
-                    slotNameTexts[i].text = s != null ? s.skillName : "-";
+                    slotNameTexts[i].text = s != null ? s.DisplayName : "-";
                 if (slotSpCostTexts != null && i < slotSpCostTexts.Length && slotSpCostTexts[i] != null)
                     slotSpCostTexts[i].text = s != null ? "SP " + s.spCost : "";
             }

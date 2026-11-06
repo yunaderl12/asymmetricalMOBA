@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Stomp
   m_EditorClassIdentifier: 
   skillName: Stomp
+  displayName: "\u8E0F\u307F\u3064\u3051"
   description: Leap and dive into the ground. Heavy damage directly below, a shockwave
     around, with a small chance to stun.
   spCost: 20
