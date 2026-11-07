@@ -152,7 +152,7 @@ namespace Game.Core
 
         [Header("Demon King Model")]
         [Tooltip("Resources path of the Demon King model. Empty = no model (capsule body).")]
-        public string demonKingModelPath = "DemonKing/demonking";
+        public string demonKingModelPath = "DemonKing/demon_king";
         [Tooltip("Scale of the Demon King model (heroes use HeroClassData.modelScale)")]
         public float demonKingModelScale = 1.5f;
 

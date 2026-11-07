@@ -58,6 +58,13 @@ CHARS = {
         toe=(0.165, -0.05, 0.02), toe_tip=(0.17, -0.12, 0.015), neck=(0, -0.04, 0.58), head=(0, -0.12, 0.61),
         shoulder=(0.07, 0.03, 0.63), arm=(0.24, 0.64), elbow=(0.34, 0.47), wrist=(0.38, 0.29), tip=(0.41, 0.11),
         items=[]),
+    # 魔王: 足元まで届く長いローブとマント。背中側（y が back_y より後ろ）のマントは腕に付けず胴について行かせる。
+    "demonking": dict(
+        folder="DemonKing", fbx="demon_king.fbx", blend="demonking_tripo.blend", prefix="DemonKing", height=2.9, target=9000, head_z=0.71,
+        hip_center=(0, -0.06, 0.41), hip=(0.06, -0.06, 0.39), knee=(0.065, -0.07, 0.23), ankle=(0.065, -0.07, 0.05),
+        toe=(0.07, -0.10, 0.02), toe_tip=(0.07, -0.13, 0.015), neck=(0, -0.06, 0.67), head=(0, -0.07, 0.70),
+        shoulder=(0.04, -0.06, 0.65), arm=(0.13, 0.66), elbow=(0.225, 0.625), wrist=(0.315, 0.565), tip=(0.40, 0.52), back_y=0.02,
+        items=[dict(src="right", hand="Right", name="Sword", length=2.0, target=2500, up=(0, -0.25, 0.97), front=(-1, 0, 0), grip=0.30, palm=0.45)]),
     "goblin": dict(
         folder="Goblin", fbx="goblin.fbx", blend="goblin_tripo.blend", prefix="Goblin", height=2.8, target=3500, head_z=0.67,
         hip_center=(0, 0.03, 0.37), hip=(0.07, 0.03, 0.345), knee=(0.10, 0.01, 0.19), ankle=(0.11, 0.044, 0.06),
@@ -200,6 +207,12 @@ for side, sx in (("Left", 1), ("Right", -1)):
         W[inner, IDX[side + b]] = 0
     for b in ("UpLeg", "Leg", "Foot", "ToeBase"):
         W[P[:, 2] > hip_z + 0.03 * H, IDX[side + b]] = 0
+if "back_y" in CFG:
+    # マントの背中側は腕を動かしても引っぱられないようにする。
+    behind = P[:, 1] > CFG["back_y"] * S
+    for side in ("Left", "Right"):
+        for bn in ("Arm", "ForeArm", "Hand"):
+            W[behind, IDX[side + bn]] = 0
 W[P[:, 2] < head_z - 0.06 * H, IDX["Head"]] = 0
 W[P[:, 2] > head_z] = 0
 W[P[:, 2] > head_z, IDX["Head"]] = 1
