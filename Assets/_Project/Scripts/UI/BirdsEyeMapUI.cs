@@ -9,11 +9,13 @@ using Game.Monster;
 namespace Game.UI
 {
     /// 魔王の俯瞰画面。中央に地図、左に魔王の様子と探知ボタン、右に塔と橋の番人の一覧（Evil Genius 2 の作業画面にならう）。
-    /// 地図の背景は、開くたびに真上から地形だけを撮る（魔物・勇者・雲・頭上のバーは写さない）。印はその上に重ねる。
+    /// 地図の背景は、Blender で描いた絵地図（Resources/UI/<地図>_Illust.png。南から仰角60度で見下ろした絵）。
+    /// 絵地図のないワールドでは、開くたびに真上から地形だけを撮る（魔物・勇者・雲・頭上のバーは写さない）。印はその上に重ねる。
     /// 勇者は、動いている塔の検知範囲に入ったとき・探知中・城内にいるときだけ出す。
     public class BirdsEyeMapUI : MonoBehaviour
     {
-        private const float MapPixels = 1000f;
+        private const float MapPixels = 1000f;      // 撮った地図の一辺。絵地図は高さをこれより少し低くし、幅は絵の比率で決める
+        private const float IllustHeight = 960f;
         private const int SnapshotSize = 1024;
         private const float RefreshInterval = 0.15f;
         private const float WarningSeconds = 3f;
@@ -51,6 +53,18 @@ namespace Game.UI
         private RenderTexture snapshot;
         private Vector2 worldMin = new Vector2(-250f, -250f);
         private Vector2 worldMax = new Vector2(250f, 250f);
+        private Vector2 mapSize = new Vector2(MapPixels, MapPixels);
+        private Illust illust;
+
+        /// render_map.py が書き出す、ゲームの座標から絵の位置への変換。
+        [System.Serializable]
+        private class Illust
+        {
+            public float width, height, centerX, centerScreenY, upZ, upY;
+        }
+
+        private static readonly Color LabelPaper = HudStyle.Hex(0xf6ead0);
+        private static readonly Color LabelInk = HudStyle.Hex(0x3a2414);
 
         private Text clockText, nextLevelText, levelText, hpText, mpText, townText, coreText;
         private HudBar hpBar, mpBar, townBar, coreBar;
@@ -132,6 +146,7 @@ namespace Game.UI
             BuildGuardianList();
             BuildLandmark(GameObject.Find("StartTown"), "はじまりのまち");
             BuildLandmark(GameObject.Find("DemonCastle"), "魔王城");
+            BuildAreaLabels();
         }
 
         private static HealthComponent FindHealth(string tag)
@@ -149,7 +164,7 @@ namespace Game.UI
             if (!show) return;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
-            TakeSnapshot();
+            if (illust == null) TakeSnapshot();
             RefreshLive();
             RefreshPanels();
         }
@@ -259,6 +274,12 @@ namespace Game.UI
 
         private Vector2 WorldToMap(Vector3 world)
         {
+            if (illust != null)
+            {
+                float iu = (world.x - illust.centerX) / illust.width;
+                float iv = (world.z * illust.upZ + world.y * illust.upY - illust.centerScreenY) / illust.height;
+                return new Vector2(iu * mapSize.x, iv * mapSize.y);
+            }
             float u = Mathf.InverseLerp(worldMin.x, worldMax.x, world.x);
             float v = Mathf.InverseLerp(worldMin.y, worldMax.y, world.z);
             return new Vector2((u - 0.5f) * MapPixels, (v - 0.5f) * MapPixels);
@@ -295,22 +316,101 @@ namespace Game.UI
             BuildWarning(canvas.transform);
         }
 
+        private void LoadIllust()
+        {
+            string name = "UI/" + WorldCatalog.ForActiveScene().mapResource + "_Illust";
+            var texture = Resources.Load<Texture2D>(name);
+            var json = Resources.Load<TextAsset>(name);
+            if (texture == null || json == null) return;
+            var info = JsonUtility.FromJson<Illust>(json.text);
+            if (info == null || info.width <= 0f || info.height <= 0f) return;
+            illust = info;
+            mapSize = new Vector2(IllustHeight * info.width / info.height, IllustHeight);
+            mapImage.texture = texture;
+        }
+
         private void BuildMap(RectTransform rootRt)
         {
             var frame = HudStyle.Place(rootRt, "MapFrame", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(MapPixels + 24f, MapPixels + 24f));
             HudStyle.DropShadow(frame, HudShape.Kind.RoundRect, pal.Shadow, 18f, 6f);
-            HudStyle.Shape(frame, "Frame", HudShape.Kind.RoundRect, Panel, 18f, HudStyle.FeltTexture);
+            var frameShape = HudStyle.Shape(frame, "Frame", HudShape.Kind.RoundRect, Panel, 18f, HudStyle.FeltTexture);
 
             mapArea = HudStyle.Place(frame, "MapArea", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(MapPixels, MapPixels));
             mapImage = HudStyle.AddGraphic<RawImage>(mapArea);
             mapImage.color = Color.white;
             mapImage.raycastTarget = true;
-            HudStyle.Shape(mapArea, "Tint", HudShape.Kind.RoundRect, MapTint, 0f);
+            LoadIllust();
+            if (illust != null)
+            {
+                // 絵地図は紙の縁で囲む。
+                mapArea.sizeDelta = mapSize;
+                frame.sizeDelta = mapSize + new Vector2(28f, 28f);
+                frameShape.color = LabelPaper;
+                frameShape.texture = HudStyle.PaperTexture;
+            }
+            else HudStyle.Shape(mapArea, "Tint", HudShape.Kind.RoundRect, MapTint, 0f);
             monsterLayer = HudStyle.Filled(mapArea, "Monsters");
             towerLayer = HudStyle.Filled(mapArea, "Towers");
             heroLayer = HudStyle.Filled(mapArea, "Heroes");
             labelLayer = HudStyle.Filled(mapArea, "Labels");
-            HudStyle.Stitch(frame, pal.Stitch, false, 13f, 6f);
+            HudStyle.Stitch(frame, illust != null ? LabelInk : pal.Stitch, false, 13f, 6f);
+            if (illust != null) BuildCompass();
+        }
+
+        /// 地図の右下（海の上）の方位磁針。上が北。
+        private void BuildCompass()
+        {
+            var c = HudStyle.Place(labelLayer, "Compass", new Vector2(1f, 0f), new Vector2(0.5f, 0.5f), new Vector2(-84f, 96f), new Vector2(120f, 120f));
+            var ring = HudStyle.Shape(c, "Ring", HudShape.Kind.Circle, LabelInk);
+            HudStyle.Stretch(ring.rectTransform, -22f);
+            var inner = HudStyle.Shape(c, "Inner", HudShape.Kind.Circle, LabelPaper);
+            HudStyle.Stretch(inner.rectTransform, -25f);
+            CompassPoint(c, 0f, HudStyle.Hex(0x9a2a1c));   // 北は赤
+            CompassPoint(c, 180f, LabelInk);
+            CompassPoint(c, 90f, LabelInk, 0.62f);
+            CompassPoint(c, 270f, LabelInk, 0.62f);
+            HudStyle.Shape(HudStyle.Place(c, "Pin", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(12f, 12f)), "Dot", HudShape.Kind.Circle, HudStyle.Gold);
+            HudStyle.Label(c, "N", new Vector2(0.5f, 1f), new Vector2(0.5f, 0f), new Vector2(0f, -4f), new Vector2(60f, 34f), "N", 30, LabelInk, TextAnchor.LowerCenter, 3f, LabelPaper);
+        }
+
+        /// 中心から外へ向かう細いひし形を1本。angle は上（北）から時計回り。
+        private static void CompassPoint(RectTransform parent, float angle, Color color, float length = 1f)
+        {
+            var arm = HudStyle.Place(parent, "Arm" + angle, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
+            arm.localEulerAngles = new Vector3(0f, 0f, -angle);
+            var squash = HudStyle.Place(arm, "Squash", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 26f * length), Vector2.zero);
+            squash.localScale = new Vector3(0.28f, 1f, 1f);
+            var diamond = HudStyle.Shape(squash, "Diamond", HudShape.Kind.RoundRect, color, 2f);
+            diamond.rectTransform.anchorMin = diamond.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            diamond.rectTransform.sizeDelta = new Vector2(38f, 38f) * length;
+            diamond.rectTransform.localEulerAngles = new Vector3(0f, 0f, 45f);
+        }
+
+        /// 地方の名前の札（紙に墨の枠）。場所は StageMap のバイオームの中心。
+        private void BuildAreaLabels()
+        {
+            if (illust == null) return;
+            var map = StageMap.Map;
+            if (map == null || map.biomes == null) return;
+            foreach (var area in map.biomes)
+            {
+                string label = area.name == "desert" ? "砂漠" : area.name == "forest" ? "巨大樹の森" : area.name == "mountain" ? "山脈" : null;
+                if (label == null) continue;
+                // 砂漠には塔が5本立つので、札は南西と南東の塔のあいだ（南寄り）に置く。
+                float z = area.name == "desert" ? area.z - area.rz * 0.55f : area.z;
+                PaperLabel(label, WorldToMap(new Vector3(area.x, 0f, z)), 26);
+            }
+        }
+
+        private RectTransform PaperLabel(string text, Vector2 position, int size)
+        {
+            float w = text.Length * size + 30f, h = size + 18f;
+            var box = HudStyle.Place(labelLayer, "Label_" + text, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), position, new Vector2(w, h));
+            HudStyle.Shape(box, "Ink", HudShape.Kind.RoundRect, LabelInk, 5f);
+            var paper = HudStyle.Shape(box, "Paper", HudShape.Kind.RoundRect, LabelPaper, 4f, HudStyle.PaperTexture);
+            HudStyle.Stretch(paper.rectTransform, -3f);
+            HudStyle.Label(box, "Text", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(w, h), text, size, LabelInk, TextAnchor.MiddleCenter);
+            return box;
         }
 
         private void BuildLeftColumn(RectTransform rootRt)
@@ -528,6 +628,7 @@ namespace Game.UI
         private void BuildLandmark(GameObject go, string label)
         {
             if (go == null) return;
+            if (illust != null) { PaperLabel(label, WorldToMap(go.transform.position) + new Vector2(0f, 52f), 24); return; }
             HudStyle.Label(labelLayer, "Landmark_" + label, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), WorldToMap(go.transform.position) + new Vector2(0f, 46f), new Vector2(240f, 32f),
                 label, 22, pal.Light, TextAnchor.MiddleCenter, 5f, pal.Outline);
         }
