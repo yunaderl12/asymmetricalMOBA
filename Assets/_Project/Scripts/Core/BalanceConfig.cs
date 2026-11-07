@@ -137,6 +137,8 @@ namespace Game.Core
         public float botSprintTargetDistance = 12f;
         [Tooltip("Bots with Teleport escape below this share of HP while an enemy is close.")]
         public float botEscapeHpRatio = 0.3f;
+        [Tooltip("How far the Mage's basic magic bolt flies (metres). A little shorter than a spawner tower's shooting range (SpawnerData.detectRange 30m), so the Mage cannot outrange the tower.")]
+        public float mageBoltRange = 28f;
         [Tooltip("Mage bots stop this far from their target and shoot magic bolts (metres).")]
         public float botMageAttackRange = 10f;
         [Tooltip("Seconds between a bot hero's SP regen ticks. Matches HeroRegen.")]
@@ -181,14 +183,14 @@ namespace Game.Core
         public float rippleInterval = 0.32f;
         [Tooltip("Radius a ripple grows to (m).")]
         public float rippleRadius = 1.6f;
-        [Tooltip("Below this height, being over deep water counts as falling in (m).")]
-        public float deepWaterFallHeight = 1.5f;
         [Tooltip("Speed multiplier while walking on desert sand off the road (heroes, bots and the Demon King; monsters live there and are not slowed).")]
         public float looseSandSpeedMultiplier = 0.8f;
         [Tooltip("Seconds between sand splashes while walking on loose sand.")]
         public float sandSplashInterval = 0.22f;
         [Tooltip("Sand grains thrown up by one splash.")]
         public int sandSplashGrains = 9;
+        [Tooltip("Below this height, being over deep water counts as falling in (m).")]
+        public float deepWaterFallHeight = 1.5f;
         [Tooltip("Speed lost by the Demon King on a 30 degree climb (0.25 = 25%).")]
         public float demonKingSlopePenalty = 0.25f;
 

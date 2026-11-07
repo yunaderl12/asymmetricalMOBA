@@ -17,6 +17,7 @@ namespace Game.Hero
         {
             owner = ownerObj;
             damage = dmg;
+            maxDistance = Game.Core.BalanceConfig.Instance.mageBoltRange;
             transform.forward = direction.normalized;
             var body = GetComponent<MeshRenderer>();
             if (body != null) body.enabled = false;

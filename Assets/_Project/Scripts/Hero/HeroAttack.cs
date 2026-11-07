@@ -29,7 +29,7 @@ namespace Game.Hero
         private const float BoltMuzzleForward = 0.7f;
         private const float BoltMuzzleRight = 0.34f;
         private const float BoltMuzzleDown = 0.04f;
-        private const float BoltAimDistance = 20f;
+        private static float BoltAimDistance => Game.Core.BalanceConfig.Instance.mageBoltRange;
         private const float BoltMinAimDistance = 1.5f;
 
         private HeroInputActions inputs;
