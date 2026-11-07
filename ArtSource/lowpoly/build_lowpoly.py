@@ -1296,6 +1296,39 @@ def build_archer_tower():
 
 
 # ================================================================ main
+# ---------------------------------------------------------------- sand mask
+# 砂漠の「道から外れた砂地」を2m四方のマスで書き出す。Unity 側（StageMap.IsLooseSand）が読み、歩くと遅くなって砂が跳ねる。
+# 地面の色分け（face_mat）と同じ判定を使うので、見た目の砂地とずれない。
+SAND_CELL = 2.0
+
+
+def is_loose_sand(p):
+    if not in_desert(p) or is_sea(p) or deep_gap(p) < 3.5 or shore_dist(p) < 5.0 or shallow_gap(p) < 1.5:
+        return False
+    return not on_path(p.x, p.y, 0.8) and not near_spawner(p, 7.0) and (p - TOWN).length >= 9
+
+
+def write_sand_mask():
+    b = BIOMES["desert"]
+    x0, z0 = b["x"] - b["rx"] * 1.25, b["z"] - b["rz"] * 1.25
+    cols, rows = int(b["rx"] * 2.5 / SAND_CELL) + 1, int(b["rz"] * 2.5 / SAND_CELL) + 1
+    lines, count = [], 0
+    for j in range(rows):
+        bits = 0
+        for i in range(cols):
+            if is_loose_sand(Vector((x0 + (i + 0.5) * SAND_CELL, z0 + (j + 0.5) * SAND_CELL))):
+                bits |= 1 << i
+                count += 1
+        lines.append(format(bits, "x"))
+    out = {"x0": x0, "z0": z0, "cell": SAND_CELL, "cols": cols, "rows": rows, "bits": lines}
+    with open(os.path.join(ROOT, "Assets", "_Project", "Resources", "StageMap_Sand.json"), "w", encoding="utf-8") as f:
+        json.dump(out, f, separators=(",", ":"))
+    print("SAND_MASK", cols, "x", rows, "cells", count)
+
+
+if ONLY is None or ONLY == "LP_Field.fbx":
+    write_sand_mask()
+
 models = [(build_field(), "LP_Field.fbx"), (build_town(), "LP_StartTown.fbx"), (build_castle(), "LP_DemonCastle.fbx"), (build_archer_tower(), "LP_ArcherTower.fbx")]
 for (col, root), fn in models:
     if ONLY is None or fn == ONLY:

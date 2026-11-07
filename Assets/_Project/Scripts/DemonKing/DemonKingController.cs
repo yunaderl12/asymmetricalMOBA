@@ -58,6 +58,7 @@ namespace Game.DemonKing
             if (inputs == null) inputs = new DemonKingInputActions();
             var cam = pitchTarget != null ? pitchTarget.GetComponentInChildren<Camera>(true) : null;
             if (cam != null)
+            terrain.SplashScale = Game.Core.BalanceConfig.Instance.demonKingModelScale;
             {
                 cameraTransform = cam.transform;
                 cameraRest = cameraTransform.localPosition;

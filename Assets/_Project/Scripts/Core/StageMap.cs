@@ -49,8 +49,19 @@ namespace Game.Core
             public Place[] rocks;
         }
 
+        [Serializable]
+        private class SandMask
+        {
+            public float x0, z0, cell;
+            public int cols, rows;
+            public string[] bits;
+        }
+
         private static Data data;
         private static string loadedResource;
+        private static string sandResource;
+        private static bool[] sandCells;
+        private static SandMask sand;
         private static Vector2[] seaPolygon;
 
         public static Data Map
@@ -78,6 +89,44 @@ namespace Game.Core
             for (int i = 0; i + 1 < data.seaShore.Length; i += 2) polygon.Add(new Vector2(data.seaShore[i], data.seaShore[i + 1]));
             polygon.Add(new Vector2(data.seaCorner[0], data.seaCorner[1]));
             seaPolygon = polygon.ToArray();
+        }
+
+        /// 砂漠の道から外れた砂地か。Resources/<地図>_Sand.json（Blender の build_lowpoly.py が地面の色分けと同じ判定で書き出す）を読む。
+        /// ファイルがないワールドでは常に false。
+        public static bool IsLooseSand(Vector3 position)
+        {
+            string wanted = WorldCatalog.ForActiveScene().mapResource + "_Sand";
+            if (sandResource != wanted) LoadSand(wanted);
+            if (sandCells == null) return false;
+            int i = Mathf.FloorToInt((position.x - sand.x0) / sand.cell);
+            int j = Mathf.FloorToInt((position.z - sand.z0) / sand.cell);
+            if (i < 0 || j < 0 || i >= sand.cols || j >= sand.rows) return false;
+            return sandCells[j * sand.cols + i];
+        }
+
+        private static void LoadSand(string resource)
+        {
+            sandResource = resource;
+            sandCells = null;
+            var text = Resources.Load<TextAsset>(resource);
+            if (text == null) return;
+            sand = JsonUtility.FromJson<SandMask>(text.text);
+            if (sand == null || sand.bits == null || sand.cell <= 0f) return;
+            sandCells = new bool[sand.cols * sand.rows];
+            for (int j = 0; j < sand.rows && j < sand.bits.Length; j++)
+            {
+                // 1行は右端が i=0 の16進数。
+                string row = sand.bits[j];
+                for (int k = 0; k < row.Length; k++)
+                {
+                    int nibble = Convert.ToInt32(row[row.Length - 1 - k].ToString(), 16);
+                    for (int b = 0; b < 4; b++)
+                    {
+                        int i = k * 4 + b;
+                        if (i < sand.cols && (nibble & (1 << b)) != 0) sandCells[j * sand.cols + i] = true;
+                    }
+                }
+            }
         }
 
         /// 歩いて渡れる浅瀬の中か。

@@ -183,6 +183,12 @@ namespace Game.Core
         public float rippleRadius = 1.6f;
         [Tooltip("Below this height, being over deep water counts as falling in (m).")]
         public float deepWaterFallHeight = 1.5f;
+        [Tooltip("Speed multiplier while walking on desert sand off the road (heroes, bots and the Demon King; monsters live there and are not slowed).")]
+        public float looseSandSpeedMultiplier = 0.8f;
+        [Tooltip("Seconds between sand splashes while walking on loose sand.")]
+        public float sandSplashInterval = 0.22f;
+        [Tooltip("Sand grains thrown up by one splash.")]
+        public int sandSplashGrains = 9;
         [Tooltip("Speed lost by the Demon King on a 30 degree climb (0.25 = 25%).")]
         public float demonKingSlopePenalty = 0.25f;
 

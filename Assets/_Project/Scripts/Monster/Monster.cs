@@ -84,6 +84,7 @@ namespace Game.Monster
         {
             gameObject.AddComponent<Game.Core.GroundFollower>();
             terrain = TerrainWalker.For(gameObject);
+            terrain.SandSlows = false; // 砂漠に住んでいるので砂地でも遅くならない
             terrain.FactorChanged += ApplySpeed;
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<HealthComponent>();
