@@ -813,13 +813,72 @@ def build_field():
         add_tree(trees, p.x, p.y, rng.uniform(0.9, 1.3))
         placed += 1
 
-    # Forest: 太い幹が魔法を遮る。地面は平らなので歩きやすい。
-    cell_size = 5.5
+    # Forest: 巨大樹の森。高さ24〜34mの巨大樹を15m前後の間隔で立て、すき間を中くらいの木で埋め、足元にシダを敷く。
+    # 太い幹が魔法を遮る。地面は平らなので歩きやすい。森は専用の乱数で作り、木を増減してもほかの飾りの並びが変わらないようにする。
+    frng = random.Random(29)
+
+    def forest_point():
+        return Vector((frng.uniform(-w / 2 + 3, w / 2 - 3), frng.uniform(-d / 2 + 3, d / 2 - 3)))
+
+    def giant_tree(x, y, s):
+        h = frng.uniform(24, 34) * s
+        r = frng.uniform(1.1, 1.5) * s
+        trunk_h = h * 0.62
+        trees.cyl(P["bark"], (x, y, -0.3), r, trunk_h + 0.3, n=9, r2=r * 0.6, jitter=0.06 * r, rotz=frng.random() * 6)
+        trees.cyl(P["bark"], (x, y, trunk_h - 0.2), r * 0.6, h - trunk_h, n=7, r2=r * 0.22, rotz=frng.random() * 6)
+        # 根の張り出し
+        for k in range(6):
+            a = k / 6 * math.tau + frng.uniform(-0.3, 0.3)
+            dirv = Vector((math.cos(a), math.sin(a), 0))
+            tilt = Matrix.Rotation(math.radians(frng.uniform(62, 74)), 4, Vector((-dirv.y, dirv.x, 0)))
+            trees.cone(P["bark"], (x + dirv.x * r * 0.5, y + dirv.y * r * 0.5, frng.uniform(0.6, 1.2) * r), r * 0.42, r * frng.uniform(2.0, 2.8), n=5, tilt=tilt)
+        # 太い枝と、その先の葉の塊
+        leaves = [P["leaf_a"], P["leaf_b"], P["leaf_pine"]]
+        for k in range(frng.randint(3, 5)):
+            a = frng.random() * math.tau
+            dirv = Vector((math.cos(a), math.sin(a), 0))
+            z = h * frng.uniform(0.55, 0.78)
+            length = frng.uniform(5.0, 8.5) * s
+            ang = math.radians(frng.uniform(48, 64))
+            tilt = Matrix.Rotation(ang, 4, Vector((-dirv.y, dirv.x, 0)))
+            trees.cyl(P["bark"], (x, y, z), r * 0.32, length, n=5, r2=r * 0.12, tilt=tilt)
+            tip = Vector((x, y, z)) + (dirv * math.sin(ang) + Vector((0, 0, math.cos(ang)))) * length
+            cr = frng.uniform(3.8, 5.5) * s
+            trees.ico(frng.choice(leaves), tip + Vector((0, 0, cr * 0.25)), cr, sub=1, scale=(1, 1, 0.55), jitter=0.18 * cr, rotz=frng.random() * 6)
+        # てっぺんの大きな傘
+        for k in range(frng.randint(3, 4)):
+            off = Vector((frng.uniform(-3.5, 3.5), frng.uniform(-3.5, 3.5), 0)) * s
+            cr = frng.uniform(5.5, 8.0) * s
+            trees.ico(frng.choice(leaves), (x + off.x, y + off.y, h * frng.uniform(0.88, 1.0)), cr, sub=1, scale=(1, 1, 0.5), jitter=0.16 * cr, rotz=frng.random() * 6)
+        tree_cols.cyl(P["bark"], (x, y, -0.5), r * 1.15 + 0.2, 14.0, n=8)
+        return r
+
+    def fern(x, y):
+        z = ground_height(x, y, frng) - 0.05
+        mtl = P["moss"] if frng.random() < 0.6 else P["tuft"]
+        for k in range(5):
+            a = k / 5 * math.tau + frng.uniform(-0.3, 0.3)
+            tilt = Matrix.Rotation(math.radians(frng.uniform(50, 70)), 4, Vector((-math.sin(a), math.cos(a), 0)))
+            decor.cone(mtl, (x, y, z), 0.22, frng.uniform(1.0, 1.6), n=3, rotz=a, tilt=tilt)
+
+    giants = []
+    for _ in range(30000):
+        p = forest_point()
+        if not in_forest(p) or blocked(p, 3.0) or road_dist(p) < 9.0:
+            continue
+        if any((p - q).length < rq for q, rq in giants):
+            continue
+        rad = giant_tree(p.x, p.y, frng.uniform(0.9, 1.15))
+        giants.append((p, 13.0 + rad * 2))
+
+    cell_size = 4.6
     used = {}
     forest_count = 0
-    for _ in range(26000):
-        p = rand_point(3.0)
+    for _ in range(40000):
+        p = forest_point()
         if not in_forest(p) or blocked(p, 1.5) or road_dist(p) < 5.5:
+            continue
+        if any((p - q).length < 5.0 + (rq - 13.0) for q, rq in giants):
             continue
         key = (int(p.x // cell_size), int(p.y // cell_size))
         near = False
@@ -831,9 +890,21 @@ def build_field():
         if near:
             continue
         used[key] = p
-        add_tree(trees, p.x, p.y, rng.uniform(1.6, 2.3), "pine" if rng.random() < 0.55 else "round")
+        ts = frng.uniform(2.2, 3.4)
+        tree(trees, frng, p.x, p.y, ts, "pine" if frng.random() < 0.6 else "round")
+        tree_cols.cyl(P["bark"], (p.x, p.y, -0.5), 0.26 * ts + 0.12, 7.0, n=6)
         forest_count += 1
-    print("FOREST_TREES", forest_count)
+
+    ferns = 0
+    for _ in range(12000):
+        p = forest_point()
+        if not in_forest(p) or blocked(p, 0.5) or road_dist(p) < 3.5:
+            continue
+        fern(p.x, p.y)
+        ferns += 1
+        if ferns >= 2200:
+            break
+    print("FOREST_TREES", forest_count, "GIANTS", len(giants), "FERNS", ferns)
 
     # Mountain pines: まばらなので見通しが良い。
     placed = tries = 0
