@@ -16,13 +16,15 @@ MonoBehaviour:
   - biome: 2
     monsters:
     - {fileID: 11400000, guid: 99308e291e52c46cba9abd910658d3e9, type: 2}
-    - {fileID: 11400000, guid: 2b34e85e0e358438d86566ff807a7f18, type: 2}
+    - {fileID: 11400000, guid: bff89cbbd50ca43bda1a1dd11aca4a0d, type: 2}
+    boss: {fileID: 11400000, guid: 3e5e3cb8238e34f5daf805a80f85fa45, type: 2}
   - biome: 1
     monsters:
-    - {fileID: 11400000, guid: 99308e291e52c46cba9abd910658d3e9, type: 2}
-    - {fileID: 11400000, guid: 80f3d6548d6e348d79af3db17f6bc471, type: 2}
+    - {fileID: 11400000, guid: 5d2a37e76b1364fd2a8ef7b47b6d09d8, type: 2}
+    - {fileID: 11400000, guid: fcce3a7d909ee486dbc32faed65e4129, type: 2}
+    boss: {fileID: 11400000, guid: 87354c81d9f0c4d39af5a07c87f17378, type: 2}
   - biome: 3
     monsters:
-    - {fileID: 11400000, guid: 99308e291e52c46cba9abd910658d3e9, type: 2}
-    - {fileID: 11400000, guid: 2b34e85e0e358438d86566ff807a7f18, type: 2}
-    - {fileID: 11400000, guid: 80f3d6548d6e348d79af3db17f6bc471, type: 2}
+    - {fileID: 11400000, guid: 1cde3cb1999e24377874d64111790f4e, type: 2}
+    - {fileID: 11400000, guid: 8b60d36d149b14186a8a7b379115ca71, type: 2}
+    boss: {fileID: 11400000, guid: def854ee21f5b4f71a0fc8efc2517177, type: 2}

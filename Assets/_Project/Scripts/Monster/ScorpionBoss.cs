@@ -249,6 +249,8 @@ namespace Game.Monster
 
         // ---------------------------------------------------------------- pose
 
+        private IdleMotion idleNow;
+
         protected override void Pose()
         {
             if (IsDead)
@@ -263,9 +265,14 @@ namespace Game.Monster
                 return;
             }
 
+            // 待機: 体を上下させて息をし、爪をゆっくり開閉し、体ごと少し向きを変えて見回す。
+            // 時々しぐさをする（0: 爪をカチカチ鳴らす、1: 尾を高く上げて震わせる、2: 両爪を振り上げて威嚇、3: その場で足踏み）。
+            idleNow = Idle(state == State.Idle && walkAmount < 0.1f, 1.6f);
+            float shuffle = idleNow.fidgetKind == 3 ? idleNow.fidget * 0.45f : 0f;
+
             // 脚: 左右と前後で互い違いに、前後へ振って持ち上げる。
-            walkPhase += Time.deltaTime * data.stepRate * Mathf.Max(walkAmount, 0f) * Mathf.PI * 2f;
-            float amount = Mathf.Clamp01(walkAmount);
+            walkPhase += Time.deltaTime * data.stepRate * Mathf.Max(walkAmount + shuffle, 0f) * Mathf.PI * 2f;
+            float amount = Mathf.Clamp01(walkAmount + shuffle);
             foreach (var s in new[] { "P", "N" })
             {
                 float sg = s == "P" ? side : -side;
@@ -277,8 +284,9 @@ namespace Game.Monster
             // 胴: 歩くと少し揺れ、突進では頭を下げる。
             float bob = Mathf.Abs(Mathf.Sin(walkPhase)) * 0.12f * amount;
             float lean = state == State.Charging ? 8f : state == State.ChargeWindup ? -6f : 0f;
+            bob += idleNow.breath * 0.04f * idleNow.weight;
             model.localPosition = Vector3.up * bob;
-            model.localRotation = Quaternion.Euler(lean, 0f, Mathf.Sin(walkPhase) * 2f * amount);
+            model.localRotation = Quaternion.Euler(lean + idleNow.lookPitch * 0.25f, idleNow.lookYaw * 0.3f, Mathf.Sin(walkPhase) * 2f * amount + idleNow.shift * 1.5f);
 
             PoseTail();
             PoseClaws();
@@ -303,18 +311,30 @@ namespace Game.Monster
                 pull = k < 0.25f ? Mathf.Lerp(-22f, 30f, k / 0.25f) : Mathf.Lerp(30f, 0f, (k - 0.25f) / 0.75f);
             }
             else if (state == State.Charging) pull = 10f;
+            // 待機のしぐさ: 尾を高く持ち上げて、先を小刻みに震わせる。
+            float raiseTail = idleNow.fidgetKind == 1 ? idleNow.fidget : 0f;
+            pull -= 18f * raiseTail;
+            sway *= 1f + idleNow.weight;
             rig.Rotate("Tail1", Vector3.up, sway * 0.5f);
             rig.Rotate("Tail1", Vector3.right, pull * 0.35f);
             rig.Rotate("Tail2", Vector3.right, pull * 0.3f);
             rig.Rotate("Tail3", Vector3.right, pull * 0.3f);
             rig.Rotate("Tail4", Vector3.right, pull * 0.25f + Mathf.Sin(Time.time * 2.1f) * 3f);
-            rig.Rotate("Stinger", Vector3.right, pull * 0.4f);
+            rig.Rotate("Stinger", Vector3.right, pull * 0.4f + Mathf.Sin(Time.time * 30f) * 6f * raiseTail);
         }
 
         // 爪: 広げる（spread、外向きの水平の回転）と振り上げる（raise）を組み合わせる。
         private void PoseClaws()
         {
             float spread = 0f, raise = 0f, pincer = Mathf.Sin(Time.time * 2.4f) * 6f;
+            if (idleNow.weight > 0f)
+            {
+                // 爪をゆっくり開いて閉じ、見回す向きへ少し寄せる。しぐさでカチカチ鳴らすか、両爪を振り上げる。
+                pincer = Mathf.Sin(Time.time * 1.1f) * 9f * idleNow.weight + pincer * (1f - idleNow.weight);
+                if (idleNow.fidgetKind == 0) pincer += Mathf.Abs(Mathf.Sin(Time.time * 14f)) * 22f * idleNow.fidget;
+                if (idleNow.fidgetKind == 2) { raise += 30f * idleNow.fidget; spread += 26f * idleNow.fidget; pincer += 16f * idleNow.fidget; }
+                spread += idleNow.breath * 3f * idleNow.weight;
+            }
             switch (state)
             {
                 case State.SlashWindup:

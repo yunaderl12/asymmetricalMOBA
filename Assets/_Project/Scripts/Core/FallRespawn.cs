@@ -18,6 +18,8 @@ namespace Game.Core
         private bool isHero;
         private bool fallen;
 
+        public const string NoEntryMessage = "侵入不可エリアに入ったため、まちへ戻ります";
+
         private void Start()
         {
             spawnPosition = transform.position;
@@ -50,7 +52,7 @@ namespace Game.Core
                 return;
             }
 
-            if (Game.UI.ConsoleUI.IsConsoleActive) return;
+            if (Game.UI.InGameMenu.BlocksGameInput) return;
             if (Keyboard.current != null && Keyboard.current.backspaceKey.wasPressedThisFrame)
             {
                 Respawn();
@@ -61,6 +63,7 @@ namespace Game.Core
         private bool FallToDeath()
         {
             if (!isHero || health == null) return false;
+            if (RespawnManager.Instance != null) RespawnManager.Instance.SetDeathReason(gameObject, NoEntryMessage);
             if (!health.IsDead) health.TakeDamage(Mathf.Max(1, health.CurrentHP), null);
             Debug.Log($"[FallRespawn] {name} fell into the abyss and died.");
             return true;

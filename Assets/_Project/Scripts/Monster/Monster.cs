@@ -137,6 +137,7 @@ namespace Game.Monster
             initialized = true;
             ApplyData();
             AttachModel();
+            MonsterBehaviour.Attach(this);
 
             remainingWaypoints.Clear();
             if (waypoints != null)
@@ -161,6 +162,11 @@ namespace Game.Monster
         {
             if (data == null) return;
             levelMultiplier = DemonKingLevel.MonsterStatMultiplier(DemonKingLevel.Current);
+            if (data.noticeRadius > 0f)
+            {
+                aggroRadius = data.noticeRadius;
+                deaggroRadius = Mathf.Max(deaggroRadius, data.noticeRadius * 1.3f);
+            }
             ApplySpeed();
             if (health != null) health.SetMaxHP(Mathf.RoundToInt(data.hp * levelMultiplier));
             var expReward = GetComponent<ExpReward>();
@@ -175,13 +181,25 @@ namespace Game.Monster
             anim.Configure(data.modelPath, data.modelMaterialPath, data.modelScale, false, false, false);
             anim.ConfigureDeath(data.deathFallSeconds, data.deathHoldSeconds, data.deathParticleCount);
             anim.ConfigureBlastDeath(data.deathBlastSeconds, data.deathBlastSpeed);
+            if (data.customRig) anim.UseCustomRig();
+            else anim.EnableIdleLife();
         }
 
         private void ApplySpeed()
         {
             if (data == null || agent == null) return;
             float mul = mods != null ? mods.TotalSpdMultiplier : 1f;
-            agent.speed = data.spd * mul * (terrain != null ? terrain.SpeedFactor : 1f);
+            agent.speed = data.spd * mul * speedScale * (terrain != null ? terrain.SpeedFactor : 1f);
+        }
+
+        private float speedScale = 1f;
+
+        /// 技の部品が足の速さを変える（ミイラのよろめき歩きなど）。1 = MonsterData.spd のまま。
+        public void SetSpeedScale(float scale)
+        {
+            if (Mathf.Approximately(scale, speedScale)) return;
+            speedScale = scale;
+            ApplySpeed();
         }
 
         private void OnModsChanged()
@@ -266,14 +284,7 @@ namespace Game.Monster
 
             if (currentState == BehaviorState.ChasingHero)
             {
-                chaseRefreshTimer -= Time.deltaTime;
-                if (chaseRefreshTimer <= 0f && heroTransform != null && agent.isOnNavMesh)
-                {
-                    agent.isStopped = false;
-                    atTarget = false;
-                    agent.SetDestination(heroTransform.position);
-                    chaseRefreshTimer = chaseRefreshInterval;
-                }
+                TickChase();
                 return;
             }
 
@@ -294,6 +305,74 @@ namespace Game.Monster
                 remainingWaypoints.Dequeue();
                 SetNextDestination();
             }
+        }
+
+        /// 勇者の中心からこの距離で止まる。近接の魔物は体が触れない程度、遠距離の魔物は MonsterData.keepDistance。
+        public float KeepDistance
+        {
+            get
+            {
+                if (data != null && data.keepDistance > 0f) return data.keepDistance;
+                float body = agent != null ? agent.radius * Mathf.Max(transform.lossyScale.x, transform.lossyScale.z) : 0.5f;
+                return body + HeroBodyRadius + BalanceConfig.Instance.monsterKeepGap;
+            }
+        }
+
+        /// 勇者がこれより近づいてきたら下がる。
+        private float RetreatDistance => data != null && data.retreatDistance > 0f ? data.retreatDistance : KeepDistance * 0.8f;
+
+        /// 追っている勇者（いなければ null）。攻撃の部品が使う。
+        public Transform ChaseTarget => currentState == BehaviorState.ChasingHero ? heroTransform : null;
+
+        /// 攻撃の部品が動きを止めたいとき（溜め・突進など）に true にする。
+        public bool HoldMovement { get; set; }
+
+        private const float HeroBodyRadius = 0.5f;
+
+        // 勇者に重ならないよう、KeepDistance で止まって向き合い、入り込まれたら少し下がる。
+        private void TickChase()
+        {
+            if (heroTransform == null || !agent.isOnNavMesh) return;
+            atTarget = false;
+            Vector3 to = heroTransform.position - transform.position;
+            to.y = 0f;
+            float dist = to.magnitude;
+            float keep = KeepDistance;
+
+            if (HoldMovement)
+            {
+                agent.isStopped = true;
+                return;
+            }
+            if (dist < RetreatDistance && dist > 0.01f)
+            {
+                agent.isStopped = true;
+                agent.ResetPath();
+                Vector3 away = -to / dist;
+                agent.Move(away * agent.speed * 0.6f * Time.deltaTime);
+                Face(to);
+                return;
+            }
+            if (dist <= keep)
+            {
+                agent.isStopped = true;
+                Face(to);
+                return;
+            }
+            chaseRefreshTimer -= Time.deltaTime;
+            if (agent.isStopped || chaseRefreshTimer <= 0f)
+            {
+                agent.isStopped = false;
+                agent.stoppingDistance = keep * 0.95f;
+                agent.SetDestination(heroTransform.position);
+                chaseRefreshTimer = chaseRefreshInterval;
+            }
+        }
+
+        private void Face(Vector3 to)
+        {
+            if (to.sqrMagnitude < 0.01f) return;
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(to), 540f * Time.deltaTime);
         }
 
         // 最終フェーズまでは、スポナーの周りをうろうろする。
@@ -427,6 +506,8 @@ namespace Game.Monster
 
         private void ResumePath(string reason)
         {
+            HoldMovement = false;
+            if (agent.isOnNavMesh) { agent.stoppingDistance = 0f; agent.isStopped = false; }
             if (DemonKingLevel.IsFinalPhase)
             {
                 currentState = BehaviorState.FollowingPath;

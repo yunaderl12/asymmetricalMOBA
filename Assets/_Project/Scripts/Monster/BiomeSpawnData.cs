@@ -13,8 +13,16 @@ namespace Game.Monster
         public class Entry
         {
             public StageMap.Biome biome;
+            /// 魔王ロビーで置ける通常魔物の候補（ロビーを通らないときはこのまま湧く）。
             public List<MonsterData> monsters = new List<MonsterData>();
+            /// このバイオームの広場に出る中ボス（ロビーで出す・出さないを選ぶ）。
+            public BossData boss;
         }
+
+        /// ロビーと試合の両方で読むので Resources に置く。
+        public static BiomeSpawnData Load() => Resources.Load<BiomeSpawnData>("BiomeSpawnTable");
+
+        public Entry For(StageMap.Biome biome) => entries.Find(e => e.biome == biome);
 
         public List<Entry> entries = new List<Entry>();
     }

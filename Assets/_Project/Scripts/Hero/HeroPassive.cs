@@ -71,7 +71,7 @@ namespace Game.Hero
         /// 操作を受け付けられる状態か（準備時間と試合終了後は Controller が止まっている）。
         protected bool CanAct()
         {
-            if (Game.UI.ConsoleUI.IsConsoleActive) return false;
+            if (Game.UI.InGameMenu.BlocksGameInput) return false;
             if (Controller == null || !Controller.enabled || Controller.Suspended || Controller.SkillMotion || Controller.MovementLocked) return false;
             if (Health != null && Health.IsDead) return false;
             if (StatusEffectController.IsStunnedObj(gameObject)) return false;

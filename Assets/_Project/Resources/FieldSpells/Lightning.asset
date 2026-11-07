@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e052e9c08f9e466bb24855fde012dfc, type: 3}
+  m_Name: Lightning
+  m_EditorClassIdentifier: Game.Runtime::Game.DemonKing.FieldSpellData
+  kind: 1
+  spellName: "\u96F7"
+  description: "\u9078\u3093\u3060\u5834\u6240\u306B\u96F7\u96F2\u304C5\u79D2\u304B\u304B\u3063\u3066\u96C6\u307E\u308A\u3001\u96F7\u304C\u843D\u3061\u308B\u3002\u76F4\u6483\u306F\u5927\u30C0\u30E1\u30FC\u30B8\u3001\u5468\u308A\u306E\u52C7\u8005\u306B\u3082\u5C0F\u301C\u4E2D\u30C0\u30E1\u30FC\u30B8\u3068\u30B9\u30ED\u30FC\u3002\u8C6A\u96E8\u3067\u6FE1\u308C\u305F\u5730\u9762\u3067\u306F\u30C0\u30E1\u30FC\u30B8\u304C\u5897\u3048\u308B\u3002"
+  glyph: "\u96F7"
+  color: {r: 0.55, g: 0.5, b: 0.15, a: 1}
+  order: 1
+  cooldown: 45
+  chargeSeconds: 5
+  needsTarget: 1
+  targetsBiome: 0
+  radius: 3
+  damage: 70
+  outerRadius: 9
+  outerDamage: 25
+  duration: 3
+  count: 1
+  scatterRadius: 0
+  launchSpeed: 16
+  debrisCount: 0
+  debrisDamage: 0
+  slowSeconds: 3
+  slowMultiplier: 0.6
+  wetDamageMultiplier: 1.5
+  windPush: 0
+  wetAfterSeconds: 10
+  fuseSeconds: {x: 3, y: 5}
+  orbHp: 1
+  crater: {x: 3, y: 1}

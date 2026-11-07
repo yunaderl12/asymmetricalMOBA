@@ -157,6 +157,14 @@ namespace Game.Hero
         }
 
         /// 地響きなどの画面の揺れ。strength はカメラが動く幅 (m)。いま揺れているものより弱ければ足さない。
+        /// 上へ打ち上げる（魔王のフィールド魔法「竜巻」）。今の上向きの速さより強いときだけ上書きする。
+        public void Launch(float upSpeed)
+        {
+            if (upSpeed > verticalVelocity) verticalVelocity = upSpeed;
+        }
+
+        public bool IsGrounded => controller != null && controller.isGrounded;
+
         public void Shake(float strength, float seconds)
         {
             if (strength <= 0f || seconds <= 0f) return;
@@ -278,7 +286,7 @@ namespace Game.Hero
 
         private void Update()
         {
-            if (Game.UI.ConsoleUI.IsConsoleActive || Suspended) return;
+            if (Game.UI.InGameMenu.BlocksGameInput || Suspended) return;
             if (IsAnimLocked())
             {
                 // Keep gravity so the hero doesn't float, but ignore movement input.
@@ -309,8 +317,9 @@ namespace Game.Hero
             if (!LookEnabled) return;
 
             var look = inputs.Hero.Look.ReadValue<Vector2>();
-            float yawDelta = look.x * lookSensitivity;
-            float pitchDelta = -look.y * lookSensitivity;
+            float sensitivity = lookSensitivity * Game.Core.GameSettings.MouseSensitivity;
+            float yawDelta = look.x * sensitivity;
+            float pitchDelta = -look.y * sensitivity;
 
             transform.Rotate(0f, yawDelta, 0f, Space.World);
 
@@ -394,6 +403,8 @@ namespace Game.Hero
 
         private void OnPause(InputAction.CallbackContext _)
         {
+            // 試合中は ESC で InGameMenu が開き、カーソルもそちらで出し入れする。
+            if (Game.UI.InGameMenu.Instance != null) return;
             LockCursor(!cursorLocked);
         }
 

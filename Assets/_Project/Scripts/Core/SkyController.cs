@@ -128,6 +128,9 @@ namespace Game.Core
             }
         }
 
+        /// 外から足す嵐の暗さ（0〜1）。豪雨が使う。
+        public static float ExtraStorm { get; set; }
+
         private void ApplyLighting()
         {
             var cam = Camera.main;
@@ -136,7 +139,8 @@ namespace Game.Core
             float inside = 1f - Mathf.InverseLerp(radius * FullRadiusInside, Mathf.Max(radius, 0.01f), Vector3.Distance(viewer, center));
             stormAmount = Mathf.MoveTowards(stormAmount, inside, ColorChangePerSecond * Time.deltaTime);
 
-            var p = SkyParams.Lerp(SkyPalette.Clear, SkyPalette.Storm, stormAmount);
+            // 魔王のフィールド魔法「豪雨」の中にカメラがいるあいだも嵐の色にする。
+            var p = SkyParams.Lerp(SkyPalette.Clear, SkyPalette.Storm, Mathf.Max(stormAmount, ExtraStorm));
             RenderSettings.ambientLight = p.ambient;
             // 雷が光っている間はライトを LightningFlash に任せる。
             if (directionalLight != null && (lightningFlash == null || !lightningFlash.IsFlashing))

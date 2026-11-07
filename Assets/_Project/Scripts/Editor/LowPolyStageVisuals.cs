@@ -253,7 +253,7 @@ namespace Game.Editor
             var spawner = go.GetComponent<Game.Monster.BiomeSpawner>();
             if (spawner == null) spawner = go.AddComponent<Game.Monster.BiomeSpawner>();
             var so = new SerializedObject(spawner);
-            so.FindProperty("table").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Game.Monster.BiomeSpawnData>("Assets/_Project/ScriptableObjects/Biomes/BiomeSpawnTable.asset");
+            so.FindProperty("table").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Game.Monster.BiomeSpawnData>("Assets/_Project/Resources/BiomeSpawnTable.asset");
             so.FindProperty("monsterPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/_Project/Prefabs/Monster.prefab");
             so.ApplyModifiedPropertiesWithoutUndo();
 

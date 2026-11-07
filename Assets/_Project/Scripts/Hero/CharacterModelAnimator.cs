@@ -144,7 +144,27 @@ namespace Game.Hero
         private float guardReach;
         private Vector3 guardPoint;
         private bool castBonesCached;
-        private Transform hips, spineLower, spineUpper, leftArm, leftForeArm, leftHand, rightArm, rightForeArm, rightHand;
+        private Transform hips, spineLower, spineUpper, leftArm, leftForeArm, leftHand, rightArm, rightForeArm, rightHand, neck, head;
+
+        // 魔物の待機の動き（アニメーションの上に重ねる）: 息、見回し、重心移動、時々のしぐさ。
+        private bool idleLife;
+        private float idleW, idleYaw, idleYawGoal, idleYawVel, idlePitch, idlePitchGoal, idlePitchVel, idleNextLook, idleSeed;
+        private float idleFidgetAt, idleFidgetStart = -99f;
+        private int idleFidgetKind;
+        private const float IdleFidgetSeconds = 1.5f;
+
+        /// 魔物用: 騎士の骨とクリップを使わない独自の骨のモデル。骨は別のスクリプト（BossRig）がコードで回す。
+        /// Configure の直後、Start より前に呼ぶ。
+        public void UseCustomRig() { customRig = true; }
+        private bool customRig;
+
+        /// 魔物用: 立ち止まっているとき、待機アニメーションの上に息・見回し・重心移動・しぐさを重ねる。
+        public void EnableIdleLife()
+        {
+            idleLife = true;
+            idleSeed = Random.value * 50f;
+            idleFidgetAt = Time.time + Random.Range(3f, 9f);
+        }
 
         private static readonly string[] TriggerNames =
         {
@@ -243,6 +263,7 @@ namespace Game.Hero
             if (model == null || animator == null) return;
             bool casting = castLean != 0f || castReach != 0f;
             bool melee = meleeLean != 0f || meleeSpin != 0f || meleeReach != 0f;
+            if (idleLife) ApplyIdleLife(currentState == AnimState.Idle && !casting && !melee && guardReach == 0f && !(health != null && health.IsDead));
             if (!casting && !melee && guardReach == 0f) return;
             if (health != null && health.IsDead) return;
             CacheCastBones();
@@ -260,6 +281,46 @@ namespace Game.Hero
             if (guardReach != 0f) AimArm(leftArm, leftForeArm, leftHand, -transform.right, guardPoint, guardReach);
             // 腕を決めた後に回すと、腕ごと体が回る。
             if (meleeSpin != 0f && hips != null) hips.rotation = Quaternion.AngleAxis(meleeSpin, transform.up) * hips.rotation;
+        }
+
+        private void ApplyIdleLife(bool idle)
+        {
+            float dt = Time.deltaTime, now = Time.time;
+            idleW = Mathf.MoveTowards(idleW, idle ? 1f : 0f, dt / (idle ? 0.6f : 0.25f));
+            if (idleW <= 0f) return;
+            CacheCastBones();
+            if (now >= idleNextLook)
+            {
+                idleNextLook = now + Random.Range(2f, 4.5f);
+                idleYawGoal = Random.value < 0.3f ? 0f : Random.Range(-35f, 35f);
+                idlePitchGoal = Random.Range(-6f, 8f);
+            }
+            if (idle && now >= idleFidgetAt)
+            {
+                idleFidgetStart = now;
+                idleFidgetKind = Random.Range(0, 3);
+                idleFidgetAt = now + IdleFidgetSeconds + Random.Range(6f, 12f);
+            }
+            float f = Mathf.Clamp01((now - idleFidgetStart) / IdleFidgetSeconds);
+            float fidget = (f > 0f && f < 1f ? Mathf.Sin(f * Mathf.PI) : 0f) * idleW;
+            // しぐさ: 0 = 肩ごしに後ろを振り返る、1 = 背をそらして伸びをする、2 = 首をかしげる
+            float over = idleFidgetKind == 0 ? fidget : 0f;
+            float stretch = idleFidgetKind == 1 ? fidget : 0f;
+            float tilt = idleFidgetKind == 2 ? fidget : 0f;
+            idleYaw = Mathf.SmoothDamp(idleYaw, idleYawGoal, ref idleYawVel, 0.6f);
+            idlePitch = Mathf.SmoothDamp(idlePitch, idlePitchGoal, ref idlePitchVel, 0.8f);
+            float breath = Mathf.Sin((now + idleSeed) * Mathf.PI * 2f * 0.3f);
+            float shift = Mathf.Sin((now + idleSeed) * Mathf.PI * 2f * 0.12f);
+            float yaw = (idleYaw + 70f * over * Mathf.Sign(idleYawGoal == 0f ? 1f : idleYawGoal)) * idleW;
+            Vector3 up = transform.up, right = transform.right, fwd = transform.forward;
+            if (hips != null) hips.rotation = Quaternion.AngleAxis(shift * 2.2f * idleW, fwd) * hips.rotation;
+            if (spineLower != null) spineLower.rotation = Quaternion.AngleAxis((breath * 1.5f - 6f * stretch) * idleW, right) * Quaternion.AngleAxis(yaw * 0.15f, up) * spineLower.rotation;
+            if (spineUpper != null) spineUpper.rotation = Quaternion.AngleAxis((breath * 2f - 8f * stretch) * idleW, right) * Quaternion.AngleAxis(yaw * 0.2f, up) * spineUpper.rotation;
+            if (leftArm != null) leftArm.rotation = Quaternion.AngleAxis((breath * 2f + 25f * stretch) * idleW, fwd) * leftArm.rotation;
+            if (rightArm != null) rightArm.rotation = Quaternion.AngleAxis(-(breath * 2f + 25f * stretch) * idleW, fwd) * rightArm.rotation;
+            if (neck != null) neck.rotation = Quaternion.AngleAxis(yaw * 0.3f, up) * neck.rotation;
+            if (head != null)
+                head.rotation = Quaternion.AngleAxis(16f * tilt, fwd) * Quaternion.AngleAxis((idlePitch - 6f * stretch) * idleW, right) * Quaternion.AngleAxis(yaw * 0.35f, up) * head.rotation;
         }
 
         private void AimArm(Transform arm, Transform foreArm, Transform hand, Vector3 side, Vector3 point, float reach)
@@ -293,6 +354,8 @@ namespace Game.Hero
                     case "RightArm": rightArm = t; break;
                     case "RightForeArm": rightForeArm = t; break;
                     case "RightHand": rightHand = t; break;
+                    case "neck": case "Neck": neck = t; break;
+                    case "Head": if (head == null) head = t; break;
                 }
             }
         }
@@ -386,8 +449,11 @@ namespace Game.Hero
             model.transform.localPosition = modelOffset;
             model.transform.localEulerAngles = modelEulerOffset;
             model.transform.localScale = Vector3.one * modelScale;
-            ModelBoneFit.Attach(model);
-            FloatingHeldItem.AttachIfPresent(model);
+            if (!customRig)
+            {
+                ModelBoneFit.Attach(model);
+                FloatingHeldItem.AttachIfPresent(model);
+            }
 
             // 1人称カメラから自分のアバターが映り込まないように専用Layerへ移す。
             ApplyAvatarLayer(model);
@@ -421,7 +487,7 @@ namespace Game.Hero
 
         private void AttachAnimatorController()
         {
-            if (animator == null) return;
+            if (animator == null || customRig) return;
             var controller = Resources.Load<RuntimeAnimatorController>("Knight/KnightAnimator");
             if (controller == null)
             {

@@ -19,6 +19,7 @@ namespace Game.Core
             Register("help", "全コマンド一覧", HelpCmd);
             Register("addexp", "勇者に Exp 加算 [n=50]", AddExpCmd);
             Register("winhero", "魔王城コア破壊 (勇者勝利)", WinHeroCmd);
+            Register("killdk", "自分の勇者が魔王に最後の一撃を入れる (勇者勝利の演出の確認)", KillDkCmd);
             Register("losehero", "StartTown 破壊 (魔王勝利)", LoseHeroCmd);
             Register("spawnitem", "PowerItem 強制スポーン", SpawnItemCmd);
             Register("respawn", "勇者を StartTown でリスポーン (HP/MP 全回復)", RespawnCmd);
@@ -35,8 +36,11 @@ namespace Game.Core
             Register("status", "状態異常付与 [stun|slow|dot|silence] [秒=3] [self|near=self]", StatusCmd);
             Register("warp", "ワープの門 [info|open|link|clear] (open=1つ目を開く、link=2つ目を開いてつなぐ・距離とMPは無視)", WarpCmd);
             Register("biome", "自然湧きの数をバイオームごとに表示", BiomeCmd);
+            Register("mob", "自然湧きの魔物を勇者の前に湧かせる <Dryad|Mummy|Ifrit|Harpy|Cockatrice|BasicMob> [距離m=12]", MobCmd);
+            Register("spell", "魔王のフィールド魔法 <1-5|Tornado|Lightning|Earthquake|Meteor|ManaBurst|Downpour> [距離m=14] (勇者の前に発動。cd でクールタイムを戻す)", SpellCmd);
             Register("hate", "ヘイト [info|on|off] (on で全魔物がヘイトを使う、info は最寄りの魔物のヘイト表)", HateCmd);
-            Register("boss", "広場のボス [info|tp dragon|tp scorpion|tp wendigo|breath|dive|sting|charge|slash|roar|pounce|scratch|curse|kill|respawn]", BossCmd);
+            Register("gate", "橋のたもとの結界 [info|open dragon|open scorpion|open wendigo|open all|close|tp dragon|tp scorpion|tp wendigo]", GateCmd);
+            Register("boss", "広場のボス [info|tp dragon|tp scorpion|tp wendigo|breath|dive|sting|charge|slash|roar|pounce|scratch|smash|curse|kill|respawn]", BossCmd);
         }
 
         public static void Register(string name, string description, CommandHandler handler)
@@ -111,6 +115,17 @@ namespace Game.Core
             if (hc == null) return "DemonCastle has no HealthComponent";
             hc.TakeDamage(hc.MaxHP * 2, null);
             return "DemonCastle_Core destroyed";
+        }
+
+        private static string KillDkCmd(string[] args)
+        {
+            var dk = GameObject.FindWithTag("DemonKing");
+            if (dk == null) return "DemonKing not found";
+            var hc = dk.GetComponent<HealthComponent>();
+            if (hc == null) return "DemonKing has no HealthComponent";
+            var hero = HumanHeroMarker.Instance != null ? HumanHeroMarker.Instance.gameObject : null;
+            hc.TakeDamage(hc.MaxHP * 5, hero);
+            return "DemonKing defeated";
         }
 
         private static string LoseHeroCmd(string[] args)
@@ -218,10 +233,86 @@ namespace Game.Core
             return "Role switched -> " + pms[0].EffectiveRole;
         }
 
+        private static string GateCmd(string[] args)
+        {
+            var gates = Game.Monster.BossGate.All;
+            string sub = args.Length > 0 ? args[0].ToLowerInvariant() : "info";
+            string key = args.Length > 1 ? args[1].ToLowerInvariant() : "all";
+            if (sub == "close")
+            {
+                Game.Monster.BossGate.CloseAll();
+                return "gates closed";
+            }
+            var sb = new System.Text.StringBuilder();
+            var list = new List<Game.Monster.BossGate>(gates);
+            foreach (var g in list)
+            {
+                if (sub == "open" && (key == "all" || key == g.BossKey)) g.Open();
+                if (sub == "tp" && key == g.BossKey)
+                {
+                    var hero = Game.Hero.HumanHeroMarker.Instance;
+                    if (hero == null) return "no hero";
+                    Vector3 away = new Vector3(g.Center.x - StageMap.Map.castleX, 0f, g.Center.z - StageMap.Map.castleZ).normalized;
+                    Vector3 p = g.Center + away * (g.Radius + 6f) + Vector3.up * 3f;
+                    var cc = hero.GetComponent<CharacterController>();
+                    if (cc != null) cc.enabled = false;
+                    hero.transform.position = p;
+                    hero.transform.rotation = Quaternion.LookRotation(-away);
+                    if (cc != null) cc.enabled = true;
+                    return "tp to gate " + g.BossKey;
+                }
+                sb.Append(g.BossKey).Append(g.IsOpen ? " open" : " sealed").Append(" (").Append(g.BossName).Append(") ");
+            }
+            return sb.Length > 0 ? sb.ToString() : "no gates";
+        }
+
         private static string BiomeCmd(string[] args)
         {
             var spawner = Object.FindFirstObjectByType<Game.Monster.BiomeSpawner>();
             return spawner != null ? spawner.Describe() : "BiomeSpawner not in scene";
+        }
+
+        private static string MobCmd(string[] args)
+        {
+            if (args.Length == 0) return "usage: /debug mob <name> [distance=12]";
+            var spawner = Object.FindFirstObjectByType<Game.Monster.BiomeSpawner>();
+            if (spawner == null) return "BiomeSpawner not in scene";
+            var hero = HumanHeroMarker.Instance != null ? HumanHeroMarker.Instance.transform : null;
+            if (hero == null) return "no local hero";
+            float distance = args.Length > 1 && float.TryParse(args[1], out var d) ? d : 12f;
+            Vector3 forward = hero.forward;
+            forward.y = 0f;
+            return spawner.SpawnAt(args[0], hero.position + forward.normalized * distance);
+        }
+
+        private static string SpellCmd(string[] args)
+        {
+            if (args.Length == 0) return "usage: /debug spell <1-5|name> [distance=14] | /debug spell cd";
+            var dk = GameObject.FindWithTag("DemonKing");
+            var caster = dk != null ? dk.GetComponent<Game.DemonKing.FieldSpellCaster>() : null;
+            if (args[0] == "cd")
+            {
+                if (caster == null) return "no FieldSpellCaster (human Demon King only)";
+                caster.ResetCooldowns();
+                return "field spell cooldowns reset";
+            }
+            Game.DemonKing.FieldSpellData spell = null;
+            var slots = caster != null ? caster.Slots : Game.DemonKing.FieldSpellCaster.LoadEquipped();
+            if (int.TryParse(args[0], out var n) && n >= 1 && n <= slots.Length) spell = slots[n - 1];
+            if (spell == null)
+                foreach (var s in Resources.LoadAll<Game.DemonKing.FieldSpellData>("FieldSpells"))
+                    if (string.Equals(s.kind.ToString(), args[0], System.StringComparison.OrdinalIgnoreCase) || s.spellName == args[0]) spell = s;
+            if (spell == null) return "unknown spell: " + args[0];
+            // 狙う場所: 自分の勇者の前（勇者でなければ最初に見つかった勇者、それもなければ魔王の前）。
+            var hero = HumanHeroMarker.Instance != null ? HumanHeroMarker.Instance.transform : (GameObject.FindWithTag("Player") != null ? GameObject.FindWithTag("Player").transform : null);
+            var from = hero != null ? hero : (dk != null ? dk.transform : null);
+            if (from == null) return "no hero or Demon King";
+            float distance = args.Length > 1 && float.TryParse(args[1], out var d) ? d : (hero != null && HumanHeroMarker.Instance == null ? 0f : 14f);
+            Vector3 forward = from.forward;
+            forward.y = 0f;
+            Vector3 at = from.position + forward.normalized * distance;
+            Game.DemonKing.FieldSpellEffect.Cast(spell, at, dk);
+            return spell.spellName + " at " + at;
         }
 
         private static string VisionCmd(string[] args)
@@ -350,9 +441,9 @@ namespace Game.Core
                     if (scorpion == null) return "scorpion not found";
                     scorpion.Force(mode == "sting" ? Game.Monster.ScorpionBoss.Attack.Sting : mode == "charge" ? Game.Monster.ScorpionBoss.Attack.Charge : Game.Monster.ScorpionBoss.Attack.Slash);
                     return "scorpion -> " + mode;
-                case "roar": case "pounce": case "scratch":
+                case "roar": case "pounce": case "scratch": case "smash":
                     if (wendigo == null) return "wendigo not found";
-                    wendigo.Force(mode == "roar" ? Game.Monster.WendigoBoss.Attack.Roar : mode == "pounce" ? Game.Monster.WendigoBoss.Attack.Pounce : Game.Monster.WendigoBoss.Attack.Scratch);
+                    wendigo.Force(mode == "roar" ? Game.Monster.WendigoBoss.Attack.Roar : mode == "pounce" ? Game.Monster.WendigoBoss.Attack.Pounce : mode == "smash" ? Game.Monster.WendigoBoss.Attack.Smash : Game.Monster.WendigoBoss.Attack.Scratch);
                     return "wendigo -> " + mode;
                 case "curse":
                 {
@@ -379,7 +470,7 @@ namespace Game.Core
                     if (Game.Monster.BossSpawner.Instance == null) return "BossSpawner not in scene";
                     return "respawned " + Game.Monster.BossSpawner.Instance.RespawnNow() + " boss(es)";
                 default:
-                    return "usage: /debug boss [info|tp dragon|tp scorpion|tp wendigo|breath|dive|sting|charge|slash|roar|pounce|scratch|curse|kill|respawn]";
+                    return "usage: /debug boss [info|tp dragon|tp scorpion|tp wendigo|breath|dive|sting|charge|slash|roar|pounce|scratch|smash|curse|kill|respawn]";
             }
         }
 

@@ -57,7 +57,7 @@ namespace Game.Skill
 
         private void OnSkillCastPerformed(InputAction.CallbackContext _)
         {
-            if (Game.UI.ConsoleUI.IsConsoleActive) return;
+            if (Game.UI.InGameMenu.BlocksGameInput) return;
             var modelAnim = GetComponent<Game.Hero.CharacterModelAnimator>();
             if (modelAnim != null && modelAnim.IsRespawnAnimPlaying) return;
             TryCast();

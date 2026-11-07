@@ -9,12 +9,14 @@ namespace Game.Monster
 {
     /// 森の広場のウェンディゴ。四つ足で広場を駆けて勇者を追う。
     ///  - 雄叫び: 勇者を初めて見つけたとき（その後は時々）、体を起こして吠える。まわりの森にいる勇者に森の呪い（視界が狭まる）をかける。
-    ///  - 飛び掛かり: 身をかがめてから、勇者のいる所へ高く跳んで着地する。着地点のまわりの勇者は跳ね飛ばされる。
-    ///  - 引っ掻き: 片腕を振り上げ、地面を勢いよく引っ掻いてはがし、前へ瓦礫を扇状に飛ばす。地面には削れた跡が残る。
+    ///  - 大跳躍（離れているとき）: 身をかがめてから、勇者の方へ前に大きく高く跳んで着地する。着地点のまわりの勇者は跳ね飛ばされる。
+    ///  - 近くにいるときは近接の破壊攻撃:
+    ///    引っ掻き: 片腕を振り上げて前の勇者を爪で薙ぎ、地面を引っ掻いてはがし、前へ瓦礫を扇状に飛ばす。
+    ///    叩きつけ: 後ろ足で立ち上がり、両腕を前の地面へ叩きつける。前にいる勇者を大きく吹き飛ばし、地面を砕いて瓦礫をまき散らす。
     public class WendigoBoss : BossBase
     {
-        public enum Attack { None, Roar, Pounce, Scratch }
-        private enum State { Idle, Chase, Roar, PounceWindup, PounceAir, PounceRecover, ScratchWindup, ScratchSwing, ScratchRecover }
+        public enum Attack { None, Roar, Pounce, Scratch, Smash }
+        private enum State { Idle, Chase, Roar, PounceWindup, PounceAir, PounceRecover, ScratchWindup, ScratchSwing, ScratchRecover, SmashWindup, SmashSlam, SmashRecover }
 
         private const float WallMargin = 3f;
         private const float StopDistance = 5f;
@@ -42,6 +44,8 @@ namespace Game.Monster
         private float scratchSide = 1f;    // 引っ掻く腕（1 = P）
         private Vector3 leapFrom;
         private Vector3 leapTo;
+        private float leapAir;
+        private float leapHeight;
         private readonly List<HealthComponent> buffer = new List<HealthComponent>();
         private readonly List<(string bone, Quaternion fix)> legFix = new List<(string, Quaternion)>();
 
@@ -106,6 +110,9 @@ namespace Game.Monster
                 case State.ScratchWindup: TickScratchWindup(); break;
                 case State.ScratchSwing: TickScratchSwing(); break;
                 case State.ScratchRecover: Recover(data.scratchRecoverSeconds); break;
+                case State.SmashWindup: TickSmashWindup(); break;
+                case State.SmashSlam: TickSmashSlam(); break;
+                case State.SmashRecover: Recover(data.smashRecoverSeconds); break;
             }
         }
 
@@ -177,10 +184,18 @@ namespace Game.Monster
                 forced = Attack.None;
                 return f;
             }
+            // 離れていれば前へ大きく跳び、近ければ近接の破壊攻撃（引っ掻きか叩きつけ）。
             var options = new List<Attack>();
             if (roarTimer <= 0f) options.Add(Attack.Roar);
-            if (d <= data.scratchMaxRange) options.Add(Attack.Scratch);
-            if (d >= data.pounceMinRange && d <= data.pounceMaxRange) options.Add(Attack.Pounce);
+            if (d >= data.pounceMinRange)
+            {
+                if (d <= data.pounceMaxRange) options.Add(Attack.Pounce);
+            }
+            else
+            {
+                options.Add(Attack.Smash);
+                if (d <= data.scratchMaxRange) options.Add(Attack.Scratch);
+            }
             if (options.Count > 1) options.Remove(lastAttack);
             return options.Count > 0 ? options[Random.Range(0, options.Count)] : Attack.None;
         }
@@ -196,6 +211,7 @@ namespace Game.Monster
                     scratchSide = -scratchSide;
                     Enter(State.ScratchWindup);
                     break;
+                case Attack.Smash: Enter(State.SmashWindup); break;
             }
         }
 
@@ -244,15 +260,21 @@ namespace Game.Monster
             reach = reach.magnitude > shortBy ? reach.normalized * (reach.magnitude - shortBy) : Vector3.zero;
             if (reach.magnitude > data.pounceMaxRange) reach = reach.normalized * data.pounceMaxRange;
             leapTo = Grounded(ClampToArena(leapFrom + reach, WallMargin));
-            EarthChips.Spawn(leapFrom, 2f, 8);
+            // 遠くへ跳ぶほど高く長く飛ぶ。
+            float share = Mathf.Clamp01(Flat(leapTo - leapFrom).magnitude / Mathf.Max(1f, data.pounceMaxRange));
+            leapAir = Mathf.Lerp(data.pounceAirSeconds * 0.6f, data.pounceAirSeconds, share);
+            leapHeight = Mathf.Lerp(data.pounceHeight * 0.45f, data.pounceHeight, share);
+            EarthChips.Spawn(leapFrom, 2.5f, 12);
+            MeleeFx.DustBurst(leapFrom, 2.5f, 18, 5f);
+            HeroFPSController.ShakeNear(leapFrom, 0.08f, 30f, 0.25f);
             Enter(State.PounceAir);
         }
 
         private void TickPounceAir()
         {
-            float t = Mathf.Clamp01(stateTimer / Mathf.Max(0.05f, data.pounceAirSeconds));
+            float t = Mathf.Clamp01(stateTimer / Mathf.Max(0.05f, leapAir));
             Vector3 p = Vector3.Lerp(leapFrom, leapTo, t);
-            p.y += Mathf.Sin(t * Mathf.PI) * data.pounceHeight;
+            p.y += Mathf.Sin(t * Mathf.PI) * leapHeight;
             Vector3 travel = Flat(leapTo - leapFrom);
             if (travel.sqrMagnitude > 0.01f) transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(travel), data.turnSpeed * 2f * Time.deltaTime);
             transform.position = p;
@@ -294,6 +316,8 @@ namespace Game.Monster
             if (stateTimer < data.scratchSwingSeconds) return;
             Vector3 lateral = transform.right * side * scratchSide * data.modelScale * 0.18f;
             Vector3 torn = Grounded(transform.position + transform.forward * data.modelScale * 0.55f + lateral);
+            // 爪そのものが前の勇者を薙ぐ。
+            FrontHit(transform.position, data.scratchHitRange + data.modelScale * 0.3f, data.scratchHitArc, data.scratchHitDamageScale, data.scratchKnockback);
             GroundDig.Dig(torn, data.scratchDigRadius, data.scratchDigDepth);
             EarthChips.Spawn(torn, data.scratchDigRadius, 16);
             MeleeFx.DustBurst(torn, data.scratchDigRadius, 20, 5f);
@@ -316,6 +340,55 @@ namespace Game.Monster
                 WendigoDebris.Spawn(gameObject, start, velocity, damage, Random.Range(0.45f, 0.95f), data);
             }
             Enter(State.ScratchRecover);
+        }
+
+        // ---- smash
+
+        private void TickSmashWindup()
+        {
+            if (target != null) FaceTowards(target.position, data.turnSpeed * 1.2f);
+            if (stateTimer >= data.smashWindupSeconds) Enter(State.SmashSlam);
+        }
+
+        private void TickSmashSlam()
+        {
+            if (stateTimer < data.smashSlamSeconds) return;
+            Vector3 at = Grounded(transform.position + transform.forward * data.modelScale * 0.6f);
+            FrontHit(transform.position, data.modelScale * 0.6f + data.smashRadius, data.smashArcDegrees, data.smashDamageScale, data.smashKnockback, at, data.smashRadius);
+            GroundDig.Dig(at, data.smashDigRadius, data.smashDigDepth);
+            EarthChips.Spawn(at, data.smashDigRadius, 26);
+            MeleeFx.DustBurst(at, data.smashDigRadius, 36, 7f);
+            ShockRing.Spawn(at + Vector3.up * 0.2f, 0.6f, data.smashRadius * 1.4f, 0.4f, 1.0f, new Color(0.55f, 0.45f, 0.33f, 0.95f));
+            HeroFPSController.ShakeNear(at, 0.3f, data.smashRadius * 6f, 0.5f);
+            int count = Mathf.Max(0, data.smashDebrisCount);
+            int damage = Mathf.Max(1, Mathf.RoundToInt(CurrentAtk * data.debrisDamageScale));
+            for (int i = 0; i < count; i++)
+            {
+                float yaw = i * 360f / Mathf.Max(1, count) + Random.Range(-12f, 12f);
+                Vector3 dir = Quaternion.AngleAxis(yaw, Vector3.up) * transform.forward;
+                float speed = Mathf.Sqrt(14f * data.smashDebrisRange) * Random.Range(0.75f, 1.0f);
+                Vector3 velocity = (dir + Vector3.up * Random.Range(0.6f, 1.1f)).normalized * speed;
+                WendigoDebris.Spawn(gameObject, at + Vector3.up * 0.8f + dir * 1.2f, velocity, damage, Random.Range(0.5f, 1.1f), data);
+            }
+            Enter(State.SmashRecover);
+        }
+
+        // 前の扇形（from から range m、角度 arc 度）にいる勇者に当てて吹き飛ばす。center と radius があれば、その円の中も当たる。
+        private void FrontHit(Vector3 from, float range, float arc, float damageScale, float knockback, Vector3? center = null, float radius = 0f)
+        {
+            HeroesNear(from, range, HitHeight, buffer);
+            foreach (var hp in buffer)
+            {
+                Vector3 to = Flat(hp.transform.position - from);
+                bool inArc = to.sqrMagnitude < 0.01f || Vector3.Angle(transform.forward, to) <= arc * 0.5f;
+                bool inCircle = center.HasValue && Flat(hp.transform.position - center.Value).magnitude <= radius;
+                if (!inArc && !inCircle) continue;
+                Vector3 away = to.sqrMagnitude > 0.01f ? to.normalized : transform.forward;
+                Hit(hp, damageScale);
+                if (hp == null || hp.IsDead) continue;
+                SkillKnockback.Play(hp.gameObject, away, knockback);
+                ImpactPunch.Play(hp.gameObject, away);
+            }
         }
 
         // ---------------------------------------------------------------- death
@@ -376,7 +449,7 @@ namespace Game.Monster
                 }
                 case State.PounceAir:
                 {
-                    float k = Mathf.Clamp01(stateTimer / Mathf.Max(0.05f, data.pounceAirSeconds));
+                    float k = Mathf.Clamp01(stateTimer / Mathf.Max(0.05f, leapAir));
                     chest -= Mathf.Lerp(18f, 4f, k);
                     head -= 10f;
                     armSwing = Mathf.Lerp(-60f, -30f, k);
@@ -416,10 +489,54 @@ namespace Game.Monster
                 }
             }
 
+            // 待機: 息をして、あたりを見回す。時々しぐさをする（0,1: 地面のにおいをかぐ、2: 頭を振る、3: 前足で地面をかく）。
+            var idle = Idle(state == State.Idle && runAmount < 0.1f, 1.8f);
+            float idleYaw = 0f, idleRoll = 0f, paw = 0f;
+            if (idle.weight > 0f)
+            {
+                float sniff = idle.fidgetKind <= 1 ? idle.fidget : 0f;
+                chest += idle.breath * 2.5f * idle.weight + 6f * sniff;
+                neck += 10f * sniff;
+                head += idle.lookPitch + 14f * sniff + Mathf.Sin(time * 22f) * 3.5f * sniff;
+                idleYaw = idle.lookYaw * (1f - sniff) + (idle.fidgetKind == 2 ? Mathf.Sin(time * 15f) * 16f * idle.fidget : 0f);
+                armSpread += (idle.breath * 2f + 3f) * idle.weight;
+                idleRoll = idle.shift * 2.5f;
+                paw = idle.fidgetKind == 3 ? idle.fidget : 0f;
+            }
+
+            // 叩きつけ: 後ろ足で立ち上がって両腕を高く上げ、前へ振り下ろす。
+            float rear = 0f;
+            if (state == State.SmashWindup)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, stateTimer / Mathf.Max(0.05f, data.smashWindupSeconds));
+                rear = k;
+                chest -= 30f * k;
+                head -= 12f * k;
+                armSwing = -110f * k;
+                armSpread = 16f * k;
+                legSwing = -14f * k;
+            }
+            else if (state == State.SmashSlam)
+            {
+                float k = Mathf.Clamp01(stateTimer / Mathf.Max(0.05f, data.smashSlamSeconds));
+                rear = 1f - k;
+                chest += Mathf.Lerp(-30f, 18f, k);
+                armSwing = Mathf.Lerp(-110f, -15f, k);
+                armSpread = 16f * (1f - k);
+                drop = 0.05f * k;
+            }
+            else if (state == State.SmashRecover)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, stateTimer / Mathf.Max(0.05f, data.smashRecoverSeconds));
+                chest += 18f * (1f - k);
+                armSwing = -15f * (1f - k);
+                drop = 0.05f * (1f - k);
+            }
+
             // 駆け足: 前足と後ろ足が対角で組になって、前後へ大きく振る。
             float bob = Mathf.Abs(Mathf.Sin(runPhase)) * 0.025f * run;
-            model.localPosition = Vector3.up * data.modelScale * (bob - drop);
-            model.localRotation = Quaternion.Euler(Mathf.Sin(runPhase * 2f) * 3f * run, 0f, Mathf.Sin(runPhase) * 2f * run);
+            model.localPosition = Vector3.up * data.modelScale * (bob - drop + 0.07f * rear) - Vector3.forward * data.modelScale * 0.08f * rear;
+            model.localRotation = Quaternion.Euler(Mathf.Sin(runPhase * 2f) * 3f * run - 24f * rear + idle.breath * 0.6f * idle.weight, 0f, Mathf.Sin(runPhase) * 2f * run + idleRoll);
 
             rig.Rotate("Chest", Vector3.right, chest);
             if (target != null && state == State.Chase)
@@ -429,6 +546,11 @@ namespace Game.Monster
                 float yaw = Mathf.Clamp(Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg, -30f, 30f);
                 rig.Rotate("Neck", Vector3.up, yaw * 0.5f);
                 rig.Rotate("Head", Vector3.up, yaw * 0.5f);
+            }
+            if (idleYaw != 0f)
+            {
+                rig.Rotate("Neck", Vector3.up, idleYaw * 0.45f);
+                rig.Rotate("Head", Vector3.up, idleYaw * 0.55f);
             }
             rig.Rotate("Neck", Vector3.right, neck);
             rig.Rotate("Head", Vector3.right, head + Mathf.Sin(time * 0.9f) * 2f);
@@ -443,6 +565,13 @@ namespace Game.Monster
                 float arm = armSwing + stride * 30f * run;
                 float fore = -lift * 30f * run;
                 float spread = armSpread;
+                if (paw > 0f && s == "P")
+                {
+                    // 前足で地面をかく: 持ち上げて前へ出し、後ろへかき戻す。
+                    float stroke = Mathf.Sin(time * 9f);
+                    arm += -28f * paw + stroke * 12f * paw;
+                    fore += -30f * paw;
+                }
                 if (scratching)
                 {
                     // 引っ掻く腕: 前へ高く振り上げ、振り下ろして地面を後ろへかく。

@@ -2,6 +2,9 @@ using UnityEngine;
 
 namespace Game.Monster
 {
+    /// 魔物の動き方と技。Melee はゴブリンのような体当たりの近接（ContactDamage）。ほかは MonsterBehaviour の派生が動かす。
+    public enum MonsterKind { Melee, Dryad, Mummy, Ifrit, Harpy, Cockatrice }
+
     [CreateAssetMenu(menuName = "Game/Monster Data", fileName = "MonsterData")]
     public class MonsterData : ScriptableObject
     {
@@ -23,6 +26,82 @@ namespace Game.Monster
 
         public bool IsUnlockedAt(int dkLevel) => dkLevel >= unlockDkLevel;
         [TextArea(2, 5)] public string description;
+
+        [Header("Kind")]
+        [Tooltip("How it moves and attacks. Melee = touches heroes (ContactDamage); others run their own MonsterBehaviour and never deal touch damage to heroes.")]
+        public MonsterKind kind = MonsterKind.Melee;
+        [Tooltip("Notices heroes this close (m). 0 = the prefab's aggro radius.")]
+        public float noticeRadius;
+
+        [Header("Attack (Dryad / Harpy / Ifrit)")]
+        [Tooltip("Starts the attack when the hero it chases is this close (m).")]
+        public float attackRange = 24f;
+        [Tooltip("Seconds between attacks.")]
+        public float attackCooldown = 2.6f;
+        [Tooltip("Seconds of the windup before the shot leaves.")]
+        public float attackWindup = 0.55f;
+        [Tooltip("Speed of the shot (m/s).")]
+        public float projectileSpeed = 24f;
+        [Tooltip("Share of Atk dealt by one shot.")]
+        public float attackDamageScale = 1f;
+        [Tooltip("Shots in one volley (Dryad leaves). They fan out a little.")]
+        public int projectileCount = 1;
+        [Tooltip("Total fan angle of a volley (degrees).")]
+        public float projectileSpread = 8f;
+        [Tooltip("Radius of a shot for hitting heroes (m).")]
+        public float projectileHitRadius = 0.45f;
+
+        [Header("Mummy")]
+        [Tooltip("Throws the bandage at heroes between these distances (m).")]
+        public float grabMinRange = 5f;
+        public float grabRange = 16f;
+        [Tooltip("Speed of the bandage tip (m/s).")]
+        public float grabSpeed = 34f;
+        [Tooltip("Seconds between bandage throws.")]
+        public float grabCooldown = 7f;
+        [Tooltip("Seconds the pulled hero is stunned (so the two-handed attack lands).")]
+        public float grabStunSeconds = 0.9f;
+        [Tooltip("Share of Atk dealt by the bandage hit itself.")]
+        public float grabDamageScale = 0.3f;
+        [Tooltip("Reach of the two-handed attack (m, from the body center).")]
+        public float clawRange = 2.6f;
+        [Tooltip("Share of Atk dealt by the two-handed attack.")]
+        public float clawDamageScale = 1.4f;
+        [Tooltip("Seconds between two-handed attacks.")]
+        public float clawCooldown = 2.2f;
+        [Tooltip("Speed against spd while lurching (lowest, highest).")]
+        public Vector2 lurchSpeedScale = new Vector2(0.35f, 1.15f);
+
+        [Header("Floating / Flying")]
+        [Tooltip("Height the body floats above the ground at rest (m). Dryad / Ifrit.")]
+        public float floatHeight = 0.25f;
+        [Tooltip("Height it flies at after noticing a hero (m). Harpy / Cockatrice: about half a hero.")]
+        public float hoverHeight = 0.9f;
+
+        [Header("Cockatrice Dive")]
+        [Tooltip("Starts the dive when the hero is this close (m).")]
+        public float diveRange = 12f;
+        [Tooltip("Height it climbs to before diving (m).")]
+        public float diveClimbHeight = 4f;
+        [Tooltip("Seconds of the climb.")]
+        public float diveWindup = 0.8f;
+        [Tooltip("Speed of the glide down (m/s).")]
+        public float diveSpeed = 17f;
+        [Tooltip("Heroes this close to the body during the dive are hit (m).")]
+        public float diveHitRadius = 1.8f;
+        public float diveDamageScale = 1.5f;
+        [Tooltip("Knockback of a dive hit (m).")]
+        public float diveKnockback = 3f;
+        [Tooltip("Seconds it stays low after the dive.")]
+        public float diveRecover = 0.9f;
+        [Tooltip("Seconds between dives.")]
+        public float diveCooldown = 4.5f;
+
+        [Header("Spacing")]
+        [Tooltip("Stops this far from the hero it chases (m, from center to center). 0 = melee: just short of touching.")]
+        public float keepDistance;
+        [Tooltip("Backs off when the hero comes closer than this (m). 0 = 80% of keepDistance.")]
+        public float retreatDistance;
 
         [Header("Bridge Guardian")]
         [Tooltip("Stands in front of a bridge instead of wandering. Chosen in the Demon King lobby, not in the deck.")]
@@ -94,6 +173,8 @@ namespace Game.Monster
         [Header("Model")]
         [Tooltip("Resources path of the model on the Knight skeleton (e.g. Goblin/goblin). Empty = keep the prefab's Body shape.")]
         public string modelPath;
+        [Tooltip("The model has its own bones (not the Knight's). Its MonsterBehaviour poses them in code.")]
+        public bool customRig;
         [Tooltip("Resources path of a material applied to every renderer. Empty = keep the FBX materials.")]
         public string modelMaterialPath;
         public float modelScale = 1f;

@@ -285,6 +285,64 @@ namespace Game.UI
             return new Vector2((u - 0.5f) * MapPixels, (v - 0.5f) * MapPixels);
         }
 
+        /// 俯瞰画面が出ているか。
+        public static BirdsEyeMapUI Instance => _instance;
+        public bool IsOpen => root != null && root.activeSelf;
+
+        /// 画面の位置（マウス）から地図の上の地点（ゲームの座標）。地図の外なら false。
+        /// 絵地図は高さで上下にずれるので、地形の高さを数回たどって合わせる。
+        public bool ScreenToWorld(Vector2 screen, out Vector3 world)
+        {
+            world = Vector3.zero;
+            if (!IsOpen || mapArea == null) return false;
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(mapArea, screen, null, out var local)) return false;
+            if (Mathf.Abs(local.x) > mapSize.x * 0.5f || Mathf.Abs(local.y) > mapSize.y * 0.5f) return false;
+            if (illust == null)
+            {
+                float u = local.x / MapPixels + 0.5f, v = local.y / MapPixels + 0.5f;
+                world = new Vector3(Mathf.Lerp(worldMin.x, worldMax.x, u), 0f, Mathf.Lerp(worldMin.y, worldMax.y, v));
+                world.y = Game.DemonKing.FieldSpellEffect.GroundY(world.x, world.z);
+                return true;
+            }
+            float x = local.x / mapSize.x * illust.width + illust.centerX;
+            float screenY = local.y / mapSize.y * illust.height + illust.centerScreenY;
+            float y = 0f, z = 0f;
+            for (int i = 0; i < 4; i++)
+            {
+                z = Mathf.Abs(illust.upZ) > 1e-4f ? (screenY - y * illust.upY) / illust.upZ : 0f;
+                y = Game.DemonKing.FieldSpellEffect.GroundY(x, z);
+            }
+            world = new Vector3(x, y, z);
+            return true;
+        }
+
+        private RectTransform aimMark;
+        private HudShape aimRing;
+
+        /// フィールド魔法の狙いの輪を地図に出す（radius はゲームの m）。show=false で消す。
+        public void ShowAim(bool show, Vector3 world, float radius, Color color)
+        {
+            if (mapArea == null) return;
+            if (aimMark == null)
+            {
+                aimMark = HudStyle.Place(mapArea, "FieldSpellAim", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(40f, 40f));
+                aimRing = HudStyle.Shape(aimMark, "Ring", HudShape.Kind.Circle, color);
+                aimRing.raycastTarget = false;
+                var dot = HudStyle.Shape(aimMark, "Dot", HudShape.Kind.Circle, Color.white);
+                dot.raycastTarget = false;
+                HudStyle.Stretch(dot.rectTransform, -16f);
+            }
+            aimMark.gameObject.SetActive(show);
+            if (!show) return;
+            aimMark.SetAsLastSibling();
+            float scale = illust != null ? mapSize.x / illust.width : MapPixels / Mathf.Max(1f, worldMax.x - worldMin.x);
+            float size = Mathf.Max(24f, radius * 2f * scale);
+            aimMark.sizeDelta = new Vector2(size, size);
+            aimMark.anchoredPosition = WorldToMap(world);
+            color.a *= 0.45f + 0.25f * Mathf.Sin(Time.unscaledTime * 8f);
+            aimRing.color = color;
+        }
+
         // ---- 組み立て ----
 
         private void BuildRoot()
@@ -514,9 +572,10 @@ namespace Game.UI
             HudStyle.Label(guards, "Title", topLeft, topLeft, new Vector2(20f, -12f), new Vector2(300f, 32f), "橋の番人", 23, pal.Light, TextAnchor.MiddleLeft);
 
             // 操作の案内
-            var keys = HudStyle.Place(col, "Keys", topLeft, topLeft, new Vector2(0f, -530f), new Vector2(380f, 90f));
+            var keys = HudStyle.Place(col, "Keys", topLeft, topLeft, new Vector2(0f, -530f), new Vector2(380f, 134f));
             KeyHint(keys, 0, "V", "もどる");
             KeyHint(keys, 1, "Esc", "塔の上空から戻る");
+            KeyHint(keys, 2, "1-5", "フィールド魔法（地図をクリック）");
         }
 
         private void KeyHint(RectTransform parent, int index, string key, string label)

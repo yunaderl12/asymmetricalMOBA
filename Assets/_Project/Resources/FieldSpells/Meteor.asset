@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e052e9c08f9e466bb24855fde012dfc, type: 3}
+  m_Name: Meteor
+  m_EditorClassIdentifier: Game.Runtime::Game.DemonKing.FieldSpellData
+  kind: 3
+  spellName: "\u9695\u77F3"
+  description: "\u9078\u3093\u3060\u5834\u6240\u306E\u5468\u308A\u306B\u3001\u9695\u77F3\u304C\u30E9\u30F3\u30C0\u30E0\u306B\u964D\u308A\u6CE8\u3050\u3002\u76F4\u6483\u306F\u5927\u30C0\u30E1\u30FC\u30B8\u3067\u3001\u843D\u3061\u305F\u6240\u306B\u306F\u30AF\u30EC\u30FC\u30BF\u30FC\u304C\u3067\u304D\u308B\u3002"
+  glyph: "\u9695"
+  color: {r: 0.6, g: 0.28, b: 0.15, a: 1}
+  order: 3
+  cooldown: 70
+  chargeSeconds: 2
+  needsTarget: 1
+  targetsBiome: 0
+  radius: 3.5
+  damage: 60
+  outerRadius: 0
+  outerDamage: 0
+  duration: 4
+  count: 6
+  scatterRadius: 14
+  launchSpeed: 16
+  debrisCount: 0
+  debrisDamage: 0
+  slowSeconds: 0
+  slowMultiplier: 1
+  wetDamageMultiplier: 1.5
+  windPush: 0
+  wetAfterSeconds: 10
+  fuseSeconds: {x: 3, y: 5}
+  orbHp: 1
+  crater: {x: 3, y: 1}

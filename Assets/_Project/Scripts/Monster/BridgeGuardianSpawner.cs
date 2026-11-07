@@ -21,6 +21,7 @@ namespace Game.Monster
             var castle = new Vector3(StageMap.Map.castleX, 0f, StageMap.Map.castleZ);
             for (int i = 0; i < GameSession.BRIDGE_COUNT && i * 2 + 1 < starts.Length; i++)
             {
+                if (GameSession.Instance != null && !GameSession.Instance.BridgeGuardianOn[i]) continue; // 魔王ロビーで外した橋
                 var data = GameSession.Instance != null ? GameSession.Instance.BridgeGuardians[i] : null;
                 if (data == null) data = defaultGuardian;
                 if (data == null) continue;

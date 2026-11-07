@@ -1,0 +1,102 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8de724ff83bb4ea9b37ca207a87f5c3, type: 3}
+  m_Name: Dryad
+  m_EditorClassIdentifier: 
+  monsterName: "\u30C9\u30E9\u30A4\u30A2\u30C9"
+  hp: 70
+  atk: 9
+  df: 1
+  mDf: 4
+  spd: 4.2
+  cost: 2
+  spwnCool: 3
+  maxSpwn: 6
+  exp: 22
+  unlockDkLevel: 1
+  useHate: 0
+  description: "\u68EE\u306B\u4F4F\u3080\u7CBE\u970A\u3002\u3075\u308F\u3075\u308F\u6D6E\u3044\u3066\u6F02\u3044\u3001\u6728\u306E\u8449\u306E\u5203\u3092\u6247\u5F62\u306B\u98DB\u3070\u3059\u3002"
+  kind: 1
+  noticeRadius: 22
+  attackRange: 24
+  attackCooldown: 2.6
+  attackWindup: 0.55
+  projectileSpeed: 22
+  attackDamageScale: 0.5
+  projectileCount: 3
+  projectileSpread: 10
+  projectileHitRadius: 0.45
+  grabMinRange: 5
+  grabRange: 16
+  grabSpeed: 34
+  grabCooldown: 7
+  grabStunSeconds: 0.9
+  grabDamageScale: 0.3
+  clawRange: 2.6
+  clawDamageScale: 1.4
+  clawCooldown: 2.2
+  lurchSpeedScale: {x: 0.35, y: 1.15}
+  floatHeight: 0.3
+  hoverHeight: 0.9
+  diveRange: 12
+  diveClimbHeight: 4
+  diveWindup: 0.8
+  diveSpeed: 17
+  diveHitRadius: 1.8
+  diveDamageScale: 1.5
+  diveKnockback: 3
+  diveRecover: 0.9
+  diveCooldown: 4.5
+  keepDistance: 17
+  retreatDistance: 10
+  isBridgeGuardian: 0
+  guardBodyHeight: 5
+  guardBodyRadius: 1.3
+  guardAggroRadius: 30
+  guardLeashRadius: 45
+  slamRange: 11
+  slamWindupSeconds: 1.2
+  slamDownSeconds: 0.2
+  slamRecoverSeconds: 1.3
+  slamCooldown: 1.5
+  slamFrontDistance: 2.6
+  shockwaveRadius: 4
+  shockwaveDamageScale: 0.5
+  spearSteps: 7
+  spearSpacing: 1.7
+  spearInterval: 0.06
+  spearHeight: 3.4
+  spearHitRadius: 1.6
+  spearDamageScale: 1
+  spearHoldSeconds: 0.45
+  spearFinalCount: 14
+  spearFinalRadius: 2.4
+  spearFinalHeightScale: 1.35
+  guardWalkAnimScale: 0.6
+  guardStepDip: 0.18
+  guardStepShake: 0.05
+  guardStepShakeRadius: 20
+  slamShake: 0.28
+  slamShakeRadius: 35
+  slamShakeSeconds: 0.6
+  slamDentRadius: 2
+  slamDentDepth: 0.25
+  modelPath: Dryad/dryad
+  customRig: 1
+  modelMaterialPath: Dryad/Dryad_BodyMat
+  modelScale: 1.8
+  hitReactionScale: 1
+  deathBlastSeconds: 0.75
+  deathBlastSpeed: 11
+  deathFallSeconds: 1
+  deathHoldSeconds: 0.2
+  deathParticleCount: 50

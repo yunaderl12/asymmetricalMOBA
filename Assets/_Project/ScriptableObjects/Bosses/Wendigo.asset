@@ -37,16 +37,20 @@ MonoBehaviour:
   curseFogStart: 3
   curseFogEnd: 18
   curseFogColor: {r: 0.07, g: 0.09, b: 0.08, a: 1}
-  pounceMinRange: 6
-  pounceMaxRange: 24
+  pounceMinRange: 12
+  pounceMaxRange: 38
   pounceWindupSeconds: 0.7
-  pounceAirSeconds: 0.75
-  pounceHeight: 5
+  pounceAirSeconds: 1.1
+  pounceHeight: 9
   pounceHitRadius: 4
   pounceDamageScale: 1.4
   pounceKnockback: 6
   pounceRecoverSeconds: 0.9
-  scratchMaxRange: 18
+  scratchMaxRange: 12
+  scratchHitRange: 6.5
+  scratchHitArc: 110
+  scratchHitDamageScale: 1
+  scratchKnockback: 4
   scratchWindupSeconds: 0.6
   scratchSwingSeconds: 0.22
   scratchRecoverSeconds: 0.8
@@ -58,3 +62,14 @@ MonoBehaviour:
   debrisDamageScale: 0.55
   scratchDigRadius: 2.2
   scratchDigDepth: 0.5
+  smashWindupSeconds: 0.85
+  smashSlamSeconds: 0.14
+  smashRecoverSeconds: 1
+  smashRadius: 7
+  smashArcDegrees: 150
+  smashDamageScale: 1.6
+  smashKnockback: 8
+  smashDigRadius: 3.4
+  smashDigDepth: 0.8
+  smashDebrisCount: 10
+  smashDebrisRange: 12

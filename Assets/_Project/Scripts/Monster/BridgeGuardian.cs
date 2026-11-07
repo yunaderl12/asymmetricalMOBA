@@ -111,7 +111,7 @@ namespace Game.Monster
                 if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(to);
                 return;
             }
-            if (Vector3.Distance(transform.position, post) > PostArriveDistance) agent.SetDestination(post);
+            if (Vector3.Distance(transform.position, post) > PostArriveDistance) { agent.stoppingDistance = 0f; agent.SetDestination(post); }
             else
             {
                 agent.ResetPath();
@@ -126,6 +126,8 @@ namespace Game.Monster
                 target = FindHero();
                 if (target == null) { phase = Phase.Idle; return; }
                 agent.isStopped = false;
+                // 勇者に体が重ならないところで止まる。
+                agent.stoppingDistance = data.guardBodyRadius + 0.5f + Game.Core.BalanceConfig.Instance.monsterKeepGap;
                 agent.SetDestination(target.position);
             }
             if (target == null) return;
@@ -226,6 +228,8 @@ namespace Game.Monster
                 var hp = hero.GetComponent<HealthComponent>();
                 if (hp != null && hp.IsDead) continue;
                 if (Vector3.Distance(hero.transform.position, post) > data.guardLeashRadius) continue;
+                // 橋のたもとの結界が閉じているあいだは、結界の外の勇者を狙わない（結界越しに一方的に殴らない）。
+                if (BossGate.SealedBetween(post, hero.transform.position)) continue;
                 float d = Vector3.Distance(transform.position, hero.transform.position);
                 if (d < bestDist) { bestDist = d; best = hero.transform; }
             }

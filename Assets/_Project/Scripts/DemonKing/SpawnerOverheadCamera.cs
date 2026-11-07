@@ -75,12 +75,12 @@ namespace Game.DemonKing
         private void Update()
         {
             if (viewSwitcher == null || viewSwitcher.CurrentMode != DemonKingViewSwitcher.ViewMode.SpawnerOverhead) return;
-            if (Game.UI.ConsoleUI.IsConsoleActive) return;
+            if (Game.UI.InGameMenu.BlocksGameInput) return;
 
             if (Mouse.current != null)
             {
                 Vector2 d = Mouse.current.delta.ReadValue();
-                yaw += d.x * yawSpeed; // horizontal only
+                yaw += d.x * yawSpeed * Game.Core.GameSettings.MouseSensitivity; // horizontal only
                 if (overheadCamera != null) overheadCamera.transform.rotation = Quaternion.Euler(fixedPitch, yaw, 0f);
 
                 if (Mouse.current.rightButton.wasPressedThisFrame)

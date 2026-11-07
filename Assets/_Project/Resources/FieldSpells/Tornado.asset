@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9e052e9c08f9e466bb24855fde012dfc, type: 3}
+  m_Name: Tornado
+  m_EditorClassIdentifier: Game.Runtime::Game.DemonKing.FieldSpellData
+  kind: 0
+  spellName: "\u7ADC\u5DFB"
+  description: "\u9078\u3093\u3060\u5834\u6240\u306B\u98A8\u304C\u6E26\u3092\u5DFB\u304D\u30015\u79D2\u5F8C\u306B\u5927\u304D\u306A\u7ADC\u5DFB\u306B\u306A\u308B\u3002\u5DFB\u304D\u8FBC\u307E\u308C\u305F\u52C7\u8005\u306F\u30C0\u30E1\u30FC\u30B8\u3092\u53D7\u3051\u3066\u7A7A\u3078\u6253\u3061\u4E0A\u3052\u3089\u308C\u3001\u7ADC\u5DFB\u304C\u6295\u3052\u308B\u5CA9\u306B\u3082\u5F53\u305F\u308B\u3002"
+  glyph: "\u65CB"
+  color: {r: 0.36, g: 0.55, b: 0.6, a: 1}
+  order: 0
+  cooldown: 60
+  chargeSeconds: 5
+  needsTarget: 1
+  targetsBiome: 0
+  radius: 5
+  damage: 35
+  outerRadius: 0
+  outerDamage: 0
+  duration: 4
+  count: 1
+  scatterRadius: 12
+  launchSpeed: 14
+  debrisCount: 6
+  debrisDamage: 12
+  slowSeconds: 0
+  slowMultiplier: 1
+  wetDamageMultiplier: 1.5
+  windPush: 0
+  wetAfterSeconds: 10
+  fuseSeconds: {x: 3, y: 5}
+  orbHp: 1
+  crater: {x: 3, y: 1}

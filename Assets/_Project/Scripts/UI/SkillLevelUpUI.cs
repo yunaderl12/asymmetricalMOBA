@@ -180,7 +180,7 @@ namespace Game.UI
             if (runtime == null) return;
             if (runtime.LevelUpPointsAvailable <= 0) return;
             if (Keyboard.current == null) return;
-            if (ConsoleUI.IsConsoleActive) return;
+            if (InGameMenu.BlocksGameInput) return;
             for (int i = 0; i < DigitKeys.Length; i++)
             {
                 if (Keyboard.current[DigitKeys[i]].wasPressedThisFrame)

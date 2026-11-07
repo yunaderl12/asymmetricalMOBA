@@ -12,7 +12,10 @@ namespace Game.Monster
     public class DragonBoss : BossBase
     {
         public enum Attack { None, Breath, Dive }
-        private enum State { Circle, BreathMove, BreathWindup, Breathing, DiveTelegraph, Diving, Grounded, Climb }
+        private enum State { Circle, BreathMove, BreathWindup, Breathing, DiveTelegraph, Diving, Grounded, Climb, Landing, Resting }
+
+        private const float RestAfterSeconds = 4f;   // 勇者がこれだけいなければ広場に降りて休む
+        private const float WakeSeconds = 0.7f;      // 休んでいて勇者に気づいてから飛び立つまで
 
         private const float WallMargin = 6f;
         private const float MoveTimeout = 2.5f;
@@ -40,6 +43,8 @@ namespace Game.Monster
         private Vector3 breathDir;
         private float nextTick;
         private float ringTimer;
+        private float restTimer;
+        private float wakeTimer = -1f;
         private float wingSide = 1f;  // WingP がモデルの +X 側なら 1
         private float legSide = 1f;
         private Transform head;
@@ -113,6 +118,8 @@ namespace Game.Monster
                 case State.Diving: TickDiving(dt); break;
                 case State.Grounded: TickGrounded(); break;
                 case State.Climb: TickClimb(dt); break;
+                case State.Landing: TickLanding(dt); break;
+                case State.Resting: TickResting(dt); break;
             }
             velocity = (transform.position - lastPosition) / Mathf.Max(dt, 1e-4f);
             lastPosition = transform.position;
@@ -142,7 +149,14 @@ namespace Game.Monster
             if (heading.sqrMagnitude < 0.01f) heading = new Vector3(-Mathf.Sin(circleAngle), 0f, Mathf.Cos(circleAngle));
             FaceTowards(transform.position + heading, 140f);
 
-            if (target == null) { attackTimer = Mathf.Max(attackTimer, 0.6f); return; }
+            if (target == null)
+            {
+                attackTimer = Mathf.Max(attackTimer, 0.6f);
+                restTimer += dt;
+                if (restTimer >= RestAfterSeconds) Enter(State.Landing);
+                return;
+            }
+            restTimer = 0f;
             attackTimer -= dt;
             if (attackTimer > 0f) return;
             var attack = forced != Attack.None ? forced : nextAttack;
@@ -329,6 +343,44 @@ namespace Game.Monster
             Enter(State.Circle);
         }
 
+        // ---- rest (勇者がいないあいだ)
+
+        // 広場の真ん中へゆっくり降りる。途中で勇者が来たら、また舞い上がる。
+        private void TickLanding(float dt)
+        {
+            flapRate = data.flapRate * 1.1f;
+            if (target != null) { TakeOff(); return; }
+            Vector3 ground = new Vector3(arenaCenter.x, FloorY(arenaCenter) + LandedHeight, arenaCenter.z);
+            Vector3 flat = Flat(ground - transform.position);
+            Vector3 goal = flat.magnitude > 2f ? new Vector3(ground.x, Mathf.Max(ground.y, transform.position.y - dt * 4f), ground.z) : ground;
+            MoveTowards(goal, data.flySpeed * 0.8f * SpeedFactor, dt);
+            if (flat.sqrMagnitude > 1f) FaceTowards(ground, 120f);
+            if ((transform.position - ground).sqrMagnitude > 0.04f) return;
+            EarthChips.Spawn(ground - Vector3.up * LandedHeight, 3f, 10);
+            wakeTimer = -1f;
+            Enter(State.Resting);
+        }
+
+        private void TickResting(float dt)
+        {
+            flapRate = data.flapRate * 0.25f;
+            restTimer = 0f;
+            if (target == null) { wakeTimer = -1f; return; }
+            if (wakeTimer < 0f) wakeTimer = 0f;
+            wakeTimer += dt;
+            FaceTowards(target.position, 90f);
+            if (wakeTimer >= WakeSeconds) TakeOff();
+        }
+
+        private void TakeOff()
+        {
+            restTimer = 0f;
+            wakeTimer = -1f;
+            diveStart = transform.position;
+            attackTimer = Mathf.Max(attackTimer, data.attackInterval * 0.5f);
+            Enter(State.Climb);
+        }
+
         // ---------------------------------------------------------------- death
 
         protected override void OnDeathStart()
@@ -351,7 +403,8 @@ namespace Game.Monster
         protected override void Pose()
         {
             if (IsDead) { PoseWings(-30f, 10f, 0f); return; }
-            bool grounded = state == State.Grounded && !Stunned;
+            bool resting = state == State.Resting;
+            bool grounded = (state == State.Grounded || resting) && !Stunned;
             bool diving = state == State.Diving;
             flapPhase += Time.deltaTime * flapRate * (diving ? 0f : 1f) * Mathf.PI * 2f;
 
@@ -361,10 +414,23 @@ namespace Game.Monster
             bank = Mathf.Lerp(bank, targetBank, 1f - Mathf.Exp(-4f * Time.deltaTime));
             float pitch = diving ? 35f : state == State.Climb ? -20f : Mathf.Clamp(-velocity.y * 1.2f, -20f, 20f);
             float bob = grounded ? 0f : Mathf.Sin(flapPhase) * 0.25f;
-            model.localRotation = Quaternion.Euler(pitch, 0f, bank);
+            // 休んでいるとき: 翼をたたんで息をし、首を回して見回す。
+            // 時々しぐさをする（0,1: 翼を大きく広げて伸びをする、2: 首を振って鼻を鳴らす、3: 尾を大きく振る）。
+            var idle = Idle(resting && wakeTimer < 0f, 2.2f);
+            float stretch = idle.fidgetKind <= 1 ? idle.fidget : 0f;
+            float snort = idle.fidgetKind == 2 ? idle.fidget : 0f;
+            float swish = idle.fidgetKind == 3 ? idle.fidget : 0f;
+            if (resting) bob = -idle.breath * 0.06f * data.modelScale / 14f;
+            model.localRotation = Quaternion.Euler(pitch + idle.breath * 0.8f * idle.weight, 0f, bank + idle.shift * 1.5f);
             model.localPosition = Vector3.up * -bob;
 
             if (diving) PoseWings(-35f, -40f, 0f);           // 翼を後ろへたたむ
+            else if (resting)
+            {
+                // たたんだ翼（息に合わせてわずかに動く）。伸びのときは大きく広げてゆっくり戻す。
+                float fold = Mathf.Lerp(1f, 0f, Mathf.Clamp01(wakeTimer < 0f ? 0f : wakeTimer / WakeSeconds));
+                PoseWings(Mathf.Lerp(15f, -28f, fold) + 58f * stretch + idle.breath * 2f, Mathf.Lerp(0f, 12f, fold) + 30f * stretch, 2f + 12f * stretch);
+            }
             else if (grounded) PoseWings(15f, 0f, 14f);      // 地上ではゆっくり
             else PoseWings(10f, 8f, 38f);
 
@@ -375,7 +441,7 @@ namespace Game.Monster
                 rig.Rotate("LegBack" + s, Vector3.right, tuck + 10f);
             }
 
-            float sway = Mathf.Sin(Time.time * 1.3f) * 9f;
+            float sway = Mathf.Sin(Time.time * 1.3f) * 9f * (1f + idle.weight * 0.4f) + Mathf.Sin(Time.time * 5f) * 22f * swish;
             rig.Rotate("Tail1", Vector3.up, sway * 0.6f);
             rig.Rotate("Tail2", Vector3.up, sway);
             rig.Rotate("Tail3", Vector3.up, sway * 1.4f);
@@ -385,6 +451,13 @@ namespace Game.Monster
             if (state == State.BreathWindup) neck = -28f * Mathf.SmoothStep(0f, 1f, stateTimer / Mathf.Max(0.01f, data.breathWindupSeconds));
             else if (state == State.Breathing) neck = Mathf.Clamp(Vector3.SignedAngle(Flat(model.forward), breathDir, model.right) , -10f, 75f) - pitch;
             else if (diving) neck = -15f;
+            if (idle.weight > 0f)
+            {
+                float shake = Mathf.Sin(Time.time * 14f) * 14f * snort;
+                rig.Rotate("Neck", Vector3.up, idle.lookYaw * 0.5f + shake * 0.4f);
+                rig.Rotate("Head", Vector3.up, idle.lookYaw * 0.5f + shake * 0.6f);
+                neck += idle.lookPitch - 12f * stretch + idle.breath * 2f * idle.weight;
+            }
             rig.Rotate("Neck", Vector3.right, neck * 0.5f);
             rig.Rotate("Head", Vector3.right, neck * 0.5f);
 

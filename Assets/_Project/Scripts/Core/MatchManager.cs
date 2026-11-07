@@ -12,6 +12,9 @@ namespace Game.Core
     {
         public enum MatchState { WaitingForStart, DemonPrepPhase, InMatch, Finished }
         public enum Winner { None, Heroes, DemonKing, Draw }
+        /// どうやって決まったか（試合終了の演出と勝敗の画面の文に使う）。
+        public enum EndCause { DemonKingDefeated, CastleCoreDestroyed, TownCoreDestroyed, TimeUp }
+        public EndCause MatchEndCause { get; private set; }
 
         public static MatchManager Instance { get; private set; }
 
@@ -73,6 +76,7 @@ namespace Game.Core
 
         private void Start()
         {
+            Game.UI.InGameMenu.Ensure();
             StartCoroutine(RunMatch());
         }
 
@@ -97,7 +101,7 @@ namespace Game.Core
             if (CurrentState == MatchState.InMatch)
             {
                 Debug.Log("[Match] Time up - DemonKing wins (provisional)");
-                FinishMatch(Winner.DemonKing);
+                FinishMatch(Winner.DemonKing, EndCause.TimeUp, startTownHealth);
             }
         }
 
@@ -116,7 +120,7 @@ namespace Game.Core
                 if (hc != null)
                 {
                     startTownHealth = hc;
-                    startTownHealth.OnDeath += CheckHeroLoss;
+                    startTownHealth.OnDeath += OnTownCoreDestroyed;
                     AttachCoreDefense(hc);
                 }
             }
@@ -125,7 +129,7 @@ namespace Game.Core
             if (dk != null)
             {
                 demonKingHealth = dk.GetComponent<HealthComponent>();
-                if (demonKingHealth != null) demonKingHealth.OnDeath += CheckHeroWin;
+                if (demonKingHealth != null) demonKingHealth.OnDeath += OnDemonKingDefeated;
             }
 
             var castle = GameObject.FindWithTag(demonCastleTag);
@@ -135,7 +139,7 @@ namespace Game.Core
                 if (demonCastleCoreHealth == null) demonCastleCoreHealth = castle.GetComponentInChildren<HealthComponent>();
                 if (demonCastleCoreHealth != null)
                 {
-                    demonCastleCoreHealth.OnDeath += CheckHeroWin;
+                    demonCastleCoreHealth.OnDeath += OnCastleCoreDestroyed;
                     AttachCoreDefense(demonCastleCoreHealth);
                 }
             }
@@ -159,31 +163,37 @@ namespace Game.Core
             OnStateChanged?.Invoke(newState);
         }
 
-        private void CheckHeroLoss()
+        private void OnTownCoreDestroyed()
         {
             if (CurrentState != MatchState.InMatch) return;
-            FinishMatch(Winner.DemonKing);
+            FinishMatch(Winner.DemonKing, EndCause.TownCoreDestroyed, startTownHealth);
         }
 
-        private void CheckHeroWin()
+        private void OnDemonKingDefeated()
         {
             if (CurrentState != MatchState.InMatch) return;
-            FinishMatch(Winner.Heroes);
+            FinishMatch(Winner.Heroes, EndCause.DemonKingDefeated, demonKingHealth);
+        }
+
+        private void OnCastleCoreDestroyed()
+        {
+            if (CurrentState != MatchState.InMatch) return;
+            FinishMatch(Winner.Heroes, EndCause.CastleCoreDestroyed, demonCastleCoreHealth);
         }
 
         [Header("Result Transition")]
         [SerializeField] private string resultSceneName = "Result";
         [SerializeField] private float resultDelaySeconds = 3f;
 
-        private void FinishMatch(Winner w)
+        private void FinishMatch(Winner w, EndCause cause, HealthComponent focus)
         {
             if (CurrentState == MatchState.Finished) return;
             CurrentState = MatchState.Finished;
             MatchWinner = w;
-            Debug.Log($"[Match] Finished. Winner={w}");
+            MatchEndCause = cause;
+            Debug.Log($"[Match] Finished. Winner={w} Cause={cause}");
             OnStateChanged?.Invoke(CurrentState);
             OnMatchFinished?.Invoke(w);
-            Time.timeScale = 0f;
 
             if (GameSession.Instance != null)
             {
@@ -196,22 +206,25 @@ namespace Game.Core
                     if (st != null) GameSession.Instance.LastMatchStats = st.Stats;
                 }
             }
-            if (!string.IsNullOrEmpty(resultSceneName))
-                StartCoroutine(LoadResultAfterDelay());
+            if (GameSession.Instance != null) GameSession.Instance.LastEndCause = cause;
+            // 最後の一撃のカットイン → 消滅 → 勝敗の画面のあと、リザルトへ。
+            Transform target = focus != null ? focus.transform : null;
+            GameObject finisher = focus != null ? focus.LastAttacker : null;
+            Game.UI.MatchEndDirector.Play(w, cause, target, finisher, LoadResult);
         }
 
-        private IEnumerator LoadResultAfterDelay()
+        private void LoadResult()
         {
-            yield return new WaitForSecondsRealtime(resultDelaySeconds);
             Time.timeScale = 1f;
+            if (string.IsNullOrEmpty(resultSceneName)) return;
             SceneManager.LoadScene(resultSceneName);
         }
 
         private void OnDestroy()
         {
-            if (startTownHealth != null) startTownHealth.OnDeath -= CheckHeroLoss;
-            if (demonKingHealth != null) demonKingHealth.OnDeath -= CheckHeroWin;
-            if (demonCastleCoreHealth != null) demonCastleCoreHealth.OnDeath -= CheckHeroWin;
+            if (startTownHealth != null) startTownHealth.OnDeath -= OnTownCoreDestroyed;
+            if (demonKingHealth != null) demonKingHealth.OnDeath -= OnDemonKingDefeated;
+            if (demonCastleCoreHealth != null) demonCastleCoreHealth.OnDeath -= OnCastleCoreDestroyed;
             if (Instance == this) Instance = null;
             Time.timeScale = 1f;
         }

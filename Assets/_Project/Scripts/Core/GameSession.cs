@@ -26,10 +26,30 @@ namespace Game.Core
         public List<MonsterData> SpawnerInitialMobs = new List<MonsterData>();
         /// 橋ごとの番人（山・砂漠・森の順）。未設定の橋には標準の番人が立つ。
         public MonsterData[] BridgeGuardians = new MonsterData[BRIDGE_COUNT];
+        /// 橋ごとに番人を置くか（魔王ロビーの地図で切り替える）。
+        public bool[] BridgeGuardianOn = { true, true, true };
+
+        // ---- 魔王ロビーの地図の配置（2026-11-08） ----
+        public const int BIOME_COUNT = 3;
+        public const int BIOME_MONSTER_SLOTS = 3;
+        public const int FIELD_SPELL_SLOTS = 5;
+        /// ロビーの並び（山・森・砂漠）。
+        public static readonly StageMap.Biome[] PlacementBiomes = { StageMap.Biome.Mountain, StageMap.Biome.Forest, StageMap.Biome.Desert };
+        /// 魔王ロビーで配置を決めたか。false なら自然湧きは BiomeSpawnTable のまま。
+        public bool PlacementChosen;
+        /// バイオームごとの通常魔物（PlacementBiomes の順に3枠ずつ）。同じ魔物を2枠に入れると、その分だけ多く湧く。
+        public MonsterData[] BiomeMonsters = new MonsterData[BIOME_COUNT * BIOME_MONSTER_SLOTS];
+        /// バイオームごとに中ボスを出すか（PlacementBiomes の順）。
+        public bool[] BiomeBossOn = { true, true, true };
+        /// 装備したフィールド魔法（1〜5キー）。
+        public Game.DemonKing.FieldSpellData[] FieldSpells = new Game.DemonKing.FieldSpellData[FIELD_SPELL_SLOTS];
+
+        public static int PlacementIndex(StageMap.Biome biome) => System.Array.IndexOf(PlacementBiomes, biome);
         /// 試合をするワールド（WorldCatalog.All の番号）。
         public int WorldIndex;
         public MatchStats LastMatchStats;
         public MatchManager.Winner LastWinner = MatchManager.Winner.None;
+        public MatchManager.EndCause LastEndCause = MatchManager.EndCause.TimeUp;
         public bool SkipPrepPhase = false;
         public List<BotData> CurrentMatchBots = new List<BotData>();
 

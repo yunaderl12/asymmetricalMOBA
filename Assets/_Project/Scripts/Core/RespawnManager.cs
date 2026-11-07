@@ -48,6 +48,16 @@ namespace Game.Core
         private Transform heroBody;
         private HeroDeathCamera deathCamera;
         private bool respawning;
+        private string pendingReason;
+
+        /// 今の死に方の説明（null なら敵に倒された）。リスポーン待ちの表示に使う。
+        public string DeathReason { get; private set; }
+
+        /// 自分の勇者が敵以外の理由で死ぬ直前に呼ぶ（侵入不可エリアなど）。
+        public void SetDeathReason(GameObject who, string reason)
+        {
+            if (who == hero) pendingReason = reason;
+        }
 
         private void Awake()
         {
@@ -148,6 +158,8 @@ namespace Game.Core
         private void OnHeroDied()
         {
             if (respawning) return;
+            DeathReason = pendingReason;
+            pendingReason = null;
             int deaths = heroDeathCounter != null ? heroDeathCounter.CurrentDeathCount : 0;
             float wait = baseRespawnSeconds + perDeathExtraSeconds * deaths;
             StartCoroutine(RespawnRoutine(wait));
@@ -187,6 +199,7 @@ namespace Game.Core
             if (heroDeathCounter != null) heroDeathCounter.IncrementDeathCount();
 
             Debug.Log("Respawned. DeathCount=" + (heroDeathCounter != null ? heroDeathCounter.CurrentDeathCount : -1));
+            DeathReason = null;
             OnRespawnFinished?.Invoke();
             // リスポーンのアニメーションのあいだは、外から斜め上に自分を映す（終われば目の高さへ戻る）。
             if (deathCamera != null) deathCamera.BeginRespawn();

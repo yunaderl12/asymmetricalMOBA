@@ -263,6 +263,8 @@ namespace Game.Core
         public float monsterSightDegrees = 180f;
         [Tooltip("Height of the ! mark above the top of a monster (m).")]
         public float monsterAlertMarkLift = 0.5f;
+        [Tooltip("Gap a melee monster keeps between its body and the hero's (m), so it never stands inside the hero.")]
+        public float monsterKeepGap = 0.35f;
 
         [Header("Storm Sky")]
         [Tooltip("Radius of the red sky and clouds for each stage, as a share of the castle-to-town distance. 1 = reaches the town.")]

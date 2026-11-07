@@ -337,9 +337,21 @@ def is_sea(p):
     return in_poly(p, SEA_POLY)
 
 
+def capped_gap(p, pts, w):
+    """川の岸までの距離（水の中は負）。川の端は丸めずに平らに切る（端の先にある浅瀬が深い水にならないように）。"""
+    d = line_dist(p, pts)[0] - w / 2
+    for a, b in ((pts[0], pts[1]), (pts[-1], pts[-2])):
+        t = (a - b).normalized()
+        over = (p - a).dot(t)
+        if over > 0.0:
+            side = abs((p - a).x * t.y - (p - a).y * t.x)
+            d = max(side - w / 2, over)
+    return d
+
+
 def deep_gap(p):
-    """Distance to the bank of the deep rivers (negative in the water)."""
-    return min(line_dist(p, pts)[0] - w / 2 for w, pts in DEEP)
+    """Distance to the bank of the deep rivers (negative in the water). The ends are cut flat."""
+    return min(capped_gap(p, pts, w) for w, pts in DEEP)
 
 
 def shallow_gap(p):
@@ -393,10 +405,29 @@ def nearest_on(pts, p):
 FOREST_PLAZA = MAP["forestPlaza"]
 FOREST_CENTER = Vector((FOREST_PLAZA["x"], FOREST_PLAZA["z"]))
 FOREST_RADIUS = FOREST_PLAZA["radius"]
-_trail_end = nearest_on(ROADS["forest"], FOREST_CENTER)
-FOREST_ENTRANCE = (_trail_end - FOREST_CENTER).normalized()
-FOREST_TRAIL = [FOREST_CENTER + FOREST_ENTRANCE * (FOREST_RADIUS - 2.0), _trail_end]
-FOREST_TRAIL_HALF = 3.0
+
+
+def road_gap_angles(center, radius):
+    """道が円 (center, radius) を横切る所の角度。広場の縁の飾りはここを空けて、道が広場を通り抜けられるようにする。"""
+    angles = []
+    for pts in ROADS.values():
+        for a, b in zip(pts, pts[1:]):
+            d = b - a
+            f = a - center
+            A, B, C = d.dot(d), 2 * f.dot(d), f.dot(f) - radius * radius
+            disc = B * B - 4 * A * C
+            if disc < 0:
+                continue
+            for sgn in (-1, 1):
+                t = (-B + sgn * math.sqrt(disc)) / (2 * A)
+                if 0.0 <= t <= 1.0:
+                    q = a + d * t - center
+                    angles.append(math.atan2(q.y, q.x))
+    return angles
+
+
+def near_angle(a, angles, tol):
+    return any(abs(math.atan2(math.sin(a - b), math.cos(a - b))) < tol for b in angles)
 
 
 def in_forest_plaza(p, margin=0.0):
@@ -404,7 +435,7 @@ def in_forest_plaza(p, margin=0.0):
 
 
 def on_forest_trail(p, margin=0.0):
-    return line_dist(p, FOREST_TRAIL)[0] < FOREST_TRAIL_HALF + margin
+    return False  # 広場が道の上に移ったので、小道はもうない
 
 
 # ---------------------------------------------------------------- ground bumps
@@ -433,7 +464,7 @@ def bump_mask(p, sg):
         return 0.0
     if p.x > -62 and p.y > -46:
         m *= 1.0 - smooth(-0.1, 0.3, mountain_height(p))
-    m *= 0.5 + 0.5 * smooth(1.5, 5, min(road_dist(p), line_dist(p, FOREST_TRAIL)[0]))
+    m *= 0.5 + 0.5 * smooth(1.5, 5, road_dist(p))
     m *= smooth(0, 15, HALF - max(abs(p.x), abs(p.y)))
     return m
 
@@ -475,7 +506,10 @@ def north_of_river_a(p):
 
 def road_height(s):
     window = smooth(0, 50, s) * smooth(0, 50, MOUNTAIN_LEN - s)
-    return window * (8.0 + 6.0 * math.sin(s * 0.05) + 2.0 * math.sin(s * 0.11 + 1.0))
+    h = window * (8.0 + 6.0 * math.sin(s * 0.05) + 2.0 * math.sin(s * 0.11 + 1.0))
+    # ドラゴンの広場は山道の上にある。広場の前後で道をゆるやかに広場の高さへそろえる。
+    k = 1.0 - smooth(PLAZA_RADIUS, PLAZA_RADIUS + 40.0, abs(s - PLAZA_S))
+    return h + (PLAZA_HEIGHT - h) * k
 
 
 def mountain_height(p):
@@ -504,6 +538,7 @@ def mountain_height(p):
 PLAZA = MAP["dragonPlaza"]
 PLAZA_CENTER = Vector((PLAZA["x"], PLAZA["z"]))
 PLAZA_RADIUS, PLAZA_BLEND, PLAZA_HEIGHT = PLAZA["radius"], PLAZA["blend"], PLAZA["height"]
+PLAZA_S = line_dist(PLAZA_CENTER, MOUNTAIN_ROAD)[1]
 
 
 def plaza_dist(p):
@@ -712,12 +747,6 @@ def build_field():
                 return P["dirt_dark"] if r.random() < 0.5 else P["dirt"]
         if shallow_gap(p) < 1.5:
             return P["sand_wet"]
-        if on_path(cx, cy):
-            return P["dirt"]
-        if near_spawner(p, 7.0):
-            return P["dirt_dark"]
-        if (p - TOWN).length < 9:
-            return P["grass_b"]
         if in_scorpion_plaza(p):
             jitter = r.uniform(-0.2, 0.2)  # 砂漠の面と同じ数だけ乱数を使い、あとの飾りの並びを変えない
             d = (p - SCORPION_CENTER).length
@@ -725,6 +754,12 @@ def build_field():
                 return P["sandstone_dark"]
             ring = int(d / 4.0) % 2
             return P["sandstone"] if (ring == 0) == (jitter > -0.12) else P["sandstone_b"]
+        if on_path(cx, cy):
+            return P["dirt"]
+        if near_spawner(p, 7.0):
+            return P["dirt_dark"]
+        if (p - TOWN).length < 9:
+            return P["grass_b"]
         if in_desert(p):
             n = noise.noise(Vector((cx * 0.05, cy * 0.05, 3.1))) + r.uniform(-0.2, 0.2)
             return P["sand_b"] if n > 0.2 else (P["sand_c"] if n < -0.25 else P["sand"])
@@ -906,6 +941,28 @@ def build_field():
             wall_segment(barrier, P["stone"], q0, q1, -1, 6, extend=0.3)
     for a, b in (((-HALF, -HALF), (shore[0].x, -HALF)), ((-HALF, -HALF), (-HALF, HALF)), ((-HALF, HALF), (HALF, HALF)), ((HALF, HALF), (HALF, shore[-1].y))):
         wall_segment(barrier, P["stone"], Vector(a), Vector(b), -1, 130, thick=2.0)
+    # 橋の両側と浮島の縁にも見えない壁を立てて、橋や島から海へ落ちないようにする（海にはどこからも入れない）。
+    for start in BRIDGE_STARTS:
+        dirv = (castle - start).normalized()
+        end = castle - dirv * (R_ISLAND - BRIDGE_ISLAND_OVERLAP)
+        length = (end - start).length
+        profile = bridge_profile(length)
+        side = Vector((-dirv.y, dirv.x)) * (BRIDGE_W / 2 + 0.6)
+        n = max(1, int(length / 3.0))
+        for i in range(n):
+            s0, s1 = length * i / n, length * (i + 1) / n
+            z0 = min(profile(s0), profile(s1)) - 1.0
+            z1 = max(profile(s0), profile(s1)) + 6.0
+            for sgn in (-1, 1):
+                wall_segment(barrier, P["stone"], start + dirv * s0 + side * sgn, start + dirv * s1 + side * sgn, z0, z1, thick=1.0, extend=0.3)
+    rim = int(math.tau * R_ISLAND / 1.5)
+    for i in range(rim):
+        a0, a1 = i / rim * math.tau, (i + 1) / rim * math.tau
+        q0 = castle + Vector((math.cos(a0), math.sin(a0))) * (R_ISLAND - 0.6)
+        q1 = castle + Vector((math.cos(a1), math.sin(a1))) * (R_ISLAND - 0.6)
+        if on_bridge((q0 + q1) / 2, 0.6):
+            continue
+        wall_segment(barrier, P["stone"], q0, q1, H_CASTLE - 1.0, H_CASTLE + 6.0, thick=1.0, extend=0.3)
 
     def blocked(p, extra=0.0):
         if (p - TOWN).length < 22 + extra:
@@ -1162,9 +1219,10 @@ def build_field():
 
     # スコーピオンの広場を囲む崩れた砂岩の柱。南西（砂漠の中央側）を入口として空ける。柱は当たり判定つき。
     prng = random.Random(53)
+    scorpion_gaps = road_gap_angles(SCORPION_CENTER, SCORPION_RADIUS + 1.6)
     for k in range(12):
         a = k / 12 * math.tau
-        if abs(math.atan2(math.sin(a - math.radians(200)), math.cos(a - math.radians(200)))) < 0.5:
+        if near_angle(a, scorpion_gaps, 0.42):
             continue
         r = SCORPION_RADIUS + 1.6
         x, y = SCORPION_CENTER.x + math.cos(a) * r, SCORPION_CENTER.y + math.sin(a) * r
@@ -1177,10 +1235,11 @@ def build_field():
 
     # 森の広場: 縁に大きな枯れ木を並べ、小道の側だけ空ける。床には骨と苔むした石が散らばる。枯れ木は当たり判定つき。
     wrng = random.Random(61)
-    entrance = math.atan2(FOREST_ENTRANCE.y, FOREST_ENTRANCE.x)
+    forest_gaps = road_gap_angles(FOREST_CENTER, FOREST_RADIUS + 2.5)
+    entrance = forest_gaps[0] if forest_gaps else 0.0
     for k in range(26):
         a = k / 26 * math.tau + wrng.uniform(-0.08, 0.08)
-        if abs(math.atan2(math.sin(a - entrance), math.cos(a - entrance))) < 0.32:
+        if near_angle(a, forest_gaps, 0.32):
             continue
         r = FOREST_RADIUS + wrng.uniform(1.0, 4.5)
         x, y = FOREST_CENTER.x + math.cos(a) * r, FOREST_CENTER.y + math.sin(a) * r
@@ -1190,6 +1249,8 @@ def build_field():
     # 倒れた枯れ木（縁の内側に少しだけ）
     for k in range(4):
         a = entrance + math.pi * (0.45 + 0.37 * k) + wrng.uniform(-0.1, 0.1)
+        if near_angle(a, forest_gaps, 0.6):
+            a += 0.7
         r = FOREST_RADIUS - wrng.uniform(3.0, 5.0)
         x, y = FOREST_CENTER.x + math.cos(a) * r, FOREST_CENTER.y + math.sin(a) * r
         length = wrng.uniform(5.0, 8.0)

@@ -7,7 +7,7 @@ using Game.Monster;
 
 namespace Game.UI
 {
-    /// 魔王ロビー。デッキ・塔ごとの最初の魔物・橋の番人を決める（中身は DemonLoadoutView）。右下にマッチ開始、その左にタイトルへ戻る。
+    /// 魔王ロビー。地図の上で山・森・砂漠の魔物と中ボス、橋の番人を置き、フィールド魔法5つを装備する（中身は DemonLoadoutView）。右下にマッチ開始、その左にタイトルへ戻る。
     public class DemonLobby : MonoBehaviour
     {
         [Header("Available Monster Pool")]

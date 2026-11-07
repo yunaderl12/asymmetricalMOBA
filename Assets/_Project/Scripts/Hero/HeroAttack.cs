@@ -78,7 +78,7 @@ namespace Game.Hero
 
         public void TryBasicAttack()
         {
-            if (Game.UI.ConsoleUI.IsConsoleActive) return;
+            if (Game.UI.InGameMenu.BlocksGameInput) return;
             if (IsAnimLocked()) return;
             if (StatusEffectController.IsStunnedObj(gameObject)) return;
             if (cooldownTimer > 0f || cameraTransform == null) return;

@@ -128,6 +128,17 @@ namespace Game.UI
             currentCallback = null;
         }
 
+        /// どれかの魔物選択が開いているか（ESC をこちらが使うので、試合中メニューは開かない）。
+        public static bool AnyOpen
+        {
+            get
+            {
+                foreach (var p in FindObjectsByType<DemonMonsterPickerUI>(FindObjectsSortMode.None))
+                    if (p.root != null && p.root.activeSelf) return true;
+                return false;
+            }
+        }
+
         private void Update()
         {
             if (root == null || !root.activeSelf) return;

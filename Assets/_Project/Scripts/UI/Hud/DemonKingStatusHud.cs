@@ -103,7 +103,7 @@ namespace Game.UI
             HudStyle.Shape(line, "Line", HudShape.Kind.RoundRect, pal.Light, 2f);
 
             // 中央下: その場の案内
-            var context = HudStyle.Place(root, "Context", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 76f), new Vector2(520f, 54f));
+            var context = HudStyle.Place(root, "Context", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 214f), new Vector2(520f, 54f)); // 下はフィールド魔法の札と案内
             HudStyle.DropShadow(context, HudShape.Kind.Ribbon, pal.Shadow, 0f, 4f);
             HudStyle.Shape(context, "Ribbon", HudShape.Kind.Ribbon, pal.Ribbon);
             contextText = HudStyle.AddText(HudStyle.Filled(context, "Text"), "", 25, pal.Light, TextAnchor.MiddleCenter);

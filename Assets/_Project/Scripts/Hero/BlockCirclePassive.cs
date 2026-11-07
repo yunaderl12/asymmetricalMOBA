@@ -6,7 +6,7 @@ using Game.Skill;
 
 namespace Game.Hero
 {
-    /// 魔法使いの自動ブロック魔法陣。魔法攻撃を受けると攻撃の来た方向に魔法陣が出る。
+    /// 魔法使いの自動ブロック魔法陣。攻撃を受けると（打撃でも魔法でも）攻撃の来た方向に魔法陣が出る。
     /// 弱い攻撃は完全に防ぎ、強い攻撃はダメージをそのまま受けて魔法陣だけが割れる。
     public class BlockCirclePassive : HeroPassive, IDamageBlocker
     {
@@ -42,7 +42,7 @@ namespace Game.Hero
 
         public bool TryBlock(int damage, GameObject attacker, DamageType type)
         {
-            if (type != DamageType.Magical) return false;
+            if (type == DamageType.True) return false; // 打撃と魔法は区別せず防ぐ。防御無視の攻撃だけは通す。
             activeUntil.RemoveAll(t => Time.time >= t);
             int index = activeUntil.Count;
             if (index >= MaxCircles) return false;

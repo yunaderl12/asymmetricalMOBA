@@ -34,6 +34,7 @@ namespace Game.UI
             {
                 foreach (Transform child in transform) child.gameObject.SetActive(false);
                 DemonKingStatusHud.Create(go);
+                Game.DemonKing.FieldSpellCaster.Ensure(go);
             }
 
             health = go.GetComponent<HealthComponent>();

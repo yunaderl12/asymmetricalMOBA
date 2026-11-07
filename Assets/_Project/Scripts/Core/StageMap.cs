@@ -61,6 +61,15 @@ namespace Game.Core
             public Plaza dragonPlaza;
             public Plaza scorpionPlaza;
             public Plaza forestPlaza;
+            public Gate[] bossGates;
+        }
+
+        /// 橋のたもとの結界。boss（dragon / scorpion / wendigo）を倒すまで、勇者はこの円の内側（橋の側）へ入れない。
+        [Serializable]
+        public class Gate
+        {
+            public string boss;
+            public float x, z, radius;
         }
 
         [Serializable]
@@ -152,7 +161,7 @@ namespace Game.Core
         /// 深い川か海の中か。
         public static bool IsDeepWater(Vector3 position)
         {
-            return IsSea(position) || Gap(position, Map.deep) <= 0f;
+            return IsSea(position) || CappedGap(position, Map.deep) <= 0f;
         }
 
         public static bool IsSea(Vector3 position)
@@ -216,7 +225,7 @@ namespace Game.Core
         public static float DistanceToWater(Vector3 position)
         {
             if (IsSea(position)) return 0f;
-            return Mathf.Min(Gap(position, Map.shallow), Gap(position, Map.deep), ShoreDistance(position));
+            return Mathf.Min(Gap(position, Map.shallow), CappedGap(position, Map.deep), ShoreDistance(position));
         }
 
         private static float ShoreDistance(Vector3 position)
@@ -239,6 +248,36 @@ namespace Game.Core
                     float d = SegmentDistance(position.x, position.z, flat[i], flat[i + 1], flat[i + 2], flat[i + 3]) - line.width * 0.5f;
                     if (d < best) best = d;
                 }
+            }
+            return best;
+        }
+
+        // 深い川の岸までの距離。川の端は丸めず平らに切る（地形の build_lowpoly.py の capped_gap と同じ）。
+        // 端の先につながる浅瀬を、深い水と見なさないため。
+        private static float CappedGap(Vector3 position, Line[] lines)
+        {
+            float best = float.MaxValue;
+            foreach (var line in lines)
+            {
+                var f = line.points;
+                int n = f.Length / 2;
+                if (n < 2) continue;
+                float d = float.MaxValue;
+                for (int i = 0; i + 3 < f.Length; i += 2)
+                    d = Mathf.Min(d, SegmentDistance(position.x, position.z, f[i], f[i + 1], f[i + 2], f[i + 3]));
+                d -= line.width * 0.5f;
+                for (int e = 0; e < 2; e++)
+                {
+                    int a = e == 0 ? 0 : n - 1, b = e == 0 ? 1 : n - 2;
+                    var end = new Vector2(f[a * 2], f[a * 2 + 1]);
+                    var dir = (end - new Vector2(f[b * 2], f[b * 2 + 1])).normalized;
+                    var rel = new Vector2(position.x, position.z) - end;
+                    float over = Vector2.Dot(rel, dir);
+                    if (over <= 0f) continue;
+                    float side = Mathf.Abs(rel.x * dir.y - rel.y * dir.x);
+                    d = Mathf.Max(side - line.width * 0.5f, over);
+                }
+                best = Mathf.Min(best, d);
             }
             return best;
         }

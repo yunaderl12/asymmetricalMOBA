@@ -77,7 +77,9 @@ namespace Game.UI
         private void UpdateText(int seconds)
         {
             if (countdownText == null) return;
-            countdownText.text = $"あなたは倒された\nリスポーンまで {seconds} 秒";
+            string reason = RespawnManager.Instance != null ? RespawnManager.Instance.DeathReason : null;
+            string head = string.IsNullOrEmpty(reason) ? "あなたは倒された" : reason;
+            countdownText.text = $"{head}\nリスポーンまで {seconds} 秒";
         }
     }
 }

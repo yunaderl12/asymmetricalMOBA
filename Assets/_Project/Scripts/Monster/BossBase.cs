@@ -128,6 +128,60 @@ namespace Game.Monster
 
         protected bool Stunned => StatusEffectController.IsStunnedObj(gameObject);
 
+        // ---- 待機中の動き（勇者がいないとき）。あたりを見回し、息をし、重心を移し、時々しぐさをする。
+
+        /// Idle() が返す待機の動き。weight は待機の強さ（0〜1、動き出すとなめらかに 0 へ）。
+        protected struct IdleMotion
+        {
+            public float weight;
+            public float lookYaw;    // 度。正でモデルの右（+X）を見る
+            public float lookPitch;  // 度。正で下を見る
+            public float breath;     // -1〜1
+            public float shift;      // -1〜1。左右の重心移動
+            public float fidget;     // 0〜1〜0。時々のしぐさ（種類ごとに違う動き）
+            public int fidgetKind;   // しぐさの種類（0〜3）
+        }
+
+        private float idleWeight;
+        private float idleYaw, idlePitch, idleYawGoal, idlePitchGoal, idleYawVel, idlePitchVel;
+        private float idleNextLook, idleFidgetAt = -1f, idleFidgetStart = -99f;
+        private int idleFidgetKind;
+        private float idleSeed = -1f;
+
+        /// 毎フレーム Pose から呼ぶ。idle が true のあいだ待機の動きが強まる。
+        protected IdleMotion Idle(bool idle, float fidgetSeconds = 1.6f)
+        {
+            if (idleSeed < 0f) idleSeed = Random.value * 100f;
+            float dt = Time.deltaTime, now = Time.time;
+            idleWeight = Mathf.MoveTowards(idleWeight, idle ? 1f : 0f, dt / (idle ? 0.8f : 0.3f));
+            if (now >= idleNextLook)
+            {
+                idleNextLook = now + Random.Range(2.2f, 5f);
+                idleYawGoal = Random.value < 0.25f ? 0f : Random.Range(-40f, 40f);
+                idlePitchGoal = Random.Range(-8f, 10f);
+            }
+            idleYaw = Mathf.SmoothDamp(idleYaw, idleYawGoal, ref idleYawVel, 0.7f);
+            idlePitch = Mathf.SmoothDamp(idlePitch, idlePitchGoal, ref idlePitchVel, 0.9f);
+            if (idleFidgetAt < 0f) idleFidgetAt = now + Random.Range(4f, 9f);
+            if (idle && now >= idleFidgetAt)
+            {
+                idleFidgetStart = now;
+                idleFidgetKind = Random.Range(0, 4);
+                idleFidgetAt = now + fidgetSeconds + Random.Range(5f, 10f);
+            }
+            float f = Mathf.Clamp01((now - idleFidgetStart) / Mathf.Max(0.1f, fidgetSeconds));
+            return new IdleMotion
+            {
+                weight = idleWeight,
+                lookYaw = idleYaw * idleWeight,
+                lookPitch = idlePitch * idleWeight,
+                breath = Mathf.Sin((now + idleSeed) * Mathf.PI * 2f * 0.28f),
+                shift = Mathf.Sin((now + idleSeed) * Mathf.PI * 2f * 0.11f) * idleWeight,
+                fidget = (f > 0f && f < 1f ? Mathf.Sin(f * Mathf.PI) : 0f) * idleWeight,
+                fidgetKind = idleFidgetKind,
+            };
+        }
+
         protected float SpeedFactor
         {
             get

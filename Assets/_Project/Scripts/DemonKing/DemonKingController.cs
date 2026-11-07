@@ -120,7 +120,7 @@ namespace Game.DemonKing
 
         private void Update()
         {
-            if (Game.UI.ConsoleUI.IsConsoleActive) return;
+            if (Game.UI.InGameMenu.BlocksGameInput) return;
             HandleClickToRelock();
             if (!MovementEnabled) return;
             HandleRotation();
@@ -134,12 +134,12 @@ namespace Game.DemonKing
             var look = inputs.DemonKing.Look.ReadValue<Vector2>();
 
             // Yaw: rotate body around world Y
-            transform.Rotate(0f, look.x * lookSensitivity, 0f, Space.World);
+            transform.Rotate(0f, look.x * lookSensitivity * Game.Core.GameSettings.MouseSensitivity, 0f, Space.World);
 
             // Pitch: rotate pitchTarget (ShoulderTarget) - Cinemachine TPS follows its orientation
             if (pitchTarget != null)
             {
-                pitch = Mathf.Clamp(pitch + -look.y * lookSensitivity, pitchMin, pitchMax);
+                pitch = Mathf.Clamp(pitch + -look.y * lookSensitivity * Game.Core.GameSettings.MouseSensitivity, pitchMin, pitchMax);
                 pitchTarget.localRotation = Quaternion.Euler(pitch, 0f, 0f);
             }
         }

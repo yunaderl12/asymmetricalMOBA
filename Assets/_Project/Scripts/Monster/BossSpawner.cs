@@ -45,7 +45,32 @@ namespace Game.Monster
                 slots.Add(new Slot { data = scorpion, center = PlazaCenter(map.scorpionPlaza), radius = map.scorpionPlaza.radius });
             if (wendigo != null && map.forestPlaza != null && map.forestPlaza.radius > 0f)
                 slots.Add(new Slot { data = wendigo, center = PlazaCenter(map.forestPlaza), radius = map.forestPlaza.radius });
+            // 橋のたもとの結界。その地方のボスを倒すまで、勇者は橋へ進めない。
+            var names = new Dictionary<string, string>();
+            if (dragon != null) names["dragon"] = dragon.bossName;
+            if (scorpion != null) names["scorpion"] = scorpion.bossName;
+            if (wendigo != null) names["wendigo"] = wendigo.bossName;
+            BossGate.BuildAll(names);
+
+            // 魔王ロビーで中ボスを出さないことにしたバイオームは、広場を空にして結界も初めから開けておく。
+            var session = GameSession.Instance;
+            if (session != null && session.PlacementChosen)
+            {
+                slots.RemoveAll(slot =>
+                {
+                    int b = GameSession.PlacementIndex(BiomeOf(slot.data));
+                    if (b < 0 || session.BiomeBossOn[b]) return false;
+                    BossGate.OpenSilently(KeyOf(slot.data));
+                    return true;
+                });
+            }
         }
+
+        public static StageMap.Biome BiomeOf(BossData data) =>
+            data is DragonData ? StageMap.Biome.Mountain : data is ScorpionData ? StageMap.Biome.Desert : data is WendigoData ? StageMap.Biome.Forest : StageMap.Biome.None;
+
+        public static string KeyOf(BossData data) =>
+            data is DragonData ? "dragon" : data is ScorpionData ? "scorpion" : data is WendigoData ? "wendigo" : "";
 
         private static Vector3 PlazaCenter(StageMap.Plaza plaza)
         {
@@ -90,6 +115,7 @@ namespace Game.Monster
             {
                 if (slot.boss != boss) continue;
                 slot.boss = null;
+                BossGate.OpenFor(KeyOf(slot.data));
                 slot.respawnAt = slot.data.respawnSeconds > 0f ? Time.time + slot.data.respawnSeconds : float.MaxValue;
             }
         }

@@ -36,6 +36,18 @@ namespace Game.Monster
                 enabled = false;
                 return;
             }
+            var session = GameSession.Instance;
+            if (session != null && session.PlacementChosen)
+            {
+                // 魔王ロビーの地図で置いた魔物。同じ魔物を2枠に置いたら、その分の枠が湧く。
+                for (int b = 0; b < GameSession.PlacementBiomes.Length; b++)
+                    for (int i = 0; i < GameSession.BIOME_MONSTER_SLOTS; i++)
+                    {
+                        var monster = session.BiomeMonsters[b * GameSession.BIOME_MONSTER_SLOTS + i];
+                        if (monster != null) slots.Add(new Slot { biome = GameSession.PlacementBiomes[b], monster = monster });
+                    }
+                return;
+            }
             foreach (var entry in table.entries)
                 foreach (var monster in entry.monsters)
                     if (monster != null) slots.Add(new Slot { biome = entry.biome, monster = monster });
@@ -112,6 +124,21 @@ namespace Game.Monster
             if (!NavMesh.SamplePosition(gate, out gateHit, TownGateSnapDistance, NavMesh.AllAreas)) return false;
             return NavMesh.CalculatePath(point, gateHit.position, NavMesh.AllAreas, path)
                 && path.status == NavMeshPathStatus.PathComplete;
+        }
+
+        /// 確認用（/debug mob）: 表にある魔物を名前（アセット名か monsterName）で探し、その場にポータルから湧かせる。
+        public string SpawnAt(string name, Vector3 position)
+        {
+            foreach (var slot in slots)
+            {
+                if (!string.Equals(slot.monster.name, name, System.StringComparison.OrdinalIgnoreCase) && slot.monster.monsterName != name) continue;
+                if (!NavMesh.SamplePosition(position, out var hit, 6f, NavMesh.AllAreas)) return "no NavMesh near the point";
+                BeginSpawn(slot, hit.position);
+                return slot.monster.name + " at " + hit.position;
+            }
+            var names = new StringBuilder();
+            foreach (var slot in slots) names.Append(slot.monster.name).Append(' ');
+            return "unknown monster '" + name + "'. one of: " + names;
         }
 
         public string Describe()

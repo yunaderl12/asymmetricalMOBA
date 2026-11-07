@@ -31,6 +31,8 @@ namespace Game.Monster
                 int dmg = damagePerTick;
                 var monster = GetComponentInParent<Monster>();
                 if (monster != null && (StatusEffectController.IsStunnedObj(monster.gameObject) || monster.IsFlinching)) return;
+                // 自分の技で戦う魔物は、勇者に触れただけではダメージを与えない（コアには与える）。
+                if (monster != null && monster.Data != null && monster.Data.kind != MonsterKind.Melee && other.CompareTag("Player")) return;
                 if (monster != null && monster.CurrentAtk > 0) dmg = monster.CurrentAtk;
                 var attacker = monster != null ? monster.gameObject : gameObject;
                 hp.TakeDamage(dmg, attacker, DamageType.Physical);
