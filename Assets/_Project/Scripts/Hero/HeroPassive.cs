@@ -78,12 +78,12 @@ namespace Game.Hero
             return ModelAnim == null || !ModelAnim.IsRespawnAnimPlaying;
         }
 
-        /// SPが足りれば消費する。
+        /// MPが足りれば消費する（消費0のパッシブはそのまま使える）。
         protected bool TryPay()
         {
-            if (Data.spCost > 0)
+            if (Data.mpCost > 0)
             {
-                if (mana == null || !mana.TryUseMana(Data.spCost)) return false;
+                if (mana == null || !mana.TryUseMana(Data.mpCost)) return false;
             }
             if (regen != null) regen.NotifyActed();
             return true;

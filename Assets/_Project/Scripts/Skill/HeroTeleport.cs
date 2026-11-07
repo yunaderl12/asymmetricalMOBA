@@ -57,8 +57,6 @@ namespace Game.Skill
         private UnityEngine.AI.NavMeshAgent agent;
         private CharacterModelAnimator modelAnim;
         private Transform cameraTransform;
-        private Camera heroCamera;
-        private float baseFov;
         private Transform model;
         private Vector3 modelBaseScale;
 
@@ -103,7 +101,7 @@ namespace Game.Skill
             if (phase == Phase.WindUp && target == health && amount > 0) damagedInWindUp = true;
         }
 
-        /// tryPay は飛び立つ瞬間に呼ばれ、false なら取りやめる（溜めの中断ではSPを消費しない）。
+        /// tryPay は飛び立つ瞬間に呼ばれ、false なら取りやめる（溜めの中断ではMPを消費しない）。
         /// スキルレベルによる着地の演出の大きさ。
         public float EffectScale { get; set; } = 1f;
 
@@ -116,11 +114,6 @@ namespace Game.Skill
             if (modelAnim == null) modelAnim = GetComponent<CharacterModelAnimator>();
             model = modelAnim != null ? modelAnim.ModelRoot : null;
             if (model != null) modelBaseScale = model.localScale;
-            if (heroCamera == null && cam != null)
-            {
-                heroCamera = cam.GetComponent<Camera>();
-                if (heroCamera != null) baseFov = heroCamera.fieldOfView;
-            }
 
             phase = Phase.WindUp;
             timer = 0f;
@@ -502,7 +495,7 @@ namespace Game.Skill
                 if (health == null || !health.IsDead) model.gameObject.SetActive(true);
                 model.localScale = modelBaseScale;
             }
-            if (heroCamera != null) heroCamera.fieldOfView = baseFov;
+            if (controller != null) controller.SetSkillFov(0f);
         }
 
         private void SetModelScale(float width, float height)
@@ -513,7 +506,7 @@ namespace Game.Skill
         private void SetCamera(Vector3 position, float pitch, float fovOffset)
         {
             if (controller != null) controller.SetCameraKick(position, pitch);
-            if (heroCamera != null) heroCamera.fieldOfView = baseFov + fovOffset;
+            if (controller != null) controller.SetSkillFov(fovOffset);
         }
     }
 }

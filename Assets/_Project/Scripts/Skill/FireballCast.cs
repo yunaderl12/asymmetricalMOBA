@@ -33,8 +33,6 @@ namespace Game.Skill
         private HeroFPSController controller;
         private CharacterModelAnimator modelAnim;
         private Transform cameraTransform;
-        private Camera heroCamera;
-        private float baseFov;
 
         private Phase phase = Phase.Idle;
         private SkillData skill;
@@ -73,11 +71,6 @@ namespace Game.Skill
             this.onHit = onHit;
             cameraTransform = cam;
             if (modelAnim == null) modelAnim = GetComponent<CharacterModelAnimator>();
-            if (heroCamera == null && cam != null)
-            {
-                heroCamera = cam.GetComponent<Camera>();
-                if (heroCamera != null) baseFov = heroCamera.fieldOfView;
-            }
 
             phase = Phase.Charging;
             timer = 0f;
@@ -233,7 +226,7 @@ namespace Game.Skill
         {
             cameraTouched = true;
             if (controller != null) controller.SetCameraKick(position, pitch);
-            if (heroCamera != null) heroCamera.fieldOfView = baseFov + fovOffset;
+            if (controller != null) controller.SetSkillFov(fovOffset);
         }
 
         private Vector3 HoldPoint()

@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Game.Core
 {
-    /// 歩いている地形で速さが変わるものに付ける。浅瀬では少し遅くなって波紋が立ち、上り坂では SlopePenalty の分だけ遅くなる。
+    /// 歩いている地形で速さが変わるものに付ける。浅瀬では少し遅くなって波紋と水しぶきが立ち、上り坂では SlopePenalty の分だけ遅くなる。
     /// 砂漠の道から外れた砂地では遅くなって砂が跳ねる（SandSlows が false の魔物は砂が跳ねるだけ）。
     public class TerrainWalker : MonoBehaviour
     {
@@ -30,6 +30,7 @@ namespace Game.Core
         private Vector3 lastPosition;
         private float checkTimer;
         private float rippleTimer;
+        private float splashTimer;
         private float sandTimer;
         private float slope;
 
@@ -49,6 +50,7 @@ namespace Game.Core
         private void Update()
         {
             rippleTimer -= Time.deltaTime;
+            splashTimer -= Time.deltaTime;
             sandTimer -= Time.deltaTime;
             checkTimer -= Time.deltaTime;
             if (checkTimer > 0f) return;
@@ -66,8 +68,15 @@ namespace Game.Core
             float target = grounded && run / Mathf.Max(elapsed, 0.001f) > MinMoveSpeed && rise > 0f ? Mathf.Atan2(rise, run) * Mathf.Rad2Deg : 0f;
             slope = Mathf.Lerp(slope, target, Mathf.Clamp01(SlopeSmoothing * elapsed));
 
+            bool wasInShallow = InShallow;
             InShallow = position.y < ShallowMaxHeight && StageMap.IsShallow(position);
-            if (InShallow && run > RippleMoveDistance * elapsed * 10f && rippleTimer <= 0f) SpawnRipple(position);
+            Vector3 velocity = delta / Mathf.Max(elapsed, 0.001f);
+            if (InShallow && !wasInShallow) EnterWater(position, velocity);
+            else if (InShallow && run > RippleMoveDistance * elapsed * 10f)
+            {
+                if (rippleTimer <= 0f) SpawnRipple(position);
+                if (splashTimer <= 0f) SpawnSplash(position, velocity, BalanceConfig.Instance.waterSplashDrops);
+            }
 
             OnLooseSand = !InShallow && grounded && StageMap.IsLooseSand(position);
             if (OnLooseSand && run / Mathf.Max(elapsed, 0.001f) > MinMoveSpeed && sandTimer <= 0f) SpawnSand(position, delta / Mathf.Max(elapsed, 0.001f));
@@ -88,6 +97,31 @@ namespace Game.Core
             var cam = Camera.main;
             if (cam != null && (cam.transform.position - position).sqrMagnitude > RippleVisibleDistance * RippleVisibleDistance) return;
             SandSplash.Spawn(position, velocity, BalanceConfig.Instance.sandSplashGrains, SplashScale);
+        }
+
+        // 水に入った瞬間は大きく跳ねて、波紋が2重に広がる。
+        private void EnterWater(Vector3 position, Vector3 velocity)
+        {
+            var config = BalanceConfig.Instance;
+            if (!IsVisible(position)) return;
+            rippleTimer = config.rippleInterval;
+            splashTimer = config.waterSplashInterval;
+            WaterRipple.Spawn(position, config.rippleRadius * 1.4f);
+            WaterRipple.Spawn(position, config.rippleRadius * 0.8f);
+            SandSplash.SpawnWater(position, velocity, config.waterSplashDrops * 2, WaterRipple.SurfaceY, SplashScale);
+        }
+
+        private void SpawnSplash(Vector3 position, Vector3 velocity, int drops)
+        {
+            splashTimer = BalanceConfig.Instance.waterSplashInterval;
+            if (!IsVisible(position)) return;
+            SandSplash.SpawnWater(position, velocity, drops, WaterRipple.SurfaceY, SplashScale);
+        }
+
+        private static bool IsVisible(Vector3 position)
+        {
+            var cam = Camera.main;
+            return cam == null || (cam.transform.position - position).sqrMagnitude <= RippleVisibleDistance * RippleVisibleDistance;
         }
 
         private void SpawnRipple(Vector3 position)

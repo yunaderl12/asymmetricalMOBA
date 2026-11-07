@@ -90,10 +90,16 @@ namespace Game.Hero
         /// animation so the Swordsman cannot be moved or shoot mid-Fall4.
         /// </summary>
         public bool IsRespawnAnimPlaying => respawning;
+        /// リスポーンのアニメーションの残り秒数（再生していなければ 0）。
+        public float RespawnAnimRemaining => respawning ? Mathf.Max(0f, respawnAnimTimer) : 0f;
+        /// リスポーンのアニメーションの長さ（秒）。
+        public float RespawnAnimSeconds => respawnClipDuration;
         public bool HasModel => model != null;
         public Transform ModelRoot => model != null ? model.transform : null;
         /// 溜め中。基本攻撃と移動アニメーションを止める。
         public bool CastLocked { get; set; }
+        /// 走るアニメーションの速さの倍率（大きな体をゆっくり重く歩かせる）。
+        public float RunAnimSpeedScale { get; set; } = 1f;
 
         private GameObject model;
         private Animator animator;
@@ -130,6 +136,7 @@ namespace Game.Hero
         private float castLean;
         private float castReach;
         private Vector3 castHoldPoint;
+        private float castSpread;
         private float meleeLean;
         private float meleeSpin;
         private float meleeReach;
@@ -201,11 +208,13 @@ namespace Game.Hero
         }
 
         /// lean: -1 で後ろへ反り、+1 で前へ踏み込む / reach: 両手を holdPoint へ向ける強さ（0〜1）。
-        public void SetCastPose(float lean, float reach, Vector3 holdPoint)
+        /// spread: 両手を holdPoint から左右へ離す幅 (m)。肩幅の広い体は、手を寄せすぎると腕が胸の前で交差する。
+        public void SetCastPose(float lean, float reach, Vector3 holdPoint, float spread = 0f)
         {
             castLean = lean;
             castReach = reach;
             castHoldPoint = holdPoint;
+            castSpread = spread;
         }
 
         /// 近接スキルの姿勢。lean: 上体の傾き（+で前）/ spinDegrees: 体ごとの回転 / rightReach: 右腕を rightPoint へ向ける強さ（0〜1）。
@@ -244,8 +253,8 @@ namespace Game.Hero
 
             if (casting)
             {
-                AimArm(leftArm, leftForeArm, leftHand, -transform.right, castHoldPoint, castReach);
-                AimArm(rightArm, rightForeArm, rightHand, transform.right, castHoldPoint, castReach);
+                AimArm(leftArm, leftForeArm, leftHand, -transform.right, castHoldPoint - transform.right * castSpread, castReach);
+                AimArm(rightArm, rightForeArm, rightHand, transform.right, castHoldPoint + transform.right * castSpread, castReach);
             }
             if (meleeReach != 0f) AimArm(rightArm, rightForeArm, rightHand, transform.right, meleePoint, meleeReach);
             if (guardReach != 0f) AimArm(leftArm, leftForeArm, leftHand, -transform.right, guardPoint, guardReach);
@@ -485,7 +494,7 @@ namespace Game.Hero
             for (int i = 0; i < TriggerNames.Length; i++) animator.ResetTrigger(TriggerNames[i]);
             animator.SetTrigger(TriggerNames[(int)s]);
             bool running = s == AnimState.Forward || s == AnimState.BackLeft || s == AnimState.BackRight;
-            animator.speed = running ? Game.Core.BalanceConfig.Instance.runAnimationSpeed : 1f;
+            animator.speed = running ? Game.Core.BalanceConfig.Instance.runAnimationSpeed * RunAnimSpeedScale : 1f;
         }
 
         private void OnDeath()

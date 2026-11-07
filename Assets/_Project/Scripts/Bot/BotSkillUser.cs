@@ -8,7 +8,7 @@ using Game.Skill;
 
 namespace Game.Bot
 {
-    /// BOTの勇者のスキル使用。人間と同じ SkillRuntime / SkillExecutor を通すので、消費SP・クールタイム・演出は人間と変わらない。
+    /// BOTの勇者のスキル使用。人間と同じ SkillRuntime / SkillExecutor を通すので、消費MP・クールタイム・演出は人間と変わらない。
     public class BotSkillUser : MonoBehaviour
     {
         private const float EyeHeight = 1.6f;
@@ -33,7 +33,7 @@ namespace Game.Bot
         private float nextRegen;
 
         public bool IsCasting => executor != null && executor.IsBusy;
-        /// このBOTのクラス。HUDの味方一覧で肖像とクラス名を出すのに使う。
+        /// このBOTのジョブ。HUDの味方一覧で肖像とジョブ名を出すのに使う。
         public HeroClassData ClassData => classData;
 
         public void Init(BotHero owner, HeroClassData data, SkillData freeSlotSkill)
@@ -44,7 +44,7 @@ namespace Game.Bot
             agent = GetComponent<NavMeshAgent>();
 
             mana = gameObject.AddComponent<ManaComponent>();
-            mana.SetMaxMP(data.initialSP);
+            mana.SetMaxMP(data.initialMP);
             runtime = gameObject.AddComponent<SkillRuntime>();
             runtime.Equip(data.classSkills, freeSlotSkill);
             executor = gameObject.AddComponent<SkillExecutor>();
@@ -62,7 +62,7 @@ namespace Game.Bot
         private void Update()
         {
             if (executor == null || health == null || health.IsDead) return;
-            RegenSp();
+            RegenMp();
 
             bool casting = IsCasting;
             if (casting != wasCasting) SetCastingMotion(casting);
@@ -80,11 +80,11 @@ namespace Game.Bot
         }
 
         // 人間の HeroRegen の「戦闘中でも回復する分」と同じ割合。
-        private void RegenSp()
+        private void RegenMp()
         {
             if (Time.time < nextRegen) return;
-            nextRegen = Time.time + BalanceConfig.Instance.botSpRegenInterval;
-            mana.RestoreFraction(mana.MaxMP * classData.spCombatRegenRate);
+            nextRegen = Time.time + BalanceConfig.Instance.botMpRegenInterval;
+            mana.RestoreFraction(mana.MaxMP * classData.mpCombatRegenRate);
         }
 
         private void SetCastingMotion(bool casting)

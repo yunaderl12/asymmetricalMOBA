@@ -179,6 +179,9 @@ P = {
     "forest_b": mat("ForestB", (0.08, 0.22, 0.05)),
     "snow": mat("Snow", (0.85, 0.87, 0.90)),
     "cactus": mat("Cactus", (0.10, 0.32, 0.12)),
+    "sandstone": mat("Sandstone", (0.46, 0.27, 0.15)),
+    "sandstone_b": mat("SandstoneB", (0.36, 0.20, 0.11)),
+    "sandstone_dark": mat("SandstoneDark", (0.20, 0.11, 0.06)),
     "water_shallow": mat("WaterShallow", (0.05, 0.30, 0.46)),
     "water_shallow_b": mat("WaterShallowB", (0.08, 0.36, 0.52)),
     "water_deep": mat("WaterDeep", (0.02, 0.07, 0.30)),
@@ -236,6 +239,16 @@ def on_path(x, y, margin=0.0):
 
 def near_spawner(p, r):
     return any((p - s).length < r for s in SPAWNERS)
+
+
+# スコーピオンの広場: 砂漠の東寄りに敷いた円い石畳。縁に崩れた砂岩の柱が並ぶ。床は固く、砂地の遅さはない。
+SCORPION = MAP["scorpionPlaza"]
+SCORPION_CENTER = Vector((SCORPION["x"], SCORPION["z"]))
+SCORPION_RADIUS = SCORPION["radius"]
+
+
+def in_scorpion_plaza(p, margin=0.0):
+    return (p - SCORPION_CENTER).length < SCORPION_RADIUS + margin
 
 
 def tree(g, rng, x, y, s=1.0, kind=None, base=0.0):
@@ -358,6 +371,88 @@ def in_forest(p):
     return in_ellipse(p, b["x"], b["z"], b["rx"], b["rz"], 0.12) < 1.0 and deep_gap(p) > 2 and not is_sea(p)
 
 
+# 浅い川: 川底を土色にして窪ませ、地表のすぐ下まで半透明の水を張る（水は Unity 側で透ける材質に差し替える）。
+RIVER_WATER_Y = float(MAP.get("shallowWaterY", -0.1))
+RIVER_BED = float(MAP.get("shallowBedDepth", 0.75))
+RIVER_BANK = 4.0  # 岸から川底の深さになるまでの幅 (m)
+
+
+def nearest_on(pts, p):
+    best, best_q = 1e9, pts[0]
+    for a, b in zip(pts, pts[1:]):
+        ab = b - a
+        t = max(0.0, min(1.0, (p - a).dot(ab) / ab.dot(ab)))
+        q = a + ab * t
+        if (q - p).length < best:
+            best, best_q = (q - p).length, q
+    return best_q
+
+
+# 森の広場: 巨大樹の森の奥に開けた円い空き地。枯れ木に囲まれ、骨が散らばる。ウェンディゴがここに棲む。
+# 森の道から小道が1本だけ通じている。
+FOREST_PLAZA = MAP["forestPlaza"]
+FOREST_CENTER = Vector((FOREST_PLAZA["x"], FOREST_PLAZA["z"]))
+FOREST_RADIUS = FOREST_PLAZA["radius"]
+_trail_end = nearest_on(ROADS["forest"], FOREST_CENTER)
+FOREST_ENTRANCE = (_trail_end - FOREST_CENTER).normalized()
+FOREST_TRAIL = [FOREST_CENTER + FOREST_ENTRANCE * (FOREST_RADIUS - 2.0), _trail_end]
+FOREST_TRAIL_HALF = 3.0
+
+
+def in_forest_plaza(p, margin=0.0):
+    return (p - FOREST_CENTER).length < FOREST_RADIUS + margin
+
+
+def on_forest_trail(p, margin=0.0):
+    return line_dist(p, FOREST_TRAIL)[0] < FOREST_TRAIL_HALF + margin
+
+
+# ---------------------------------------------------------------- ground bumps
+GROUND_CELL = 2.0  # 地面の格子 (m)。Unity の当たり判定も同じ格子で作る（Resources/StageGround.bytes）。
+
+
+def bump(p):
+    return 0.22 * noise.noise(Vector((p.x * 0.07, p.y * 0.07, 9.3))) + 0.08 * noise.noise(Vector((p.x * 0.19, p.y * 0.19, 2.6)))
+
+
+def bump_mask(p, sg):
+    """凹凸を付けてよい度合い（0〜1）。まち・川岸・スポナー・広場・橋のたもと・岩・山のふもと・地図の端は平らにする。"""
+    m = smooth(30, 48, (p - TOWN).length)
+    if m <= 0.0:
+        return 0.0
+    m *= smooth(1, 5, sg) * smooth(1, 6, deep_gap(p)) * smooth(3, 10, shore_dist(p))
+    if m <= 0.0:
+        return 0.0
+    m *= min(smooth(8, 15, (p - s).length) for s in SPAWNERS)
+    m *= smooth(SCORPION_RADIUS + 1, SCORPION_RADIUS + 9, (p - SCORPION_CENTER).length)
+    m *= smooth(FOREST_RADIUS + 1, FOREST_RADIUS + 9, (p - FOREST_CENTER).length)
+    m *= min(smooth(12, 22, (p - b).length) for b in BRIDGE_STARTS)
+    for rx, rz, sx, sy, sz in ROCKS:
+        m *= smooth(1, 6, max(abs(p.x - rx) - sx / 2, abs(p.y - rz) - sz / 2))
+    if m <= 0.0:
+        return 0.0
+    if p.x > -62 and p.y > -46:
+        m *= 1.0 - smooth(-0.1, 0.3, mountain_height(p))
+    m *= 0.5 + 0.5 * smooth(1.5, 5, min(road_dist(p), line_dist(p, FOREST_TRAIL)[0]))
+    m *= smooth(0, 15, HALF - max(abs(p.x), abs(p.y)))
+    return m
+
+
+def field_height(p, r):
+    """地面の頂点の高さ。乱数 r は頂点ごとに1回だけ使う。"""
+    jitter = r.uniform(-1.0, 1.0)
+    if is_sea(p) or deep_gap(p) < -1.0:
+        return -3.0
+    sg = shallow_gap(p)
+    if sg < 0.0:
+        return -RIVER_BED * smooth(0, RIVER_BANK, -sg) + 0.03 * jitter * smooth(0, RIVER_BANK, -sg)
+    m = bump_mask(p, sg)
+    h = (bump(p) + 0.03 * jitter) * m
+    if on_path(p.x, p.y, 0.5):
+        h -= 0.03
+    return h
+
+
 # ---------------------------------------------------------------- mountains
 MOUNTAIN_ROAD = _pairs(sum([[p.x, p.y] for p in ROADS["mountain"][3:]], []))
 MOUNTAIN_LEN = line_length(MOUNTAIN_ROAD)
@@ -399,7 +494,24 @@ def mountain_height(p):
         h += mask * a * math.exp(-(((p - Vector((x, z))).length / r) ** 2))
     d, s = line_dist(p, MOUNTAIN_ROAD)
     h = road_height(s) + (h - road_height(s)) * smooth(4.0, 28, d)
+    w = plaza_weight(p)
+    if w > 0.0:
+        h += (PLAZA_HEIGHT - h) * w
     return h
+
+
+# ドラゴンの広場: 山の中ほどを平らに削った円い広場。南側が山道に開いていて、残りの三方は崖で囲まれる。
+PLAZA = MAP["dragonPlaza"]
+PLAZA_CENTER = Vector((PLAZA["x"], PLAZA["z"]))
+PLAZA_RADIUS, PLAZA_BLEND, PLAZA_HEIGHT = PLAZA["radius"], PLAZA["blend"], PLAZA["height"]
+
+
+def plaza_dist(p):
+    return (p - PLAZA_CENTER).length
+
+
+def plaza_weight(p):
+    return 1.0 - smooth(PLAZA_RADIUS, PLAZA_RADIUS + PLAZA_BLEND, plaza_dist(p))
 
 
 def terrain_y(p):
@@ -573,23 +685,31 @@ def build_field():
         tree_cols.cyl(P["bark"], (x, y, z - 0.5), 0.26 * s + 0.12, 7.0, n=6)
 
     # Ground: triangulated grid, flat shaded, material picked per triangle.
+    # 昔の 4m 格子の地面が使っていた乱数を同じ順に使い切ってから、新しい 2m 格子の地面を専用の乱数で作る。
+    # こうすると、あとに続く草や木の並びが変わらない。
     nx, ny, w, d = 125, 125, float(MAP["size"]), float(MAP["size"])
-    bm = ground.bm
-    grid = [[bm.verts.new((-w / 2 + i * w / nx, -d / 2 + j * d / ny, 0.0)) for j in range(ny + 1)] for i in range(nx + 1)]
-    for col_v in grid:
-        for v in col_v:
-            p = Vector((v.co.x, v.co.y))
-            h = ground_height(p.x, p.y, rng)
-            if is_sea(p) or deep_gap(p) < -1.0:
-                h = -3.0
-            elif on_path(p.x, p.y, 0.5):
-                h -= 0.03
-            v.co.z = h
 
-    def face_mat(cx, cy):
+    def face_mat(cx, cy, r, new=False):
         p = Vector((cx, cy))
         if is_sea(p) or deep_gap(p) < 3.5 or shore_dist(p) < 5.0:
             return P["sand"]
+        if new:
+            sg = shallow_gap(p)
+            if sg < -0.6:
+                # 川底: 土の色。ところどころ小石。
+                k = r.random()
+                return P["stone_dark"] if k < 0.12 else (P["dirt_dark"] if k < 0.55 else P["dirt"])
+            if in_forest_plaza(p):
+                dist = (p - FOREST_CENTER).length
+                k = r.random()
+                if dist > FOREST_RADIUS - 2.5:
+                    return P["stone_dark"] if k < 0.4 else P["moss"]
+                n = noise.noise(Vector((cx * 0.13, cy * 0.13, 5.5)))
+                if n > 0.25:
+                    return P["moss"] if k < 0.7 else P["forest_a"]
+                return P["dirt_dark"] if k < 0.55 else P["dirt"]
+            if on_forest_trail(p):
+                return P["dirt_dark"] if r.random() < 0.5 else P["dirt"]
         if shallow_gap(p) < 1.5:
             return P["sand_wet"]
         if on_path(cx, cy):
@@ -598,12 +718,19 @@ def build_field():
             return P["dirt_dark"]
         if (p - TOWN).length < 9:
             return P["grass_b"]
+        if in_scorpion_plaza(p):
+            jitter = r.uniform(-0.2, 0.2)  # 砂漠の面と同じ数だけ乱数を使い、あとの飾りの並びを変えない
+            d = (p - SCORPION_CENTER).length
+            if d > SCORPION_RADIUS - 3.0:
+                return P["sandstone_dark"]
+            ring = int(d / 4.0) % 2
+            return P["sandstone"] if (ring == 0) == (jitter > -0.12) else P["sandstone_b"]
         if in_desert(p):
-            n = noise.noise(Vector((cx * 0.05, cy * 0.05, 3.1))) + rng.uniform(-0.2, 0.2)
+            n = noise.noise(Vector((cx * 0.05, cy * 0.05, 3.1))) + r.uniform(-0.2, 0.2)
             return P["sand_b"] if n > 0.2 else (P["sand_c"] if n < -0.25 else P["sand"])
         if in_forest(p):
-            return P["forest_a"] if rng.random() < 0.6 else P["forest_b"]
-        n = noise.noise(Vector((cx * 0.02, cy * 0.02, 1.7))) + rng.uniform(-0.25, 0.25)
+            return P["forest_a"] if r.random() < 0.6 else P["forest_b"]
+        n = noise.noise(Vector((cx * 0.02, cy * 0.02, 1.7))) + r.uniform(-0.25, 0.25)
         if n > 0.45:
             return P["grass_dry"]
         if n > 0.1:
@@ -612,22 +739,54 @@ def build_field():
             return P["grass_c"]
         return P["grass_a"]
 
+    # 昔の地面の乱数の使い方をなぞる（形は作らない）。
+    for i in range(nx + 1):
+        for j in range(ny + 1):
+            ground_height(-w / 2 + i * w / nx, -d / 2 + j * d / ny, rng)
     for i in range(nx):
         for j in range(ny):
+            xs = [-w / 2 + (i + a) * w / nx for a in (0, 1, 1, 0)]
+            ys = [-d / 2 + (j + b) * d / ny for b in (0, 0, 1, 1)]
+            tris = [(0, 1, 2), (0, 2, 3)] if (i + j) % 2 == 0 else [(0, 1, 3), (1, 2, 3)]
+            for tr in tris:
+                face_mat(sum(xs[k] for k in tr) / 3, sum(ys[k] for k in tr) / 3, rng)
+
+    # 新しい地面: 2m 格子。ほんの少し凹凸があり、浅い川は窪んで川底が見える。
+    grng = random.Random(41)
+    gn = int(round(w / GROUND_CELL))
+    gx0, gy0 = -w / 2, -d / 2
+    bm = ground.bm
+    heights = [[field_height(Vector((gx0 + i * GROUND_CELL, gy0 + j * GROUND_CELL)), grng) for j in range(gn + 1)] for i in range(gn + 1)]
+    grid = [[bm.verts.new((gx0 + i * GROUND_CELL, gy0 + j * GROUND_CELL, heights[i][j])) for j in range(gn + 1)] for i in range(gn + 1)]
+    for i in range(gn):
+        for j in range(gn):
             a, b, c, e = grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]
             tris = [(a, b, c), (a, c, e)] if (i + j) % 2 == 0 else [(a, b, e), (b, c, e)]
             for t in tris:
                 f = bm.faces.new(t)
                 cx = sum(v.co.x for v in t) / 3
                 cy = sum(v.co.y for v in t) / 3
-                f.material_index = ground._mi(face_mat(cx, cy))
+                f.material_index = ground._mi(face_mat(cx, cy, grng, new=True))
 
-    # Water: 海と深い川は地面より下、浅瀬は足首が隠れる高さ（当たり判定の地面は y=0）。
+    # 地面の上に置く物を凹凸に沿わせるための高さ（海と川の中は 0）。
+    lift = [[max(h, -0.05) if h > -0.5 else 0.0 for h in col_h] for col_h in heights]
+
+    def ground_lift(x, y):
+        fx, fy = (x - gx0) / GROUND_CELL, (y - gy0) / GROUND_CELL
+        i, j = int(math.floor(fx)), int(math.floor(fy))
+        if i < 0 or j < 0 or i >= gn or j >= gn:
+            return 0.0
+        u, v = fx - i, fy - j
+        return (lift[i][j] * (1 - u) + lift[i + 1][j] * u) * (1 - v) + (lift[i][j + 1] * (1 - u) + lift[i + 1][j + 1] * u) * v
+
+    write_ground_heights(heights, gx0, gy0, GROUND_CELL, gn)
+
+    # Water: 海と深い川は地面より下。浅い川は窪んだ川底の上、地表のすぐ下に水面を張る（縁は岸の地面に隠れる）。
     ws, wd, wm = [P["water_shallow"], P["water_shallow_b"]], [P["water_deep"], P["water_deep_b"]], [P["water_sea"], P["water_sea_b"]]
     for width, pts in DEEP:
         ribbon(water, pts, width + 6, -0.5, wd, rng)
     for width, pts in SHALLOW:
-        ribbon(water, pts, width, 0.12, ws, rng)
+        ribbon(water, pts, width + 1.0, RIVER_WATER_Y, ws, rng)
     cell = 12.0
     x = -60.0
     while x < 430:
@@ -657,6 +816,9 @@ def build_field():
             mverts[k] = mountains.bm.verts.new((mx0 + i * mc + jx, mz0 + j * mc + jz, heights[i][j]))
         return mverts[k]
 
+    # 山の面の色は専用の乱数で決める。広場など山の形を変えても、あとに続く草原の飾りの並びが変わらない。
+    mrng = random.Random(17)
+
     def mountain_mat(t):
         cx = sum(v.co.x for v in t) / 3
         cy = sum(v.co.y for v in t) / 3
@@ -664,15 +826,24 @@ def build_field():
         lo = min(v.co.z for v in t)
         n = (t[1].co - t[0].co).cross(t[2].co - t[0].co)
         steep = 1.0 - abs(n.z) / max(n.length, 1e-5)
+        pd = plaza_dist(Vector((cx, cy)))
+        if pd < PLAZA_RADIUS:
+            # 広場の床: 縁を石で囲み、中は土。ドラゴンの炎で焦げた跡がまだらに残る。
+            if pd > PLAZA_RADIUS - 2.5:
+                return P["stone"] if mrng.random() < 0.6 else P["stone_dark"]
+            burn = noise.noise(Vector((cx * 0.11, cy * 0.11, 7.0)))
+            if burn > 0.28:
+                return P["ash"] if burn > 0.42 else P["scorched"]
+            return P["dirt"] if mrng.random() < 0.6 else P["dirt_dark"]
         if line_dist(Vector((cx, cy)), MOUNTAIN_ROAD)[0] < 3.8 and steep < 0.12:
             return P["dirt"]
         if hi > 62:
             return P["snow"]
         if steep > 0.22 or hi > 38:
-            return P["stone"] if rng.random() < 0.7 else P["stone_dark"]
+            return P["stone"] if mrng.random() < 0.7 else P["stone_dark"]
         if lo > 16:
             return P["grass_dry"]
-        return P["grass_c"] if rng.random() < 0.5 else P["grass_a"]
+        return P["grass_c"] if mrng.random() < 0.5 else P["grass_a"]
 
     for i in range(cols):
         for j in range(rows):
@@ -741,7 +912,7 @@ def build_field():
             return True
         if is_sea(p) or shore_dist(p) < 6 + extra or deep_gap(p) < 3 + extra or shallow_gap(p) < 1.5 + extra:
             return True
-        if on_path(p.x, p.y, 0.8 + extra) or near_spawner(p, 8 + extra):
+        if on_path(p.x, p.y, 0.8 + extra) or near_spawner(p, 8 + extra) or in_scorpion_plaza(p, 4 + extra):
             return True
         for rx, rz, sx, sy, sz in ROCKS:
             if abs(p.x - rx) < sx / 2 + 1.5 + extra and abs(p.y - rz) < sz / 2 + 1.5 + extra:
@@ -757,6 +928,12 @@ def build_field():
     def meadow(p):
         return not in_desert(p) and not in_forest(p) and not on_mountain(p)
 
+    # 森の広場と小道に入る草やしげみは、乱数だけ使って捨てる（ほかの飾りの並びを変えない）。
+    scratch = Group("Scratch", rng)
+
+    def clear_of_forest_plaza(p, margin=1.0):
+        return not in_forest_plaza(p, margin) and not on_forest_trail(p, margin * 0.5)
+
     # Grass tufts
     placed = 0
     while placed < 8000:
@@ -767,10 +944,11 @@ def build_field():
             continue
         placed += 1
         z = ground_height(p.x, p.y, rng) - 0.05
+        tg = decor if clear_of_forest_plaza(p) else scratch
         for _ in range(3):
             ox, oy = rng.uniform(-0.25, 0.25), rng.uniform(-0.25, 0.25)
             tilt = Matrix.Rotation(math.radians(rng.uniform(-18, 18)), 4, Vector((rng.uniform(-1, 1), rng.uniform(-1, 1), 0)).normalized())
-            decor.cone(P["tuft"], (p.x + ox, p.y + oy, z), 0.09, rng.uniform(0.35, 0.65), n=3, rotz=rng.random() * 6, tilt=tilt)
+            tg.cone(P["tuft"], (p.x + ox, p.y + oy, z), 0.09, rng.uniform(0.35, 0.65), n=3, rotz=rng.random() * 6, tilt=tilt)
 
     # Flowers, in loose clusters
     flower_mats = [P["flower_w"], P["flower_y"], P["flower_p"], P["flower_b"]]
@@ -801,7 +979,7 @@ def build_field():
             continue
         s = rng.uniform(0.6, 1.0)
         leaf = P["leaf_a"] if rng.random() < 0.5 else P["leaf_b"]
-        decor.ico(leaf, (p.x, p.y, 0.25 * s), 0.9 * s, sub=1, scale=(1.2, 1, 0.75), jitter=0.12 * s)
+        (decor if clear_of_forest_plaza(p, 2.0) else scratch).ico(leaf, (p.x, p.y, 0.25 * s), 0.9 * s, sub=1, scale=(1.2, 1, 0.75), jitter=0.12 * s)
 
     # Meadow trees
     placed = tries = 0
@@ -864,7 +1042,7 @@ def build_field():
     giants = []
     for _ in range(30000):
         p = forest_point()
-        if not in_forest(p) or blocked(p, 3.0) or road_dist(p) < 9.0:
+        if not in_forest(p) or blocked(p, 3.0) or road_dist(p) < 9.0 or in_forest_plaza(p, 9.0) or on_forest_trail(p, 4.0):
             continue
         if any((p - q).length < rq for q, rq in giants):
             continue
@@ -876,7 +1054,7 @@ def build_field():
     forest_count = 0
     for _ in range(40000):
         p = forest_point()
-        if not in_forest(p) or blocked(p, 1.5) or road_dist(p) < 5.5:
+        if not in_forest(p) or blocked(p, 1.5) or road_dist(p) < 5.5 or in_forest_plaza(p, 4.5) or on_forest_trail(p, 1.5):
             continue
         if any((p - q).length < 5.0 + (rq - 13.0) for q, rq in giants):
             continue
@@ -898,7 +1076,7 @@ def build_field():
     ferns = 0
     for _ in range(12000):
         p = forest_point()
-        if not in_forest(p) or blocked(p, 0.5) or road_dist(p) < 3.5:
+        if not in_forest(p) or blocked(p, 0.5) or road_dist(p) < 3.5 or in_forest_plaza(p, -1.0) or on_forest_trail(p, -1.0):
             continue
         fern(p.x, p.y)
         ferns += 1
@@ -912,7 +1090,7 @@ def build_field():
         tries += 1
         p = Vector((rng.uniform(-40, 245), rng.uniform(-30, 245)))
         h = mountain_height(p)
-        if h < 3 or h > 32 or line_dist(p, MOUNTAIN_ROAD)[0] < 9 or blocked(p):
+        if h < 3 or h > 32 or line_dist(p, MOUNTAIN_ROAD)[0] < 9 or blocked(p) or plaza_dist(p) < PLAZA_RADIUS + PLAZA_BLEND + 4:
             continue
         add_tree(trees, p.x, p.y, rng.uniform(0.8, 1.1), "pine", h - 0.2)
         placed += 1
@@ -982,6 +1160,61 @@ def build_field():
             for k in range(4):
                 decor.box(P["bone"], (p.x + k * 0.5 - 0.8, p.y + rng.uniform(-0.2, 0.2), 0.06), (0.1, 1.2, 0.08), rotz=rng.uniform(-0.3, 0.3))
 
+    # スコーピオンの広場を囲む崩れた砂岩の柱。南西（砂漠の中央側）を入口として空ける。柱は当たり判定つき。
+    prng = random.Random(53)
+    for k in range(12):
+        a = k / 12 * math.tau
+        if abs(math.atan2(math.sin(a - math.radians(200)), math.cos(a - math.radians(200)))) < 0.5:
+            continue
+        r = SCORPION_RADIUS + 1.6
+        x, y = SCORPION_CENTER.x + math.cos(a) * r, SCORPION_CENTER.y + math.sin(a) * r
+        h = prng.uniform(2.5, 7.5)
+        walls.cyl(P["sandstone"], (x, y, -0.2), 1.0, h, n=6, r2=0.85, rotz=prng.random() * 6)
+        walls.box(P["sandstone_dark"], (x, y, 0.15), (2.6, 2.6, 0.5), rotz=prng.random() * 6)
+        if h > 5.5:
+            walls.box(P["sandstone_b"], (x, y, h + 0.15), (2.4, 1.2, 0.5), rotz=a + math.pi / 2)
+        tree_cols.cyl(P["sandstone"], (x, y, -0.5), 1.05, h + 0.6, n=6)
+
+    # 森の広場: 縁に大きな枯れ木を並べ、小道の側だけ空ける。床には骨と苔むした石が散らばる。枯れ木は当たり判定つき。
+    wrng = random.Random(61)
+    entrance = math.atan2(FOREST_ENTRANCE.y, FOREST_ENTRANCE.x)
+    for k in range(26):
+        a = k / 26 * math.tau + wrng.uniform(-0.08, 0.08)
+        if abs(math.atan2(math.sin(a - entrance), math.cos(a - entrance))) < 0.32:
+            continue
+        r = FOREST_RADIUS + wrng.uniform(1.0, 4.5)
+        x, y = FOREST_CENTER.x + math.cos(a) * r, FOREST_CENTER.y + math.sin(a) * r
+        s = wrng.uniform(2.6, 3.8)
+        dead_tree(trees, wrng, x, y, s)
+        tree_cols.cyl(P["bark"], (x, y, -0.5), 0.2 * s + 0.15, 9.0, n=6)
+    # 倒れた枯れ木（縁の内側に少しだけ）
+    for k in range(4):
+        a = entrance + math.pi * (0.45 + 0.37 * k) + wrng.uniform(-0.1, 0.1)
+        r = FOREST_RADIUS - wrng.uniform(3.0, 5.0)
+        x, y = FOREST_CENTER.x + math.cos(a) * r, FOREST_CENTER.y + math.sin(a) * r
+        length = wrng.uniform(5.0, 8.0)
+        tilt = Matrix.Rotation(math.radians(90), 4, Vector((math.cos(a + math.pi / 2), math.sin(a + math.pi / 2), 0)))
+        trees.cyl(P["wood_dark"], (x, y, 0.35), 0.38, length, n=6, r2=0.22, tilt=tilt, rotz=0.0, jitter=0.04)
+        walls.box(P["wood_dark"], (x + math.cos(a) * length * 0.5, y + math.sin(a) * length * 0.5, 0.35), (length, 0.7, 0.7), rotz=a)
+    # 骨: あばら骨の山と、頭の骨
+    for k in range(9):
+        a = wrng.random() * math.tau
+        r = wrng.uniform(4.0, FOREST_RADIUS - 3.0)
+        x, y = FOREST_CENTER.x + math.cos(a) * r, FOREST_CENTER.y + math.sin(a) * r
+        rot = wrng.random() * math.tau
+        for rib in range(wrng.randint(3, 5)):
+            off = (rib - 2) * 0.32
+            decor.box(P["bone"], (x + math.cos(rot) * off, y + math.sin(rot) * off, 0.07), (0.09, wrng.uniform(0.9, 1.4), 0.08), rotz=rot + wrng.uniform(-0.25, 0.25))
+        if wrng.random() < 0.6:
+            decor.ico(P["bone"], (x + math.cos(rot + 1.5) * 0.9, y + math.sin(rot + 1.5) * 0.9, 0.18), 0.24, sub=0, scale=(1.2, 0.9, 0.8), jitter=0.03, rotz=wrng.random() * 6)
+    for k in range(12):
+        a = wrng.random() * math.tau
+        r = wrng.uniform(6.0, FOREST_RADIUS - 1.5)
+        x, y = FOREST_CENTER.x + math.cos(a) * r, FOREST_CENTER.y + math.sin(a) * r
+        s = wrng.uniform(0.3, 0.8)
+        decor.ico(P["stone_dark"], (x, y, -0.05), s, sub=0, scale=(1, 1, 0.6), jitter=s * 0.25, rotz=wrng.random() * 6)
+        decor.ico(P["moss"], (x, y, s * 0.3), s * 0.75, sub=0, scale=(1, 1, 0.35), jitter=s * 0.1)
+
     # Low hills just outside the map so the edge is not a hard line
     for _ in range(110):
         side = rng.randint(0, 3)
@@ -1003,6 +1236,12 @@ def build_field():
                   scale=(sx * 0.5, sz * 0.45, sy * 0.45), jitter=0.15, rotz=rng.random() * 6)
         walls.ico(P["moss"], (rx - sx * 0.1, rz + sz * 0.1, sy * 0.78), 0.5, sub=0,
                   scale=(sx * 0.6, sz * 0.55, sy * 0.25), jitter=0.1)
+
+    # 地面の上の物を、置いた場所の凹凸の高さだけ上げ下げする（形はそのまま、頂点ごとにその場の高さを足す）。
+    for g in (decor, trees, walls, tree_cols):
+        for v in g.bm.verts:
+            v.co.z += ground_lift(v.co.x, v.co.y)
+    scratch.bm.free()
 
     ground.force_up = True
     water.force_up = True
@@ -1302,10 +1541,22 @@ def build_archer_tower():
 SAND_CELL = 2.0
 
 
+def write_ground_heights(heights, x0, z0, cell, n):
+    """Unity の当たり判定用に地面の高さを書き出す。先頭に x0, z0, cell (float32), n (int32)。続けて z の行ごとに
+    (n+1) 個の高さ (float32)。セル (i, j) は (i + j) が偶数なら左下と右上、奇数なら右下と左上を結んで三角形に分ける。"""
+    import struct
+    out = bytearray(struct.pack("<fffi", x0, z0, cell, n))
+    for j in range(n + 1):
+        out += struct.pack("<%df" % (n + 1), *[heights[i][j] for i in range(n + 1)])
+    with open(os.path.join(ROOT, "Assets", "_Project", "Resources", "StageGround.bytes"), "wb") as f:
+        f.write(out)
+    print("GROUND_HEIGHTS", n + 1, "x", n + 1)
+
+
 def is_loose_sand(p):
     if not in_desert(p) or is_sea(p) or deep_gap(p) < 3.5 or shore_dist(p) < 5.0 or shallow_gap(p) < 1.5:
         return False
-    return not on_path(p.x, p.y, 0.8) and not near_spawner(p, 7.0) and (p - TOWN).length >= 9
+    return not on_path(p.x, p.y, 0.8) and not near_spawner(p, 7.0) and (p - TOWN).length >= 9 and not in_scorpion_plaza(p, 1.0)
 
 
 def write_sand_mask():

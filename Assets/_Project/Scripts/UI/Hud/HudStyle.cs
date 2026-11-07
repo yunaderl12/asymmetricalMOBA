@@ -17,8 +17,7 @@ namespace Game.UI
 
         public static readonly Color Hp = Hex(0xef5a55);
         public static readonly Color HpLow = Hex(0xff3b3b);
-        public static readonly Color Sp = Hex(0xf5b829);
-        public static readonly Color SpPreview = Hex(0xfff0b8);
+        public static readonly Color MpPreview = Hex(0xe6ddff);
         public static readonly Color Exp = Hex(0x76dcb8);
         public static readonly Color Mp = Hex(0xa98bff);
         public static readonly Color Town = Hex(0x2aa893);
@@ -27,6 +26,9 @@ namespace Game.UI
         public static readonly Color Danger = Hex(0xb3202c);
         public static readonly Color CostPill = Hex(0xffd968);
         public static readonly Color CostText = Hex(0x6a4a00);
+        /// スキルカードの消費MPの札。MPバーと同じ紫系。
+        public static readonly Color MpPill = Hex(0xd9ccff);
+        public static readonly Color MpPillText = Hex(0x3b2470);
         public static readonly Color Brown = Hex(0x6a4a2e);
         public static readonly Color DownFelt = Hex(0x4a4552);
 
@@ -69,7 +71,7 @@ namespace Game.UI
         public static Texture2D FeltTexture => felt != null ? felt : (felt = LoadTile("UI/HudFelt"));
         public static Texture2D PaperTexture => paper != null ? paper : (paper = LoadTile("UI/HudPaper"));
 
-        /// SPの消費予告に使う斜線。白と透明の縞で、上に塗る色を掛け合わせる。
+        /// MPの消費予告に使う斜線。白と透明の縞で、上に塗る色を掛け合わせる。
         public static Texture2D HatchTexture
         {
             get
@@ -265,7 +267,7 @@ namespace Game.UI
             if (plain != null) plain.GetComponent<HudShape>().color = tint.HasValue ? fallback * tint.Value : fallback;
         }
 
-        /// 勇者のクラス。人間は HeroClassInitializer、BOT は BotSkillUser が持っている。
+        /// 勇者のジョブ。人間は HeroClassInitializer、BOT は BotSkillUser が持っている。
         public static Game.Hero.HeroClassData ClassOf(GameObject hero)
         {
             if (hero == null) return null;

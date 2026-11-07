@@ -17,7 +17,9 @@ namespace Game.Skill
 
         public string DisplayName => string.IsNullOrEmpty(displayName) ? skillName : displayName;
         [TextArea] public string description;
-        public int spCost;
+        [UnityEngine.Serialization.FormerlySerializedAs("spCost")]
+        [Tooltip("MP used per cast. Physical skills (Swordsman / Warrior) are 0: only the cooldown limits them.")]
+        public int mpCost;
         public float cooldown;
         public SkillEffectType effectType;
         public SkillDamageType damageType;

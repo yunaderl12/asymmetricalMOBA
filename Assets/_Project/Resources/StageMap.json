@@ -7,6 +7,7 @@
   "islandRadius": 46,
   "bridgeWidth": 8,
   "bridgeSlopeDegrees": 20,
+  "shallowWaterY": -0.1, "shallowBedDepth": 0.75,
   "shallow": [
     { "width": 16, "points": [-68,255, -70,209, -86,178, -112,151, -148,140, -181,129, -255,133] },
     { "width": 16, "points": [-119,141, -77,138] },
@@ -31,6 +32,9 @@
     { "name": "forest", "x": -150, "z": -150, "rx": 112, "rz": 100 },
     { "name": "mountain", "x": 165, "z": 120, "rx": 150, "rz": 150 }
   ],
+  "dragonPlaza": { "x": 160, "z": 128, "radius": 26, "blend": 16, "height": 6 },
+  "scorpionPlaza": { "x": 32, "z": -6, "radius": 22 },
+  "forestPlaza": { "x": -150, "z": -160, "radius": 24 },
   "spawners": [
     { "name": "Spawner_NW", "x": -30, "z": 78, "waypoints": [-70,60, -115,130] },
     { "name": "Spawner_NE", "x": 48, "z": 62, "waypoints": [-20,20, -70,60, -115,130] },

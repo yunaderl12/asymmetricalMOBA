@@ -237,7 +237,7 @@ MeshCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 5
   m_Convex: 0
   m_CookingOptions: 30
@@ -1398,7 +1398,7 @@ MonoBehaviour:
   - {fileID: 706192192}
   - {fileID: 14615486}
   - {fileID: 472781671}
-  slotSpCostTexts:
+  slotMpCostTexts:
   - {fileID: 495421383}
   - {fileID: 169619932}
   - {fileID: 1803201933}
@@ -8693,6 +8693,53 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1258726274}
   m_CullTransparentMesh: 1
+--- !u!1 &1261556483
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1261556485}
+  - component: {fileID: 1261556484}
+  m_Layer: 0
+  m_Name: BossSpawner
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1261556484
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1261556483}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f821a494b0ee4d6b953d135671c372f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.Monster.BossSpawner
+  dragon: {fileID: 11400000, guid: 87354c81d9f0c4d39af5a07c87f17378, type: 2}
+  scorpion: {fileID: 11400000, guid: def854ee21f5b4f71a0fc8efc2517177, type: 2}
+  wendigo: {fileID: 11400000, guid: 3e5e3cb8238e34f5daf805a80f85fa45, type: 2}
+--- !u!4 &1261556485
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1261556483}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1268124835
 GameObject:
   m_ObjectHideFlags: 0
@@ -9096,6 +9143,33 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1336802766}
   m_CullTransparentMesh: 1
+--- !u!1 &1339585535 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5314896685582114852, guid: dddde433adb1248948af77a9abef271f, type: 3}
+  m_PrefabInstance: {fileID: 1700931200}
+  m_PrefabAsset: {fileID: 0}
+--- !u!64 &1339585536
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1339585535}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -3224908186116405829, guid: dddde433adb1248948af77a9abef271f, type: 3}
 --- !u!1001 &1348756411
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -11423,6 +11497,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -3643068540159485685, guid: dddde433adb1248948af77a9abef271f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1700931210}
+    - targetCorrespondingSourceObject: {fileID: 5314896685582114852, guid: dddde433adb1248948af77a9abef271f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1339585536}
     - targetCorrespondingSourceObject: {fileID: 5399485164409540957, guid: dddde433adb1248948af77a9abef271f, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1700931209}
@@ -14473,3 +14550,4 @@ SceneRoots:
   - {fileID: 847899112}
   - {fileID: 519479514}
   - {fileID: 1194613953}
+  - {fileID: 1261556485}

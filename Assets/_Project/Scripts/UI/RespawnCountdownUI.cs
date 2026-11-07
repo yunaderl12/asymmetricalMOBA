@@ -9,9 +9,24 @@ namespace Game.UI
         [SerializeField] private GameObject root;
         [SerializeField] private Text countdownText;
 
+        private bool shifted;
+
         private void Awake()
         {
             if (root != null) root.SetActive(false);
+        }
+
+        // 死んでいるあいだは上から自分の勇者を見るので、真ん中をふさがないように上へずらす。
+        private void ShiftUp()
+        {
+            if (shifted || root == null) return;
+            var rt = root.GetComponent<RectTransform>();
+            var canvas = root.GetComponentInParent<Canvas>();
+            if (rt == null || canvas == null) return;
+            float canvasHeight = ((RectTransform)canvas.rootCanvas.transform).rect.height;
+            if (canvasHeight <= 0f) return;
+            rt.anchoredPosition += new Vector2(0f, canvasHeight * 0.22f);
+            shifted = true;
         }
 
         private void Start()
@@ -45,6 +60,7 @@ namespace Game.UI
         private void OnStarted(int seconds)
         {
             if (root != null) root.SetActive(true);
+            ShiftUp();
             UpdateText(seconds);
         }
 

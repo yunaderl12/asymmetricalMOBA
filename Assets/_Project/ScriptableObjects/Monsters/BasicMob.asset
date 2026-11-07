@@ -17,7 +17,7 @@ MonoBehaviour:
   atk: 10
   df: 0
   mDf: 0
-  spd: 7
+  spd: 5.6
   cost: 1
   spwnCool: 1
   maxSpwn: 10
@@ -25,6 +25,38 @@ MonoBehaviour:
   unlockDkLevel: 1
   useHate: 0
   description: "\u6A19\u6E96\u7684\u306A\u6B69\u5175\u30E2\u30D6\u3002HP\u3068\u706B\u529B\u306F\u63A7\u3048\u3081\u3060\u304C\u3001\u30B3\u30B9\u30C8\u304C\u8EFD\u304F\u751F\u6210\u3082\u901F\u3044\u306E\u3067\u982D\u6570\u3067\u62BC\u3057\u8FBC\u3080\u57FA\u790E\u30E6\u30CB\u30C3\u30C8\u3002"
+  isBridgeGuardian: 0
+  guardBodyHeight: 5
+  guardBodyRadius: 1.3
+  guardAggroRadius: 30
+  guardLeashRadius: 45
+  slamRange: 11
+  slamWindupSeconds: 1.2
+  slamDownSeconds: 0.2
+  slamRecoverSeconds: 1.3
+  slamCooldown: 1.5
+  slamFrontDistance: 2.6
+  shockwaveRadius: 4
+  shockwaveDamageScale: 0.5
+  spearSteps: 7
+  spearSpacing: 1.7
+  spearInterval: 0.06
+  spearHeight: 3.4
+  spearHitRadius: 1.6
+  spearDamageScale: 1
+  spearHoldSeconds: 0.45
+  spearFinalCount: 14
+  spearFinalRadius: 2.4
+  spearFinalHeightScale: 1.35
+  guardWalkAnimScale: 0.6
+  guardStepDip: 0.18
+  guardStepShake: 0.05
+  guardStepShakeRadius: 20
+  slamShake: 0.28
+  slamShakeRadius: 35
+  slamShakeSeconds: 0.6
+  slamDentRadius: 2
+  slamDentDepth: 0.25
   modelPath: Goblin/goblin
   modelMaterialPath: 
   modelScale: 0.7

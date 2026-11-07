@@ -1,192 +1,80 @@
-using System;
-using System.Collections;
 using UnityEngine;
-using Game.Combat;
 using Game.Core;
 using Game.Hero;
 
 namespace Game.Skill
 {
-    /// Warp point skill state for one hero.
-    /// No point set: using the skill sets one at the current position (allowed area only, no SP / cooldown).
-    /// Point set: using the skill starts a cast; on completion the hero moves there and the point is consumed.
-    /// Allowed area: within warpTownRadius of StartTown, or not farther toward the Demon Castle than the
-    /// farthest destroyed spawner (measured along the StartTown -> DemonCastle axis).
+    /// 魔法使いのワープ（WarpPoint）の、勇者1人ぶんの状態。
+    /// 1回目: 目の前に門を1つ開く（MP・クールタイムなし）。つながる前の門は warpGatePendingSeconds で閉じる。
+    /// 2回目: 別の場所でもう1つ開き、2つをつなぐ（ここで MP とクールタイムを使う）。前につないだ2つは閉じる。
+    /// つながった門は warpGateLinkedSeconds のあいだ開いていて、勇者が通り抜けられる（WarpGate）。
     public class HeroWarpPoint : MonoBehaviour
     {
-        private const string StartTownTag = "StartTown";
-        private const string DemonCastleTag = "DemonCastle";
+        public WarpGate PendingGate { get; private set; }
+        public WarpGate LinkedGate { get; private set; }
 
-        private HealthComponent health;
-        private CharacterController cc;
-        private Coroutine castRoutine;
-        private bool castInterrupted;
+        public bool HasPending => PendingGate != null && !PendingGate.IsClosing && !PendingGate.IsLinked;
 
-        public bool HasPoint { get; private set; }
-        public Vector3 Point { get; private set; }
-        public bool IsCasting => castRoutine != null;
-        public float CastRemaining { get; private set; }
-
-        private void Awake()
+        /// 1つ目の門を開く。
+        public bool OpenFirst()
         {
-            health = GetComponent<HealthComponent>();
-            cc = GetComponent<CharacterController>();
+            if (HasPending) PendingGate.Close();
+            if (!TryGatePosition(out var pos, out var forward)) return false;
+            PendingGate = WarpGate.Create(pos, forward, BalanceConfig.Instance.warpGatePendingSeconds);
+            Notify("ワープの門を開いた（別の場所でもう一度使うとつながる）");
+            Debug.Log($"[Warp] {name} opened the first gate at {pos}");
+            return true;
         }
 
-        private void OnEnable()
+        /// 2つ目の門を開いて、1つ目とつなぐ。離れていなければ開かない。
+        public bool OpenSecond(bool ignoreDistance = false)
         {
-            if (health != null) health.OnHPChanged += OnHPChanged;
-        }
-
-        private void OnDisable()
-        {
-            if (health != null) health.OnHPChanged -= OnHPChanged;
-            if (castRoutine != null) CancelCast("disabled");
-        }
-
-        private int lastHp = -1;
-        private void OnHPChanged(int current, int max)
-        {
-            if (IsCasting && lastHp >= 0 && current < lastHp) castInterrupted = true;
-            lastHp = current;
-        }
-
-        public bool TrySetPoint(bool ignoreArea = false)
-        {
-            Vector3 pos = transform.position;
-            if (!ignoreArea && !IsInWarpableArea(pos))
+            if (!HasPending) return false;
+            var cfg = BalanceConfig.Instance;
+            if (!TryGatePosition(out var pos, out var forward)) return false;
+            float dist = Vector3.Distance(pos, PendingGate.transform.position);
+            if (!ignoreDistance && dist < cfg.warpGateMinLinkDistance)
             {
-                Notify("ここにはワープ地点を設定できません（破壊済みスポナーより自陣側のみ）");
+                Notify($"門どうしが近すぎる（{cfg.warpGateMinLinkDistance:0}m 以上離す）");
                 return false;
             }
-            Point = pos;
-            HasPoint = true;
-            Notify("ワープ地点を設定しました");
-            Debug.Log($"[Warp] {name} set warp point at {pos}");
+            if (LinkedGate != null) LinkedGate.Close();
+            var second = WarpGate.Create(pos, forward, cfg.warpGateLinkedSeconds);
+            WarpGate.Link(PendingGate, second, cfg.warpGateLinkedSeconds);
+            LinkedGate = second;
+            PendingGate = null;
+            Notify("ワープの門がつながった");
+            Debug.Log($"[Warp] {name} linked gates ({dist:0.0}m apart)");
             return true;
         }
 
-        public void ClearPoint()
+        public void CloseAll()
         {
-            HasPoint = false;
+            if (PendingGate != null) PendingGate.Close();
+            if (LinkedGate != null) LinkedGate.Close();
+            PendingGate = null;
+            LinkedGate = null;
         }
 
-        /// Starts the cast toward the current point. onComplete runs only when the hero actually warps.
-        public bool BeginCast(Action onComplete)
+        // 目の前の地面。表は自分の方を向く。
+        private bool TryGatePosition(out Vector3 pos, out Vector3 forward)
         {
-            if (!HasPoint || IsCasting) return false;
-            castRoutine = StartCoroutine(CastRoutine(onComplete));
+            Vector3 dir = transform.forward;
+            dir.y = 0f;
+            dir = dir.sqrMagnitude > 0.001f ? dir.normalized : Vector3.forward;
+            forward = -dir;
+            pos = transform.position + dir * BalanceConfig.Instance.warpGateDistance;
+            // 足元の高さから下を探す（屋根や木の枝に乗らないように、上からは探さない）。
+            if (Physics.Raycast(pos + Vector3.up * 1.2f, Vector3.down, out var hit, 5f, ~0, QueryTriggerInteraction.Ignore))
+                pos = hit.point;
             return true;
         }
 
-        public void CancelCast(string reason)
+        private void Notify(string msg)
         {
-            if (castRoutine != null) StopCoroutine(castRoutine);
-            castRoutine = null;
-            CastRemaining = 0f;
-            Notify("ワープを中断しました");
-            Debug.Log($"[Warp] {name} cast cancelled ({reason})");
-        }
-
-        private IEnumerator CastRoutine(Action onComplete)
-        {
-            var cfg = BalanceConfig.Instance;
-            Vector3 startPos = transform.position;
-            castInterrupted = false;
-            lastHp = health != null ? health.CurrentHP : -1;
-            CastRemaining = cfg.warpCastSeconds;
-            int shownSec = -1;
-            Debug.Log($"[Warp] {name} casting ({cfg.warpCastSeconds}s)");
-
-            while (CastRemaining > 0f)
-            {
-                int sec = Mathf.CeilToInt(CastRemaining);
-                if (sec != shownSec)
-                {
-                    shownSec = sec;
-                    Notify($"ワープ詠唱中… {sec}", 1.1f);
-                }
-
-                Vector3 moved = transform.position - startPos;
-                moved.y = 0f;
-                string reason = null;
-                if (health != null && health.IsDead) reason = "dead";
-                else if (castInterrupted) reason = "damaged";
-                else if (!StatusEffectController.CanUseSkills(gameObject)) reason = "stunned / silenced";
-                else if (moved.magnitude > cfg.warpCancelMoveDistance) reason = "moved";
-                if (reason != null)
-                {
-                    CancelCast(reason);
-                    yield break;
-                }
-
-                yield return null;
-                CastRemaining -= Time.deltaTime;
-            }
-
-            castRoutine = null;
-            CastRemaining = 0f;
-            WarpNow();
-            onComplete?.Invoke();
-        }
-
-        /// Moves the hero to the point immediately and consumes it.
-        public bool WarpNow()
-        {
-            if (!HasPoint) return false;
-            Vector3 target = Point;
-            bool ccWasEnabled = cc != null && cc.enabled;
-            if (cc != null) cc.enabled = false;
-            transform.position = target;
-            if (cc != null) cc.enabled = ccWasEnabled;
-            HasPoint = false;
-            Notify("ワープしました");
-            Debug.Log($"[Warp] {name} warped to {target}");
-            return true;
-        }
-
-        private void Notify(string msg, float duration = -1f)
-        {
-            // Only the local human hero gets on-screen messages; bots just log.
+            // 自分の勇者だけ画面に出す。BOT はログだけ。
             if (GetComponent<HumanHeroMarker>() == null) return;
-            if (Game.UI.PowerItemNotifierUI.Instance != null) Game.UI.PowerItemNotifierUI.Instance.ShowNotification(msg, duration);
-        }
-
-        /// Whether a warp point may be set at this position.
-        public static bool IsInWarpableArea(Vector3 pos)
-        {
-            return IsInWarpableArea(pos, out _, out _);
-        }
-
-        /// progress: position along StartTown -> DemonCastle (m). limit: farthest destroyed spawner's progress (-Infinity if none).
-        public static bool IsInWarpableArea(Vector3 pos, out float progress, out float limit)
-        {
-            progress = 0f;
-            limit = float.NegativeInfinity;
-            var town = GameObject.FindWithTag(StartTownTag);
-            if (town == null) return true; // test scenes without a town: no restriction
-
-            Vector3 townPos = town.transform.position;
-            Vector3 toPos = pos - townPos;
-            toPos.y = 0f;
-            bool nearTown = toPos.magnitude <= BalanceConfig.Instance.warpTownRadius;
-
-            var castle = GameObject.FindWithTag(DemonCastleTag);
-            if (castle == null) return nearTown;
-            Vector3 axis = castle.transform.position - townPos;
-            axis.y = 0f;
-            if (axis.sqrMagnitude < 0.01f) return nearTown;
-            axis.Normalize();
-
-            progress = Vector3.Dot(toPos, axis);
-            foreach (var s in FindObjectsByType<Game.Monster.Spawner>(FindObjectsSortMode.None))
-            {
-                if (s == null || s.IsFunctional) continue;
-                Vector3 toSpawner = s.transform.position - townPos;
-                toSpawner.y = 0f;
-                limit = Mathf.Max(limit, Vector3.Dot(toSpawner, axis));
-            }
-            return nearTown || progress <= limit;
+            if (Game.UI.PowerItemNotifierUI.Instance != null) Game.UI.PowerItemNotifierUI.Instance.ShowNotification(msg);
         }
     }
 }

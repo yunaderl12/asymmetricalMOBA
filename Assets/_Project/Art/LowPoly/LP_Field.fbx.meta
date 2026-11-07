@@ -3,7 +3,17 @@ guid: dddde433adb1248948af77a9abef271f
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: LP_WaterShallow
+    second: {fileID: 2100000, guid: 53738736cfd2140249478de6f3a29d10, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: LP_WaterShallowB
+    second: {fileID: 2100000, guid: b8f926ea81f0a4b2a8d1d88a7b66380d, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -30,7 +40,7 @@ ModelImporter:
     extraExposedTransformPaths: []
     extraUserProperties: []
     clipAnimations: []
-    isReadable: 0
+    isReadable: 1
   meshes:
     lODScreenPercentages: []
     globalScale: 1

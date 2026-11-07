@@ -5,7 +5,7 @@ namespace Game.Skill
     /// 近接スキルで共有する色と使い捨ての演出。
     public static class MeleeFx
     {
-        /// クラスごとの演出の色。
+        /// ジョブごとの演出の色。
         public struct Palette
         {
             public Color Core, Main, Light, Spark;

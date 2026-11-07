@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Taunt
   displayName: "\u6311\u767A"
   description: Add large hate to nearby smart monsters (no effect on normal monsters).
-  spCost: 15
+  mpCost: 0
   cooldown: 10
   effectType: 3
   damageType: 2

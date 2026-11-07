@@ -211,9 +211,31 @@ namespace Game.Monster
             agent.SetDestination(dest);
         }
 
+        private float alertFaceRemaining;
+
+        private void FaceAlertTarget()
+        {
+            if (alertFaceRemaining <= 0f) return;
+            alertFaceRemaining -= Time.deltaTime;
+            bool facing = alertFaceRemaining > 0f && heroTransform != null;
+            agent.updateRotation = !facing;
+            if (!facing) return;
+            Vector3 to = heroTransform.position - transform.position;
+            to.y = 0f;
+            if (to.sqrMagnitude < 0.01f) return;
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(to), BalanceConfig.Instance.monsterAlertTurnSpeed * Time.deltaTime);
+        }
+
         private void Update()
         {
-            if (destroyed || agent == null || IsEmerging || ExternallyControlled) return;
+            if (destroyed || agent == null) return;
+            if (IsEmerging || ExternallyControlled)
+            {
+                // ほかの処理が魔物を動かすあいだは、向き直りをやめて向きを NavMeshAgent に返す。
+                if (alertFaceRemaining > 0f) { alertFaceRemaining = 0f; agent.updateRotation = true; }
+                return;
+            }
+            FaceAlertTarget();
 
             if (StatusEffectController.IsStunnedObj(gameObject) || IsFlinching)
             {
@@ -316,6 +338,8 @@ namespace Game.Monster
         {
             currentState = BehaviorState.ChasingHero;
             chaseRefreshTimer = 0f;
+            // 「！」が出ているあいだは、見つけた勇者の方へすばやく向き直って、向いたまま追う。
+            alertFaceRemaining = BalanceConfig.Instance.monsterAlertFaceSeconds;
             if (agent != null) AlertMark.Show(transform, agent.height + BalanceConfig.Instance.monsterAlertMarkLift);
         }
 

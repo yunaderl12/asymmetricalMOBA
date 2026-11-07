@@ -112,12 +112,19 @@ namespace Game.UI
             var hero = HumanHeroMarker.Instance != null ? HumanHeroMarker.Instance.gameObject : GameObject.FindWithTag("Player");
             if (hero == null) return;
             classInit = hero.GetComponent<HeroClassInitializer>();
+            heroHealth = hero.GetComponent<HealthComponent>();
             var camChild = hero.transform.Find("Camera");
             if (camChild != null) cameraTransform = camChild;
         }
 
+        private HealthComponent heroHealth;
+
         private void Update()
         {
+            // 死んでいるあいだ（上から見る視点）は照準を出さない。
+            bool show = heroHealth == null || !heroHealth.IsDead;
+            if (horizontal != null && horizontal.enabled != show) horizontal.enabled = show;
+            if (vertical != null && vertical.enabled != show) vertical.enabled = show;
             if (Time.time < nextPollTime) return;
             nextPollTime = Time.time + pollInterval;
             if (cameraTransform == null || classInit == null) { BindHero(); if (cameraTransform == null) return; }

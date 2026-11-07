@@ -2,11 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Game.Combat;
+using Game.Core;
+using Game.Hero;
 using Game.Skill;
 
 namespace Game.Monster
 {
-    /// 番人の叩きつけ。着地点の小さな衝撃波のあと、岩の槍が地面から順に飛び出して前へ走る。
+    /// 番人の叩きつけ。着地点の小さな衝撃波のあと、岩の槍が地面から順に飛び出して前へ走り、最後に剣山のように一斉に突き出る。
+    /// 叩いた瞬間は近くの勇者の画面が揺れ、地面が少しへこむ。
     public class RockSpearLine : MonoBehaviour
     {
         private const float ProbeHeight = 8f;
@@ -24,6 +27,19 @@ namespace Game.Monster
         private const int ShardsPerBurst = 4;
         private const float ShardSeconds = 0.6f;
         private const float ShardGravity = 16f;
+        private const float FinalHoldExtra = 0.35f;   // 剣山は少し長く残す
+        private const float FinalBloomSeconds = 0.12f; // 真ん中から外へ順に突き出る
+        private const float FinalInnerRing = 0.45f;
+        private const float FinalInnerTilt = 14f;
+        private const float FinalOuterTilt = 30f;
+        private const int FinalShards = 12;
+        private const float BurstShakeShare = 0.25f;  // 槍が走るあいだの地響き（叩きつけの揺れに対する割合）
+        private const float BurstShakeRadius = 14f;
+        private const float BurstShakeSeconds = 0.18f;
+        private const float FinalShakeShare = 0.6f;
+        private const int ImpactDust = 36;
+        private const float ImpactDustSpeed = 7f;
+        private const int ImpactChips = 10;
         private const string RockMaterialPath = "Golem/RockSpear";
         private const string CrystalMaterialPath = "Golem/RockSpearCrystal";
 
@@ -54,16 +70,59 @@ namespace Game.Monster
             Vector3 ground = GroundAt(origin);
             ShockRing.Spawn(ground, ShockStartRadius, data.shockwaveRadius, ShockSeconds, ShockWidth, ShockColor);
             DamageNear(ground, data.shockwaveRadius, data.shockwaveDamageScale);
+            Impact(ground);
 
             for (int i = 0; i < data.spearSteps; i++)
             {
                 Vector3 point = GroundAt(origin + direction * data.spearSpacing * (i + 1));
-                Burst(point, i);
-                DamageNear(point, data.spearHitRadius, data.spearDamageScale);
+                if (i == data.spearSteps - 1)
+                {
+                    FinalCluster(point);
+                    DamageNear(point, data.spearFinalRadius, data.spearDamageScale);
+                    HeroFPSController.ShakeNear(point, data.slamShake * FinalShakeShare, data.slamShakeRadius * FinalShakeShare, data.slamShakeSeconds * FinalShakeShare);
+                }
+                else
+                {
+                    Burst(point, i);
+                    DamageNear(point, data.spearHitRadius, data.spearDamageScale);
+                    HeroFPSController.ShakeNear(point, data.slamShake * BurstShakeShare, BurstShakeRadius, BurstShakeSeconds);
+                }
                 yield return new WaitForSeconds(data.spearInterval);
             }
-            yield return new WaitForSeconds(data.spearHoldSeconds + RiseSeconds + SinkSeconds + ShardSeconds);
+            yield return new WaitForSeconds(data.spearHoldSeconds + FinalHoldExtra + FinalBloomSeconds + RiseSeconds + SinkSeconds + ShardSeconds);
             Destroy(gameObject);
+        }
+
+        // 叩きつけた瞬間の凄み。画面が揺れ、土煙が上がり、地面が少しへこむ。
+        private void Impact(Vector3 ground)
+        {
+            HeroFPSController.ShakeNear(ground, data.slamShake, data.slamShakeRadius, data.slamShakeSeconds);
+            MeleeFx.DustBurst(ground, Mathf.Max(0.5f, data.slamDentRadius * 0.8f), ImpactDust, ImpactDustSpeed);
+            if (data.slamDentRadius > 0f && GroundDig.Dig(ground, data.slamDentRadius, data.slamDentDepth))
+                EarthChips.Spawn(ground, data.slamDentRadius * 0.6f, ImpactChips);
+        }
+
+        // 列の最後は剣山。真ん中に一番太い槍、まわりに外へ傾いた槍を内と外の二重の輪に立てる。
+        private void FinalCluster(Vector3 point)
+        {
+            Vector3 side = Vector3.Cross(Vector3.up, direction).normalized;
+            float hold = data.spearHoldSeconds + FinalHoldExtra;
+            StartCoroutine(Spear(point, Quaternion.AngleAxis(Random.Range(-4f, 4f), side), data.spearFinalHeightScale, 0f, hold));
+            int count = Mathf.Max(0, data.spearFinalCount - 1);
+            for (int i = 0; i < count; i++)
+            {
+                bool inner = i % 2 == 0;
+                float angle = (i + Random.Range(-0.3f, 0.3f)) / Mathf.Max(1, count) * 360f;
+                Vector3 outward = Quaternion.Euler(0f, angle, 0f) * direction;
+                float ring = (inner ? FinalInnerRing : 1f) * Random.Range(0.85f, 1.05f);
+                Vector3 foot = GroundAt(point + outward * data.spearFinalRadius * ring);
+                float tilt = (inner ? FinalInnerTilt : FinalOuterTilt) + Random.Range(-5f, 5f);
+                float size = (inner ? 0.85f : 0.6f) * Random.Range(0.85f, 1.1f) * data.spearFinalHeightScale;
+                float delay = (inner ? 0.4f : 1f) * FinalBloomSeconds * Random.Range(0.7f, 1f);
+                StartCoroutine(Spear(foot, Quaternion.AngleAxis(tilt, Vector3.Cross(Vector3.up, outward)), size, delay, hold));
+            }
+            for (int i = 0; i < FinalShards; i++) StartCoroutine(Shard(point));
+            MeleeFx.DustBurst(point, data.spearFinalRadius * 0.7f, ImpactDust / 2, ImpactDustSpeed * 0.7f);
         }
 
         private void Burst(Vector3 point, int step)
@@ -71,14 +130,16 @@ namespace Game.Monster
             Vector3 side = Vector3.Cross(Vector3.up, direction).normalized;
             // 真ん中の太い槍の左右に、小さな槍を外へ傾けて立てる。歩幅ごとに左右の出方を変える。
             float swing = step % 2 == 0 ? 1f : -1f;
-            StartCoroutine(Spear(point, Quaternion.AngleAxis(Random.Range(-6f, 6f) + TiltDegrees * 0.4f, side), 1f));
-            StartCoroutine(Spear(point + side * SideSpearOffset * swing - direction * 0.3f, Quaternion.AngleAxis(TiltDegrees * swing, direction), SideSpearScale));
-            StartCoroutine(Spear(point - side * SideSpearOffset * swing * 0.8f + direction * 0.3f, Quaternion.AngleAxis(-TiltDegrees * swing, direction), SideSpearScale * 0.75f));
+            float hold = data.spearHoldSeconds;
+            StartCoroutine(Spear(point, Quaternion.AngleAxis(Random.Range(-6f, 6f) + TiltDegrees * 0.4f, side), 1f, 0f, hold));
+            StartCoroutine(Spear(point + side * SideSpearOffset * swing - direction * 0.3f, Quaternion.AngleAxis(TiltDegrees * swing, direction), SideSpearScale, 0f, hold));
+            StartCoroutine(Spear(point - side * SideSpearOffset * swing * 0.8f + direction * 0.3f, Quaternion.AngleAxis(-TiltDegrees * swing, direction), SideSpearScale * 0.75f, 0f, hold));
             for (int i = 0; i < ShardsPerBurst; i++) StartCoroutine(Shard(point));
         }
 
-        private IEnumerator Spear(Vector3 foot, Quaternion tilt, float size)
+        private IEnumerator Spear(Vector3 foot, Quaternion tilt, float size, float delay, float hold)
         {
+            if (delay > 0f) yield return new WaitForSeconds(delay);
             float height = data.spearHeight * size;
             var go = NewPart("RockSpear", transform, foot, tilt * Quaternion.AngleAxis(Random.Range(0f, 360f), Vector3.up));
             float width = size * Random.Range(0.9f, 1.1f);
@@ -88,7 +149,7 @@ namespace Game.Monster
                 yield return null;
             }
             go.transform.localScale = new Vector3(width, height, width);
-            yield return new WaitForSeconds(data.spearHoldSeconds);
+            yield return new WaitForSeconds(hold);
             for (float t = 0f; t < SinkSeconds; t += Time.deltaTime)
             {
                 go.transform.position = foot - Vector3.up * height * (t / SinkSeconds);

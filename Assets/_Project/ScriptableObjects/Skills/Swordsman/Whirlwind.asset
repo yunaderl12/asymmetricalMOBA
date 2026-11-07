@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Whirlwind
   displayName: "\u65CB\u98A8"
   description: Spin twice, striking every enemy around you.
-  spCost: 25
+  mpCost: 0
   cooldown: 12
   effectType: 0
   damageType: 0

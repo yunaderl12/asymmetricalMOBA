@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: "\u5439\u96EA"
   description: Ice spikes race to the aimed spot and burst. Leaves slippery ice that
     lasts longer at higher levels.
-  spCost: 30
+  mpCost: 30
   cooldown: 10
   effectType: 0
   damageType: 1

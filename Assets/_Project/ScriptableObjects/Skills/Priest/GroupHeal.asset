@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: GroupHeal
   displayName: "\u5168\u4F53\u56DE\u5FA9"
   description: Heal allies in area.
-  spCost: 30
+  mpCost: 30
   cooldown: 10
   effectType: 1
   damageType: 2

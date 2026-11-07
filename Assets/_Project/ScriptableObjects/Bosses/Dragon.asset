@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 489f43823004a4ce1b32486db12f601c, type: 3}
+  m_Name: Dragon
+  m_EditorClassIdentifier: Game.Runtime::Game.Monster.DragonData
+  bossName: "\u30C9\u30E9\u30B4\u30F3"
+  hp: 3000
+  atk: 40
+  df: 10
+  mDf: 10
+  exp: 1500
+  respawnSeconds: 300
+  aggroRadius: 34
+  attackInterval: 2.2
+  idleRegenShare: 0.02
+  modelPath: Dragon/dragon
+  modelMaterialPath: Dragon/Dragon_BodyMat
+  modelScale: 14
+  modelYaw: 0
+  bodySize: {x: 7, y: 4.5, z: 11}
+  bodyCenterHeight: 0
+  circleAltitude: 20
+  circleRadius: 18
+  flySpeed: 14
+  flapRate: 1.1
+  breathAltitude: 13
+  breathDistance: 14
+  breathWindupSeconds: 1
+  breathSeconds: 2.4
+  breathRange: 24
+  breathHalfAngle: 16
+  breathTurnSpeed: 28
+  breathTickSeconds: 0.3
+  breathDamageScale: 0.35
+  burnDamagePerTick: 4
+  burnSeconds: 3
+  diveTelegraphSeconds: 1.3
+  diveSpeed: 48
+  diveImpactRadius: 6
+  diveDamageScale: 1.6
+  diveKnockback: 7
+  diveGroundSeconds: 2.2
+  diveClimbSeconds: 1.6

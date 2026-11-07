@@ -5,7 +5,7 @@ using Game.Combat;
 
 namespace Game.Hero
 {
-    /// 1人称カメラに映す自分の腕と武器。クラスのモデルから腕と持ち物の面だけを取り出して使う。
+    /// 1人称カメラに映す自分の腕と武器。ジョブのモデルから腕と持ち物の面だけを取り出して使う。
     /// 骨はコードで動かす。普段は HeroClassData の構えをとり、スキルは PoseRight / PoseLeft で毎フレーム上書きする。
     /// 壁にめり込まないよう、専用 Layer を重ね描き用のカメラで最後に描く。
     [DefaultExecutionOrder(5)] // カメラの揺れを反映した後に骨を置く
@@ -18,8 +18,9 @@ namespace Game.Hero
         private const float CameraFar = 20f;
         private const float PoseSharpness = 34f;
         private const float IdleSharpness = 14f;
-        private const float BobPerMeter = 1.7f;
-        private const float BobSize = 0.012f;
+        // 腕の揺れ。カメラと同じ歩幅で、縦にだけ少し揺れる。
+        private const float BobPerMeter = 0.98f;
+        private const float BobSize = 0.01f;
         private const float SwayPerDegree = 0.0016f;
         private const float SwayLimit = 0.05f;
         private const float SwaySharpness = 10f;
@@ -272,7 +273,8 @@ namespace Game.Hero
             Vector3 velocity = characterController != null && characterController.enabled ? characterController.velocity : Vector3.zero;
             velocity.y = 0f;
             bobPhase += velocity.magnitude * BobPerMeter * dt;
-            Vector3 bob = new Vector3(Mathf.Cos(bobPhase), -Mathf.Abs(Mathf.Sin(bobPhase)), 0f) * (BobSize * Mathf.Clamp01(velocity.magnitude / 3f));
+            float sink = Mathf.Sin(bobPhase);
+            Vector3 bob = new Vector3(0f, -sink * sink, 0f) * (BobSize * Mathf.Clamp01(velocity.magnitude / 3f));
 
             float yaw = transform.eulerAngles.y;
             float pitch = controller != null ? controller.LookPitch : 0f;
@@ -284,7 +286,7 @@ namespace Game.Hero
             root.localPosition = bob + sway;
         }
 
-        // 通常攻撃の小さな振り。魔法のクラスは突き出すだけ。
+        // 通常攻撃の小さな振り。魔法のジョブは突き出すだけ。
         private void UpdateAttack(float dt)
         {
             if (attackAge < 0f || right.PoseFrame == Time.frameCount) return;

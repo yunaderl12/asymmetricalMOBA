@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Game.Combat;
 using Game.Skill;
@@ -12,6 +13,8 @@ namespace Game.Hero
 
         public HeroClassData ClassData => classData;
         public SkillData CommonSkill => commonSkill;
+        /// 1〜4枠のスキル。ロビーで選んだもの（なければジョブの標準）。
+        public List<SkillData> ClassSkills { get; private set; } = new List<SkillData>();
         public int CurrentAtk { get; private set; }
         public int CurrentMAtk { get; private set; }
         public int CurrentDf { get; private set; }
@@ -48,6 +51,8 @@ namespace Game.Hero
                 Debug.LogWarning("[HeroClass] classData not assigned on " + name);
                 return;
             }
+            var picks = GameSession.Instance != null && GameSession.Instance.SelectedHeroClass == classData ? GameSession.Instance.SelectedClassSkills : null;
+            ClassSkills = classData.ResolveClassSkills(picks);
 
             ApplyInitialStats();
 
@@ -64,7 +69,7 @@ namespace Game.Hero
             if (passive != null) HeroPassive.Attach(gameObject, passive);
         }
 
-        // ロビーで選んだパッシブ。このクラスのものでなければ、クラスの先頭のパッシブにする。
+        // ロビーで選んだパッシブ。このジョブのものでなければ、ジョブの先頭のパッシブにする。
         private PassiveData PickPassive()
         {
             var selected = GameSession.Instance != null ? GameSession.Instance.SelectedPassive : null;
@@ -87,7 +92,7 @@ namespace Game.Hero
         private void ApplyInitialStats()
         {
             if (health != null) health.SetMaxHP(classData.initialHP);
-            if (mana != null) mana.SetMaxMP(classData.initialSP);
+            if (mana != null) mana.SetMaxMP(classData.initialMP);
             if (attack != null) attack.SetDamage(classData.initialAtk);
 
             CurrentAtk = classData.initialAtk;
@@ -98,7 +103,7 @@ namespace Game.Hero
             ApplyMoveSpeed();
             Game.Core.TerrainWalker.For(gameObject).SlopePenalty = classData.slopeSpeedPenalty;
 
-            Debug.Log($"[HeroClass] {classData.className} initialized: HP={classData.initialHP}, SP={classData.initialSP}, Atk={CurrentAtk}, MAtk={CurrentMAtk}, Df={CurrentDf}, MDf={CurrentMDf}, Spd={CurrentSpd}");
+            Debug.Log($"[HeroClass] {classData.className} initialized: HP={classData.initialHP}, MP={classData.initialMP}, Atk={CurrentAtk}, MAtk={CurrentMAtk}, Df={CurrentDf}, MDf={CurrentMDf}, Spd={CurrentSpd}");
         }
 
         public void ApplyLevelGrowth()

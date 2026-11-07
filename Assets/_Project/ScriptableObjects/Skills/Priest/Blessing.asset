@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Blessing
   displayName: "\u795D\u798F"
   description: Buff target Atk 1.3x for 10s.
-  spCost: 20
+  mpCost: 20
   cooldown: 15
   effectType: 2
   damageType: 2

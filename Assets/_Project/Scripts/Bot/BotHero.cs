@@ -86,6 +86,8 @@ namespace Game.Bot
         private void Start()
         {
             if (classData != null && health != null) health.SetMaxHP(classData.initialHP);
+            // 人の勇者と同じく、ジョブの Spd で走る（プレハブの NavMeshAgent の速さは使わない）。
+            if (classData != null && classData.initialSpd > 0f) baseSpeed = classData.initialSpd;
             if (health != null) health.OnDeath += OnDeath;
             AttachModel();
             if (classData != null)
@@ -128,7 +130,7 @@ namespace Game.Bot
         {
             if (dead || agent == null || !agent.isOnNavMesh) return;
             agent.speed = baseSpeed * mods.TotalSpdMultiplier * terrain.SpeedFactor;
-            HeroSpRecovery.RefillInTown(gameObject, GetComponent<ManaComponent>());
+            HeroMpRecovery.RefillInTown(gameObject, GetComponent<ManaComponent>());
             if (StatusEffectController.IsStunnedObj(gameObject)) { agent.SetDestination(transform.position); return; }
             if (skills != null && skills.IsCasting) return;
 
@@ -175,7 +177,7 @@ namespace Game.Bot
                         else
                         {
                             hp.TakeDamage(Mathf.RoundToInt(attackDamage * mods.TotalAtkMultiplier), gameObject, DamageType.Physical);
-                            HeroSpRecovery.OnBasicHit(gameObject, hp);
+                            HeroMpRecovery.OnBasicHit(gameObject, hp);
                             lastAttackTime = Time.time;
                             if (modelAnim != null) modelAnim.PlayAttack();
                         }
@@ -221,6 +223,7 @@ namespace Game.Bot
             foreach (var m in GameObject.FindGameObjectsWithTag("Monster"))
             {
                 if (m.GetComponent<Game.Monster.BridgeGuardian>() != null) continue; // 番人は狩りの相手にしない
+                if (m.GetComponent<Game.Monster.BossBase>() != null) continue;      // 広場のボスもわざわざ狩りに行かない
                 float d = Vector3.Distance(transform.position, m.transform.position);
                 if (d < bestDist) { bestDist = d; best = m.transform; }
             }
@@ -251,7 +254,7 @@ namespace Game.Bot
             return Vector3.Distance(transform.position, point);
         }
 
-        // 人間の魔法使いと同じ弾を、杖のあたりから相手の体の中心へ撃つ。消費SPも同じ。
+        // 人間の魔法使いと同じ弾を、杖のあたりから相手の体の中心へ撃つ。消費MPも同じ。
         private void FireMagicBolt(HealthComponent target)
         {
             var mana = GetComponent<ManaComponent>();

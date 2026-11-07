@@ -11,11 +11,13 @@ namespace Game.Core
             public string sceneName;
             public string mapResource;
             public string digResource;
+            /// 地面の高さのデータ（StageGround）。平らな地面のワールドは空。
+            public string groundResource;
         }
 
         public static readonly World[] All =
         {
-            new World { label = "広い地図", sceneName = "MainStage", mapResource = "StageMap", digResource = "GroundDigData" },
+            new World { label = "広い地図", sceneName = "MainStage", mapResource = "StageMap", digResource = "GroundDigData", groundResource = "StageGround" },
             new World { label = "3レーン", sceneName = "MainStage_Classic", mapResource = "StageMap_Classic", digResource = "GroundDigData_Classic" },
         };
 

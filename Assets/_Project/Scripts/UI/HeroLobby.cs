@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -10,6 +9,8 @@ using Game.Skill;
 
 namespace Game.UI
 {
+    /// 勇者ロビー。左に自分の勇者、右に「いまの編成」、右下にマッチ開始。編成は「編成」ボタンかカードを押して開くパネルで変える。
+    /// 見た目は docs/game-design.md の「ロビーのデザイン」（試合中HUDと同じ布と紙）。
     public class HeroLobby : MonoBehaviour
     {
         [Header("Classes / Skills (Inspector)")]
@@ -23,19 +24,12 @@ namespace Game.UI
         [Header("Player")]
         [SerializeField] private string userName = "ユーザー名";
 
-        [Header("3D Class Previews (optional)")]
-        [Tooltip("Model preview component in the scene. Shows the selected class's model (HeroClassData.modelPath) in the avatar area instead of the flat ellipse.")]
-        [SerializeField] private CharacterAvatarPreview modelPreview;
-
         private HeroSkillLoadout loadout;
-
-        private HeroLobbyAvatarView avatarView;
-        private HeroLobbySettingsPanel settingsPanel;
-        private GameObject overlayRoot;
-        private Text titleText;
-        private Button roleButton;
-        private Button settingsButton;
-        private Button startButton;
+        private HeroShowcase showcase;
+        private LoadoutSummary summary;
+        private HeroLoadoutEditor editor;
+        private Text toast;
+        private float toastHideAt;
 
         private void Awake()
         {
@@ -46,186 +40,89 @@ namespace Game.UI
         private void Start()
         {
             loadout.LoadFromSession();
-            BuildOverlayUI();
-            // Auto-spawn a CharacterAvatarPreview if the Inspector reference is blank,
-            // so the lobby works out of the box without manual scene wiring.
-            if (modelPreview == null)
-            {
-                var pvGO = new GameObject("CharacterAvatarPreview_Auto");
-                modelPreview = pvGO.AddComponent<CharacterAvatarPreview>();
-                Debug.Log("[HeroLobby] auto-spawned CharacterAvatarPreview");
-            }
-            if (settingsPanel != null)
-            {
-                settingsPanel.OnLoadoutChanged = RefreshAvatar;
-                settingsPanel.Bind(loadout);
-            }
-            RefreshAvatar();
-
-            // Ensure an EventSystem exists in the scene (needed for buttons).
-            if (EventSystem.current == null)
-            {
-                var es = new GameObject("EventSystem", typeof(EventSystem), typeof(UnityEngine.InputSystem.UI.InputSystemUIInputModule));
-                Debug.Log("[HeroLobby] created EventSystem");
-            }
+            Build();
+            Refresh();
         }
 
-        private void BuildOverlayUI()
+        private void Build()
         {
-            // Disable any pre-existing Canvas in the scene so the V2 overlay is the only
-            // visible/interactive UI. Old scene UI tends to leak click handlers and
-            // overlap the new layout.
-            foreach (var existingCanvas in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
-            {
-                if (existingCanvas == null) continue;
-                if (existingCanvas.name == "HeroLobbyV2Canvas") continue;
-                Debug.Log($"[HeroLobby] disabling legacy canvas '{existingCanvas.name}'");
-                existingCanvas.gameObject.SetActive(false);
-            }
+            var p = HudStyle.HeroPalette;
+            var stage = LobbyStyle.CreateScreen("HeroLobbyCanvas", p, out var background);
+            LobbyStyle.Vignette(background, new Color(0.08f, 0.04f, 0.16f, 0.6f));
 
-            // Create a dedicated V2 canvas at sortingOrder 10.
-            var canvasGO = new GameObject("HeroLobbyV2Canvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            var canvas = canvasGO.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.sortingOrder = 10;
-            var scaler = canvasGO.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            LobbyStyle.ScreenTitle(stage, "勇者ロビー", p);
+            LobbyStyle.PaperButton(LobbyStyle.At(stage, "BackToTitle", 40f, 120f, 180f, 50f), p, "← タイトル", 20, BackToTitle);
 
-            overlayRoot = new GameObject("HeroLobbyV2", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            overlayRoot.transform.SetParent(canvas.transform, false);
-            var rt = (RectTransform)overlayRoot.transform;
-            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
-            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
-            var bgImg = overlayRoot.GetComponent<Image>();
-            bgImg.color = new Color(0.06f, 0.06f, 0.1f, 1f);
-            bgImg.raycastTarget = true;
+            showcase = HeroShowcase.Create(stage, 150f, 150f, 740f, 880f, p);
 
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            summary = LoadoutSummary.Create(stage, 1040f, 220f, 840f, 480f, p, OpenEditor);
 
-            // Title (top-left)
-            var titleGO = new GameObject("Title", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-            titleGO.transform.SetParent(overlayRoot.transform, false);
-            var tRT = (RectTransform)titleGO.transform;
-            tRT.anchorMin = new Vector2(0f, 1f); tRT.anchorMax = new Vector2(0f, 1f); tRT.pivot = new Vector2(0f, 1f);
-            tRT.sizeDelta = new Vector2(400f, 40f); tRT.anchoredPosition = new Vector2(24f, -16f);
-            titleText = titleGO.GetComponent<Text>();
-            titleText.font = font; titleText.fontSize = 24; titleText.fontStyle = FontStyle.Bold;
-            titleText.alignment = TextAnchor.MiddleLeft; titleText.color = Color.white; titleText.text = "勇者ロビー";
-            titleText.raycastTarget = false;
+            // 右上: 編成と設定
+            MenuButton(stage, "Btn_Loadout", 1648f, "編成", "剣", p, OpenEditor);
+            MenuButton(stage, "Btn_Settings", 1766f, "設定", "設", p, () => ShowToast("設定はまだ作っていません"));
+            toast = LobbyStyle.Text(stage, "Toast", 1380f, 168f, 500f, 40f, "", 21, p.Light, TextAnchor.MiddleRight, 4f, p.Outline);
 
-            // TopRight stack (no background image so child raycasts work cleanly)
-            var stackGO = new GameObject("TopRightStack", typeof(RectTransform));
-            stackGO.transform.SetParent(overlayRoot.transform, false);
-            var stRT = (RectTransform)stackGO.transform;
-            stRT.anchorMin = new Vector2(1f, 1f); stRT.anchorMax = new Vector2(1f, 1f); stRT.pivot = new Vector2(1f, 1f);
-            stRT.sizeDelta = new Vector2(80f, 160f);
-            stRT.anchoredPosition = new Vector2(-8f, -8f);
+            // 右下: マッチ開始
+            LobbyStyle.KeyCap(LobbyStyle.At(stage, "EnterKey", 1290f, 952f, 96f, 46f), p, "Enter");
+            var start = LobbyStyle.At(stage, "MatchStart", 1410f, 920f, 470f, 116f);
+            LobbyStyle.RibbonButton(start, p, p.Ribbon, "マッチ開始", 52, StartMatch, out _, out _);
 
-            roleButton = CreateTopRightButton(stRT, font, "人", new Vector2(-8f, -8f), OnRoleClicked);
-            settingsButton = CreateTopRightButton(stRT, font, "設", new Vector2(-8f, -88f), OnSettingsClicked);
-
-            // Match start (bottom-right)
-            var btnGO = new GameObject("MatchStart", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-            btnGO.transform.SetParent(overlayRoot.transform, false);
-            var bRT = (RectTransform)btnGO.transform;
-            bRT.anchorMin = new Vector2(1f, 0f); bRT.anchorMax = new Vector2(1f, 0f); bRT.pivot = new Vector2(1f, 0f);
-            bRT.sizeDelta = new Vector2(280f, 60f); bRT.anchoredPosition = new Vector2(-24f, 24f);
-            var bImg = btnGO.GetComponent<Image>(); bImg.color = new Color(0.95f, 0.95f, 0.95f, 1f); bImg.raycastTarget = true;
-            var bLbl = MakeText(btnGO.transform, "Lbl", font, 20, FontStyle.Bold, "ENTER ⏎ マッチ開始");
-            var bLR = (RectTransform)bLbl.transform; bLR.anchorMin = Vector2.zero; bLR.anchorMax = Vector2.one; bLR.offsetMin = Vector2.zero; bLR.offsetMax = Vector2.zero;
-            var bT = bLbl.GetComponent<Text>(); bT.alignment = TextAnchor.MiddleCenter; bT.color = new Color(0.1f, 0.1f, 0.15f, 1f);
-            startButton = btnGO.GetComponent<Button>();
-            startButton.targetGraphic = bImg;
-            startButton.onClick.AddListener(OnStartClicked);
-
-            // Avatar view fills the whole overlay (its own children use absolute positioning)
-            var avatarHolder = new GameObject("AvatarHolder", typeof(RectTransform));
-            avatarHolder.transform.SetParent(overlayRoot.transform, false);
-            var aRT = (RectTransform)avatarHolder.transform;
-            aRT.anchorMin = Vector2.zero; aRT.anchorMax = Vector2.one;
-            aRT.offsetMin = Vector2.zero; aRT.offsetMax = Vector2.zero;
-            avatarView = HeroLobbyAvatarView.Create(aRT);
-            avatarView.SetUserName(userName);
-
-            // Settings panel (right side)
-            settingsPanel = HeroLobbySettingsPanel.Create((RectTransform)overlayRoot.transform);
+            editor = HeroLoadoutEditor.Create(stage);
+            editor.OnLoadoutChanged = Refresh;
+            editor.OnOpenChanged = open => showcase.SlideBy(open ? -170f : 0f);
+            editor.Bind(loadout);
         }
 
-        private Button CreateTopRightButton(Transform parent, Font font, string glyph, Vector2 anchoredPosFromTopRight, UnityEngine.Events.UnityAction onClick)
+        private static void MenuButton(Transform stage, string name, float x, string label, string glyph, HudStyle.Palette p, System.Action onClick)
         {
-            var go = new GameObject("Btn_" + glyph, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-            go.transform.SetParent(parent, false);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = new Vector2(1f, 1f); rt.anchorMax = new Vector2(1f, 1f); rt.pivot = new Vector2(1f, 1f);
-            rt.sizeDelta = new Vector2(64f, 64f);
-            rt.anchoredPosition = anchoredPosFromTopRight;
-            var img = go.GetComponent<Image>();
-            img.color = new Color(0.95f, 0.95f, 0.95f, 1f);
-            img.raycastTarget = true;
-
-            var lblGO = MakeText(go.transform, "Lbl", font, 28, FontStyle.Bold, glyph);
-            var lRT = (RectTransform)lblGO.transform;
-            lRT.anchorMin = Vector2.zero; lRT.anchorMax = Vector2.one; lRT.offsetMin = Vector2.zero; lRT.offsetMax = Vector2.zero;
-            var lt = lblGO.GetComponent<Text>();
-            lt.alignment = TextAnchor.MiddleCenter; lt.color = new Color(0.12f, 0.12f, 0.18f, 1f);
-
-            var btn = go.GetComponent<Button>();
-            btn.targetGraphic = img;
-            btn.onClick.AddListener(onClick);
-            return btn;
+            var rt = LobbyStyle.At(stage, name, x, 30f, 96f, 96f);
+            var body = HudStyle.Felt(rt, p, HudShape.Kind.Circle, 0f, 6f, 6f);
+            HudStyle.AddText(HudStyle.Filled(rt, "Glyph"), glyph, 40, Color.white, TextAnchor.MiddleCenter, 6f, p.Outline);
+            LobbyStyle.Text(rt, "Label", -20f, 102f, 136f, 30f, label, 22, p.Light, TextAnchor.MiddleCenter, 4f, p.Outline);
+            LobbyStyle.MakeButton(rt, body, onClick);
         }
 
-        private static GameObject MakeText(Transform parent, string name, Font font, int size, FontStyle style, string text)
+        private void Refresh()
         {
-            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-            go.transform.SetParent(parent, false);
-            var t = go.GetComponent<Text>();
-            t.font = font; t.fontSize = size; t.fontStyle = style; t.color = Color.white;
-            t.raycastTarget = false;
-            t.text = text;
-            return go;
+            showcase.Show(loadout.CurrentClass, userName);
+            summary.Show(loadout);
         }
 
-        private void RefreshAvatar()
+        private void OpenEditor()
         {
-            if (avatarView != null) avatarView.ShowLoadout(loadout, modelPreview);
+            editor.Show();
         }
 
-        private void OnRoleClicked()
+        private void ShowToast(string message)
         {
-            Debug.Log($"[HeroLobby] role button clicked, settingsPanel={(settingsPanel != null ? "ok" : "null")}, isOpen={(settingsPanel != null && settingsPanel.IsOpen)}");
-            if (settingsPanel == null) return;
-            if (settingsPanel.IsOpen) settingsPanel.Hide();
-            else settingsPanel.Show();
-        }
-
-        private void OnSettingsClicked()
-        {
-            Debug.Log("[HeroLobby] settings not yet implemented");
+            toast.text = message;
+            toastHideAt = Time.unscaledTime + 2.5f;
         }
 
         private void Update()
         {
-            if (Game.UI.ConsoleUI.IsConsoleActive) return;
-            if (Keyboard.current == null) return;
+            if (toast != null && toast.text.Length > 0 && Time.unscaledTime >= toastHideAt) toast.text = "";
+            if (ConsoleUI.IsConsoleActive || Keyboard.current == null) return;
             if (Keyboard.current.escapeKey.wasPressedThisFrame)
             {
-                if (settingsPanel != null && settingsPanel.IsOpen) settingsPanel.Hide();
+                if (editor != null && editor.IsOpen) editor.Hide();
             }
             else if (Keyboard.current.enterKey.wasPressedThisFrame || Keyboard.current.numpadEnterKey.wasPressedThisFrame)
             {
-                if (settingsPanel == null || !settingsPanel.IsOpen) OnStartClicked();
+                if (editor == null || !editor.IsOpen) StartMatch();
             }
         }
 
-        private void OnStartClicked()
+        private void StartMatch()
         {
             loadout.SaveToSession();
-            var free = loadout.Skills[HeroSkillLoadout.FreeSlot];
-            Debug.Log($"[HeroLobby] start: class={(loadout.CurrentClass != null ? loadout.CurrentClass.className : "?")}, slot5={(free != null ? free.skillName : "?")}");
             SceneManager.LoadScene(matchSceneName);
+        }
+
+        private void BackToTitle()
+        {
+            loadout.SaveToSession();
+            SceneManager.LoadScene(titleSceneName);
         }
     }
 }

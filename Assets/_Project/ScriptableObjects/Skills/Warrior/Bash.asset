@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: "\u76FE\u6483"
   description: Rush forward behind the shield, knocking every enemy in the way far
     ahead.
-  spCost: 12
+  mpCost: 0
   cooldown: 6
   effectType: 0
   damageType: 0

@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Guard
   displayName: "\u9632\u5FA1"
   description: Boosts own Df 1.5x for 5s.
-  spCost: 15
+  mpCost: 0
   cooldown: 15
   effectType: 2
   damageType: 2

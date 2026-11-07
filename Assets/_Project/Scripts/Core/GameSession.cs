@@ -18,6 +18,8 @@ namespace Game.Core
 
         public PlayerRole CurrentRole = PlayerRole.None;
         public HeroClassData SelectedHeroClass;
+        /// 1〜4枠に選んだジョブのスキル（SelectedHeroClass のもの）。空ならジョブの標準。
+        public List<SkillData> SelectedClassSkills = new List<SkillData>();
         public SkillData SelectedCommonSkill;
         public PassiveData SelectedPassive;
         public List<MonsterData> DemonDeck = new List<MonsterData>();

@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Sprint
   displayName: "\u75BE\u8D70"
   description: Boost own Spd 1.5x for 4s.
-  spCost: 10
+  mpCost: 10
   cooldown: 15
   effectType: 2
   damageType: 2

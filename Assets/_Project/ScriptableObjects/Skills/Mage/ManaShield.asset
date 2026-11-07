@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: ManaShield
   displayName: "\u9B54\u529B\u306E\u76FE"
   description: Halves damage taken for 8s.
-  spCost: 25
+  mpCost: 25
   cooldown: 20
   effectType: 2
   damageType: 2

@@ -57,7 +57,7 @@ CHARS = {
         hip_center=(0, 0.03, 0.34), hip=(0.09, 0.03, 0.32), knee=(0.145, 0.0, 0.16), ankle=(0.16, 0.02, 0.055),
         toe=(0.165, -0.05, 0.02), toe_tip=(0.17, -0.12, 0.015), neck=(0, -0.04, 0.58), head=(0, -0.12, 0.61),
         shoulder=(0.07, 0.03, 0.63), arm=(0.24, 0.64), elbow=(0.34, 0.47), wrist=(0.38, 0.29), tip=(0.41, 0.11),
-        items=[]),
+        head_half_width=0.13, robe=False, arm_min_x=0.25, items=[]),
     # 魔王: 足元まで届く長いローブとマント。背中側（y が back_y より後ろ）のマントは腕に付けず胴について行かせる。
     "demonking": dict(
         folder="DemonKing", fbx="demon_king.fbx", blend="demonking_tripo.blend", prefix="DemonKing", height=2.9, target=9000, head_z=0.71,
@@ -214,8 +214,12 @@ if "back_y" in CFG:
         for bn in ("Arm", "ForeArm", "Hand"):
             W[behind, IDX[side + bn]] = 0
 W[P[:, 2] < head_z - 0.06 * H, IDX["Head"]] = 0
-W[P[:, 2] > head_z] = 0
-W[P[:, 2] > head_z, IDX["Head"]] = 1
+above_head = P[:, 2] > head_z
+if "head_half_width" in CFG:
+    # 頭が肩より低い猫背の体（ゴーレム）は、頭の高さより上でも肩と腕は頭に付けない。
+    above_head &= np.abs(P[:, 0]) < CFG["head_half_width"] * S
+W[above_head] = 0
+W[above_head, IDX["Head"]] = 1
 W /= W.sum(axis=1, keepdims=True)
 
 # Robes and capes hanging away from the legs follow the hips, otherwise they tear apart when the legs swing.
@@ -223,6 +227,17 @@ leg_ids = [IDX[s + b] for s in ("Left", "Right") for b in ("UpLeg", "Leg", "Foot
 arm_ids = [IDX[s + b] for s in ("Left", "Right") for b in ("Arm", "ForeArm", "Hand")]
 leg_d = D[:, leg_ids].min(axis=1)
 f = np.clip((leg_d - 0.03 * H) / (0.05 * H), 0, 1) * (P[:, 2] < hip_z) * (1 - W[:, arm_ids].sum(axis=1))
+if not CFG.get("robe", True):
+    # ローブもマントもない体。腰より下まで垂れた拳を腰や脚に付けない（腕を上げたとき拳が下に残って伸びる）。
+    f[:] = 0
+    arm_d = D[:, arm_ids].min(axis=1)
+    near_arm = arm_d < leg_d - 0.01 * H
+    if "arm_min_x" in CFG:
+        # 脚の外側に垂れた拳は、脚に近くても腕のもの。
+        near_arm |= np.abs(P[:, 0]) > CFG["arm_min_x"] * S
+    for j in leg_ids:
+        W[near_arm, j] = 0
+    W[W.sum(axis=1) == 0, IDX["Hips"]] = 1
 W *= (1 - f)[:, None]
 W[:, IDX["Hips"]] += f
 

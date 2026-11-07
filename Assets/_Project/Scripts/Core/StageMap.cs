@@ -32,6 +32,13 @@ namespace Game.Core
             public float[] waypoints;
         }
 
+        /// ボスのいる円い広場。height は床の高さの目安（山の広場で地形を削った高さ。砂漠は 0）。
+        [Serializable]
+        public class Plaza
+        {
+            public float x, z, radius, blend, height;
+        }
+
         [Serializable]
         public class Data
         {
@@ -39,6 +46,10 @@ namespace Game.Core
             public float townX, townZ, townGateX, townGateZ, castleX, castleZ;
             public float castleHeight;
             public float islandRadius;
+            public float bridgeWidth;
+            /// 浅い川の水面の高さと、川底の深さ（岸から4mで最も深くなる）。
+            public float shallowWaterY;
+            public float shallowBedDepth;
             public Line[] shallow;
             public Line[] deep;
             public float[] seaShore;
@@ -47,6 +58,9 @@ namespace Game.Core
             public Area[] biomes;
             public Place[] spawners;
             public Place[] rocks;
+            public Plaza dragonPlaza;
+            public Plaza scorpionPlaza;
+            public Plaza forestPlaza;
         }
 
         [Serializable]

@@ -46,6 +46,7 @@ namespace Game.Core
         private HeroAttack heroAttack;
         private HeroDeathCounter heroDeathCounter;
         private Transform heroBody;
+        private HeroDeathCamera deathCamera;
         private bool respawning;
 
         private void Awake()
@@ -133,6 +134,8 @@ namespace Game.Core
             heroAttack = hero.GetComponent<HeroAttack>();
             heroDeathCounter = hero.GetComponent<HeroDeathCounter>();
             heroBody = hero.transform.Find("Body");
+            deathCamera = hero.GetComponent<HeroDeathCamera>();
+            if (deathCamera == null) deathCamera = hero.AddComponent<HeroDeathCamera>();
             if (heroHealth != null) heroHealth.OnDeath += OnHeroDied;
         }
 
@@ -158,6 +161,8 @@ namespace Game.Core
             if (heroFPS != null) heroFPS.enabled = false;
             if (heroAttack != null) heroAttack.enabled = false;
             if (heroBody != null) heroBody.gameObject.SetActive(false);
+            // 死んでからリスポーンまでは、倒れた自分を上から見る。
+            if (deathCamera != null) deathCamera.Begin();
 
             int remaining = Mathf.CeilToInt(waitSeconds);
             OnRespawnStarted?.Invoke(remaining);
@@ -167,6 +172,8 @@ namespace Game.Core
                 OnRespawnCountdown?.Invoke(i);
                 yield return new WaitForSeconds(1f);
             }
+
+            if (deathCamera != null) deathCamera.End();
 
             // スポーン位置を計算してテレポート。地面スナップ付きでワールド外落下を防ぐ。
             hero.transform.position = ComputeSpawnPosition();
@@ -181,6 +188,8 @@ namespace Game.Core
 
             Debug.Log("Respawned. DeathCount=" + (heroDeathCounter != null ? heroDeathCounter.CurrentDeathCount : -1));
             OnRespawnFinished?.Invoke();
+            // リスポーンのアニメーションのあいだは、外から斜め上に自分を映す（終われば目の高さへ戻る）。
+            if (deathCamera != null) deathCamera.BeginRespawn();
             respawning = false;
         }
     }

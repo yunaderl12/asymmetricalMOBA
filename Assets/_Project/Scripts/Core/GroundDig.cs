@@ -20,6 +20,7 @@ namespace Game.Core
         private const string SpawnerRoot = "Spawners";
 
         private const int ChunkCells = 16;
+        private const int RegionChunks = 4;            // 起伏のある地面の当たり判定は 4x4 チャンクずつまとめる
         private const float FlatColliderThickness = 1f;
         private const int OutlineSpokes = 9;           // 穴の輪郭を作る多角形の角の数
         private const float OutlineWobble = 0.18f;     // 輪郭のゆがみ（半径に対する割合）
@@ -56,6 +57,13 @@ namespace Game.Core
         private BoxCollider[] flatColliders;
         private Chunk[] chunks;
         private int chunksX;
+        private int chunksZ;
+        // 起伏のある地面（StageGround があるワールド）では、元の地面の高さを頂点ごとに持ち、当たり判定は地面の形のメッシュで作る。
+        private float[] baseHeight;
+        private bool[] chunkOpen;
+        private MeshCollider[] regionColliders;
+        private Mesh[] regionMeshes;
+        private int regionsX;
 
         private class Chunk
         {
@@ -84,23 +92,36 @@ namespace Game.Core
         // 削られるまでは何も変えないので、一度も削らない試合には負荷がかからない。
         private static bool TryCreate()
         {
-            var ground = GameObject.Find(GroundName);
-            var collider = ground != null ? ground.GetComponent<Collider>() : null;
-            if (collider == null) return false;
+            Collider collider = null;
+            Bounds bounds;
+            if (StageGround.Available)
+            {
+                var surface = GameObject.Find(GroundRendererName);
+                collider = surface != null ? surface.GetComponent<MeshCollider>() : null;
+                if (collider == null) return false;
+                bounds = new Bounds();
+                bounds.SetMinMax(new Vector3(StageGround.MinX, 0f, StageGround.MinZ), new Vector3(StageGround.MinX + StageGround.Size, 0f, StageGround.MinZ + StageGround.Size));
+            }
+            else
+            {
+                var ground = GameObject.Find(GroundName);
+                collider = ground != null ? ground.GetComponent<Collider>() : null;
+                if (collider == null) return false;
+                bounds = collider.bounds;
+            }
             var go = new GameObject("GroundDig");
             instance = go.AddComponent<GroundDig>();
-            instance.Build(collider);
+            instance.Build(collider, bounds);
             return true;
         }
 
-        private void Build(Collider ground)
+        private void Build(Collider ground, Bounds bounds)
         {
             var config = BalanceConfig.Instance;
             cellSize = config.digCellSize;
             stepDepth = config.digStepDepth;
             maxSteps = Mathf.RoundToInt(config.digMaxDepth / stepDepth);
 
-            Bounds bounds = ground.bounds;
             origin = new Vector2(bounds.min.x, bounds.min.z);
             cellsX = Mathf.CeilToInt(bounds.size.x / cellSize);
             cellsZ = Mathf.CeilToInt(bounds.size.z / cellSize);
@@ -119,7 +140,15 @@ namespace Game.Core
 
             earth = EarthPalette.CreateMaterial(FindDirtColor());
             SwapGroundMaterials();
-            BuildFlatColliders(ground, bounds.max.y);
+            if (StageGround.Available)
+            {
+                baseHeight = new float[vertsX * vertsZ];
+                for (int z = 0; z < vertsZ; z++)
+                    for (int x = 0; x < vertsX; x++)
+                        baseHeight[x + z * vertsX] = StageGround.HeightAt(origin.x + x * cellSize, origin.y + z * cellSize);
+                BuildRegionColliders(ground);
+            }
+            else BuildFlatColliders(ground, bounds.max.y);
         }
 
         private void OnDestroy()
@@ -128,6 +157,7 @@ namespace Game.Core
             if (mask != null) Destroy(mask);
             if (earth != null) Destroy(earth);
             foreach (var material in clipMaterials) if (material != null) Destroy(material);
+            if (regionMeshes != null) foreach (var mesh in regionMeshes) if (mesh != null) Destroy(mesh);
             if (chunks == null) return;
             foreach (var chunk in chunks)
             {
@@ -238,7 +268,7 @@ namespace Game.Core
         {
             ground.enabled = false;
             chunksX = Mathf.CeilToInt((float)cellsX / ChunkCells);
-            int chunksZ = Mathf.CeilToInt((float)cellsZ / ChunkCells);
+            chunksZ = Mathf.CeilToInt((float)cellsZ / ChunkCells);
             chunks = new Chunk[chunksX * chunksZ];
             flatColliders = new BoxCollider[chunks.Length];
             var holder = new GameObject("FlatGround");
@@ -253,6 +283,109 @@ namespace Game.Core
                     box.center = new Vector3(origin.x + (x + 0.5f) * size, top - FlatColliderThickness * 0.5f, origin.y + (z + 0.5f) * size);
                     box.size = new Vector3(size, FlatColliderThickness, size);
                     flatColliders[x + z * chunksX] = box;
+                }
+            }
+        }
+
+        // 地形モデルの地面の当たり判定を、地面と同じ形の 4x4 チャンクのメッシュに分ける。削られたチャンクだけ抜いて作り直す。
+        private void BuildRegionColliders(Collider ground)
+        {
+            ground.enabled = false;
+            chunksX = Mathf.CeilToInt((float)cellsX / ChunkCells);
+            chunksZ = Mathf.CeilToInt((float)cellsZ / ChunkCells);
+            chunks = new Chunk[chunksX * chunksZ];
+            chunkOpen = new bool[chunks.Length];
+            regionsX = Mathf.CeilToInt((float)chunksX / RegionChunks);
+            int regionsZ = Mathf.CeilToInt((float)chunksZ / RegionChunks);
+            regionColliders = new MeshCollider[regionsX * regionsZ];
+            regionMeshes = new Mesh[regionColliders.Length];
+            var holder = new GameObject("GroundSurface");
+            holder.layer = ground.gameObject.layer;
+            holder.transform.SetParent(transform, false);
+            for (int i = 0; i < regionColliders.Length; i++)
+            {
+                var go = new GameObject("GroundRegion");
+                go.layer = holder.layer;
+                go.transform.SetParent(holder.transform, false);
+                regionColliders[i] = go.AddComponent<MeshCollider>();
+                regionMeshes[i] = new Mesh { name = "GroundRegion" };
+                RebuildRegion(i);
+            }
+        }
+
+        private void SetChunkSolid(int index, bool solid)
+        {
+            if (flatColliders != null)
+            {
+                flatColliders[index].enabled = solid;
+                return;
+            }
+            if (chunkOpen[index] == !solid) return;
+            chunkOpen[index] = !solid;
+            int cx = index % chunksX, cz = index / chunksX;
+            RebuildRegion(cx / RegionChunks + cz / RegionChunks * regionsX);
+        }
+
+        private void RebuildRegion(int region)
+        {
+            var vertices = new List<Vector3>();
+            var triangles = new List<int>();
+            int rx = region % regionsX, rz = region / regionsX;
+            float chunkSize = ChunkCells * cellSize;
+            for (int cz = rz * RegionChunks; cz < Mathf.Min(chunksZ, (rz + 1) * RegionChunks); cz++)
+            {
+                for (int cx = rx * RegionChunks; cx < Mathf.Min(chunksX, (rx + 1) * RegionChunks); cx++)
+                {
+                    if (chunkOpen[cx + cz * chunksX]) continue;
+                    AddSurfaceTile(vertices, triangles, origin.x + cx * chunkSize, origin.y + cz * chunkSize, chunkSize);
+                }
+            }
+            var mesh = regionMeshes[region];
+            mesh.Clear();
+            mesh.indexFormat = vertices.Count > 60000 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
+            mesh.SetVertices(vertices);
+            mesh.SetTriangles(triangles, 0);
+            mesh.RecalculateBounds();
+            var collider = regionColliders[region];
+            collider.sharedMesh = null;
+            if (vertices.Count > 0) collider.sharedMesh = mesh;
+        }
+
+        // 1チャンク分の元の地面。StageGround の格子にそろうときは同じ三角形で作るので、見た目の地面とぴったり重なる。
+        private static void AddSurfaceTile(List<Vector3> vertices, List<int> triangles, float minX, float minZ, float size)
+        {
+            float cell = StageGround.Cell;
+            bool aligned = Mathf.Abs(size / cell - Mathf.Round(size / cell)) < 0.001f
+                && Mathf.Abs((minX - StageGround.MinX) / cell - Mathf.Round((minX - StageGround.MinX) / cell)) < 0.001f
+                && Mathf.Abs((minZ - StageGround.MinZ) / cell - Mathf.Round((minZ - StageGround.MinZ) / cell)) < 0.001f;
+            float step = aligned ? cell : Mathf.Min(cell, size / 8f);
+            int count = Mathf.Max(1, Mathf.RoundToInt(size / step));
+            int gi = Mathf.RoundToInt((minX - StageGround.MinX) / cell), gj = Mathf.RoundToInt((minZ - StageGround.MinZ) / cell);
+            int first = vertices.Count;
+            for (int j = 0; j <= count; j++)
+            {
+                for (int i = 0; i <= count; i++)
+                {
+                    float x = minX + i * step, z = minZ + j * step;
+                    vertices.Add(new Vector3(x, StageGround.HeightAt(x, z), z));
+                }
+            }
+            int row = count + 1;
+            for (int j = 0; j < count; j++)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    int bl = first + i + j * row, br = bl + 1, tl = bl + row, tr = tl + 1;
+                    if ((gi + i + gj + j) % 2 == 0)
+                    {
+                        triangles.Add(bl); triangles.Add(tr); triangles.Add(br);
+                        triangles.Add(bl); triangles.Add(tl); triangles.Add(tr);
+                    }
+                    else
+                    {
+                        triangles.Add(bl); triangles.Add(tl); triangles.Add(br);
+                        triangles.Add(br); triangles.Add(tl); triangles.Add(tr);
+                    }
                 }
             }
         }
@@ -455,7 +588,7 @@ namespace Game.Core
             if (!any)
             {
                 if (chunk != null) chunk.Root.SetActive(false);
-                flatColliders[index].enabled = true;
+                SetChunkSolid(index, true);
                 return;
             }
             if (chunk == null) chunk = chunks[index] = NewChunk();
@@ -465,7 +598,7 @@ namespace Game.Core
             chunk.Filter.sharedMesh = chunk.Visual;
             chunk.Collider.sharedMesh = null;
             chunk.Collider.sharedMesh = chunk.Solid;
-            flatColliders[index].enabled = false;
+            SetChunkSolid(index, false);
         }
 
         // 当たり判定はチャンク全面、見た目は穴とその縁だけ。見た目の三角形を足したら true。
@@ -487,7 +620,8 @@ namespace Game.Core
         private Vector3 SolidPoint(int vertex)
         {
             int x = vertex % vertsX, z = vertex / vertsX;
-            return new Vector3(origin.x + x * cellSize, -steps[vertex] * stepDepth, origin.y + z * cellSize);
+            float y = baseHeight != null ? baseHeight[vertex] : 0f;
+            return new Vector3(origin.x + x * cellSize, y - steps[vertex] * stepDepth, origin.y + z * cellSize);
         }
 
         private Vector3 VisualPoint(int vertex)
@@ -497,7 +631,7 @@ namespace Game.Core
             float shift = VertexShift * cellSize * 2f;
             point.x += (Hash01(x * 3 + 1, z * 7 + 2) - 0.5f) * shift;
             point.z += (Hash01(x * 11 + 5, z * 2 + 9) - 0.5f) * shift;
-            if (steps[vertex] == 0) point.y = RimBaseHeight + (rim[vertex] ? Hash01(x * 17 + 4, z * 13 + 6) * RimLift : 0f);
+            if (steps[vertex] == 0) point.y = (baseHeight != null ? baseHeight[vertex] : 0f) + RimBaseHeight + (rim[vertex] ? Hash01(x * 17 + 4, z * 13 + 6) * RimLift : 0f);
             return point;
         }
 

@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Charge
   displayName: "\u7A81\u9032"
   description: Dash forward and slam the first enemy in your way.
-  spCost: 20
+  mpCost: 0
   cooldown: 8
   effectType: 0
   damageType: 0

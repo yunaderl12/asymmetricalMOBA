@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   className: Mage
   initialHP: 80
-  initialSP: 70
+  initialMP: 70
   initialAtk: 5
   initialMAtk: 18
   initialDf: 4
   initialMDf: 8
-  initialSpd: 10
+  initialSpd: 8
   hpGrowthPerLevel: 8
-  spGrowthPerLevel: 7
+  mpGrowthPerLevel: 7
   atkGrowthPerLevel: 0
   mAtkGrowthPerLevel: 3
   dfGrowthPerLevel: 0
@@ -31,14 +31,14 @@ MonoBehaviour:
   classSkills:
   - {fileID: 11400000, guid: 9beb170db0c0c4b67a92eeec6dfb63b5, type: 2}
   - {fileID: 11400000, guid: c08def79f328943b0a1075d06456d2f3, type: 2}
-  - {fileID: 11400000, guid: b5805bb1d637745d59c9033db1420334, type: 2}
+  - {fileID: 11400000, guid: 44a9177d9ffc84d1db674b15abb3f441, type: 2}
   - {fileID: 11400000, guid: be9a4dddbb337417888d6231abf8a94f, type: 2}
-  exclusiveFreeSkills:
+  extraClassSkills:
   - {fileID: 11400000, guid: e54a22e1fe33f469d905ee9ed97f54e9, type: 2}
   passives:
   - {fileID: 11400000, guid: 6e30f4020211d4d4d81568897f3350e3, type: 2}
   - {fileID: 11400000, guid: 237b19e6ec1e144539df4549f800f4b8, type: 2}
-  spCombatRegenRate: 0.004
+  mpCombatRegenRate: 0.004
   basicAttackMpCost: 2
   regenMultiplier: 2
   avatarColor: {r: 0.7, g: 0.2, b: 0.95, a: 1}

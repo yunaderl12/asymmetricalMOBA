@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01462c893047d48338151fc115161b80, type: 3}
+  m_Name: Scorpion
+  m_EditorClassIdentifier: Game.Runtime::Game.Monster.ScorpionData
+  bossName: "\u30B9\u30B3\u30FC\u30D4\u30AA\u30F3"
+  hp: 3500
+  atk: 35
+  df: 15
+  mDf: 8
+  exp: 1500
+  respawnSeconds: 300
+  aggroRadius: 30
+  attackInterval: 2.2
+  idleRegenShare: 0.02
+  modelPath: Scorpion/scorpion
+  modelMaterialPath: Scorpion/Scorpion_BodyMat
+  modelScale: 7
+  modelYaw: 0
+  bodySize: {x: 6, y: 3, z: 7}
+  bodyCenterHeight: 1.6
+  moveSpeed: 4.8
+  turnSpeed: 120
+  stepRate: 2.4
+  stingMinRange: 8
+  stingMaxRange: 30
+  stingWindupSeconds: 0.8
+  stingRecoverSeconds: 0.7
+  stingShots: 3
+  stingSpreadDegrees: 12
+  stingSpeed: 26
+  stingRange: 34
+  stingHitRadius: 1.2
+  stingDamageScale: 0.6
+  poisonDamagePerTick: 6
+  poisonSeconds: 5
+  chargeMaxRange: 26
+  chargeWindupSeconds: 0.9
+  chargeSpeed: 26
+  chargeDistance: 26
+  chargeHitRadius: 3.2
+  chargeDamageScale: 1.3
+  chargeKnockback: 8
+  chargeRecoverSeconds: 1.2
+  slashMaxRange: 20
+  slashWindupSeconds: 0.7
+  slashSwingSeconds: 0.18
+  slashRecoverSeconds: 0.8
+  slashSpeed: 22
+  slashRange: 26
+  slashHalfSize: 3.2
+  slashDamageScale: 1

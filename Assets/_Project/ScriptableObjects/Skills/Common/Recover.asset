@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Recover
   displayName: "\u81EA\u5DF1\u56DE\u5FA9"
   description: Heal self 20 HP.
-  spCost: 15
+  mpCost: 15
   cooldown: 20
   effectType: 1
   damageType: 2

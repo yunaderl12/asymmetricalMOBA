@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Fireball
   displayName: "\u706B\u7403"
   description: Magical fireball.
-  spCost: 15
+  mpCost: 15
   cooldown: 3
   effectType: 0
   damageType: 1

@@ -47,7 +47,7 @@ namespace Game.Hero
             if (hp != null && !hp.IsDead)
             {
                 hp.TakeDamage(damage, owner, DamageType.Magical);
-                HeroSpRecovery.OnBasicHit(owner, hp);
+                HeroMpRecovery.OnBasicHit(owner, hp);
                 End(true);
             }
             // 壁や地面ではそこで消える。

@@ -90,13 +90,13 @@ namespace Game.UI
                 if (hpText != null)
                     hpText.text = $"HP {health.CurrentHP} / {health.MaxHP}";
             }
-            // Heroes' only resource is SP (MP is the Demon King's). ManaComponent holds it.
+            // Heroes and the Demon King both use MP (ManaComponent). Only magic skills cost it.
             if (mana != null)
             {
                 if (mpFillImage != null)
                     mpFillImage.fillAmount = mana.MaxMP > 0 ? (float)mana.CurrentMP / mana.MaxMP : 0f;
                 if (mpText != null)
-                    mpText.text = $"SP {mana.CurrentMP} / {mana.MaxMP}";
+                    mpText.text = $"MP {mana.CurrentMP} / {mana.MaxMP}";
             }
             if (level != null && lvText != null)
                 lvText.text = $"Lv {level.CurrentLevel} / {level.MaxLevel}";

@@ -112,7 +112,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73e8ff761d88440c38c9c76a1a712004, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 9
+  moveSpeed: 7.2
   gravity: -20
   groundedStickForce: -2
   lookSensitivity: 0.2
@@ -120,6 +120,8 @@ MonoBehaviour:
   pitchMin: -70
   pitchMax: 70
   cameraRadius: 0.2
+  cameraOffset: {x: 0, y: 2.8, z: -7}
+  cameraTilt: 15
 --- !u!114 &1328229829529510799
 MonoBehaviour:
   m_ObjectHideFlags: 0

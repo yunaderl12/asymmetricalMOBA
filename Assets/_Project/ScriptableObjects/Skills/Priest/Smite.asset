@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Smite
   displayName: "\u8056\u6483"
   description: Magical smite.
-  spCost: 18
+  mpCost: 18
   cooldown: 5
   effectType: 0
   damageType: 1

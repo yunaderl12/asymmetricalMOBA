@@ -17,7 +17,7 @@ MonoBehaviour:
   howToUse: "\u64CD\u4F5C: A / D \u3092\u7D20\u65E9\u304F2\u56DE\u62BC\u3059"
   description: "\u62BC\u3057\u305F\u65B9\u5411\u3078\u7D20\u65E9\u304F\u6ED1\u3063\u3066\u653B\u6483\u3092\u304B\u308F\u3059\u3002"
   iconColor: {r: 0.45, g: 0.7, b: 1, a: 1}
-  spCost: 0
+  mpCost: 0
   cooldown: 1.5
   doubleTapSeconds: 0.5
   dodgeDistance: 4.5

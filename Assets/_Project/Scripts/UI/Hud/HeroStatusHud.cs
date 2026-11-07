@@ -8,7 +8,7 @@ using Game.Skill;
 
 namespace Game.UI
 {
-    /// 勇者の画面の左下と右上。自分（肖像・Lv・HP・SP・Exp）、その上に状態異常と味方3人、右上にいる場所。
+    /// 勇者の画面の左下と右上。自分（肖像・Lv・HP・MP・Exp）、その上に状態異常と味方3人、右上にいる場所。
     /// 配置は Dead by Daylight にならい、チームの様子を左下にまとめる。
     public class HeroStatusHud : MonoBehaviour
     {
@@ -17,6 +17,9 @@ namespace Game.UI
         private const float AreaRefreshInterval = 0.25f;
         private const float TownAreaRadius = 40f; // 仮値: はじまりのまちと見なす半径（m）
         private const int AllyRows = 3;
+        private const float HitShakeSeconds = 0.35f;
+        private const float HitShakePixels = 9f;
+        private const float HitShakeFrequency = 38f;
 
         private static readonly Color LowFelt = HudStyle.Hex(0x5a1f35);
         private static readonly Color LowStitch = HudStyle.Hex(0xffb4a8);
@@ -66,15 +69,18 @@ namespace Game.UI
         private SkillRuntime runtime;
         private StatusEffectController status;
 
+        private RectTransform selfPanel, portraitPanel;
+        private Vector2 selfPanelBase, portraitBase;
+        private float hitShakeTimer;
         private HudShape panelFelt;
         private HudStitch panelStitch;
-        private Text nameText, levelText, hpText, spText, expText, areaText;
-        private HudBar hpBar, spBar, expBar;
+        private Text nameText, levelText, hpText, mpText, expText, areaText;
+        private HudBar hpBar, mpBar, expBar;
         private readonly List<AllyRow> allies = new List<AllyRow>();
         private readonly List<StatusChip> chips = new List<StatusChip>();
 
         private float nextAllyRefresh, nextAreaRefresh;
-        private int shownHp = -1, shownHpMax = -1, shownSp = -1, shownSpMax = -1, shownLevel = -1, shownExp = -1, shownExpReq = -1, shownCost = -1;
+        private int shownHp = -1, shownHpMax = -1, shownMp = -1, shownMpMax = -1, shownLevel = -1, shownExp = -1, shownExpReq = -1, shownCost = -1;
         private bool shownLow;
         private string shownArea;
 
@@ -108,6 +114,8 @@ namespace Game.UI
 
             // 自分のフェルト。肖像が左に重なるので、中身は左を広くあける。
             var panel = HudStyle.Place(root, "Self", bottomLeft, bottomLeft, new Vector2(118f, 40f), new Vector2(560f, 154f));
+            selfPanel = panel;
+            selfPanelBase = panel.anchoredPosition;
             HudStyle.DropShadow(panel, HudShape.Kind.RoundRect, pal.Shadow, 20f, 6f);
             panelFelt = HudStyle.Shape(panel, "Felt", HudShape.Kind.RoundRect, pal.Felt, 20f, HudStyle.FeltTexture);
             panelStitch = HudStyle.Stitch(panel, pal.Stitch, false, 14f, 7f);
@@ -117,11 +125,13 @@ namespace Game.UI
                 HudStyle.ClassLabel(classData != null ? classData.className : null), 25, Color.white, TextAnchor.MiddleLeft);
             levelText = HudStyle.Label(content, "Level", topLeft, topLeft, new Vector2(150f, 0f), new Vector2(200f, 32f), "", 22, pal.Light, TextAnchor.MiddleLeft);
             hpBar = BuildStatRow(content, "Hp", "HP", -38f, 24f, HudStyle.Hp, 21, out hpText);
-            spBar = BuildStatRow(content, "Sp", "SP", -70f, 20f, HudStyle.Sp, 21, out spText);
+            mpBar = BuildStatRow(content, "Mp", "MP", -70f, 20f, HudStyle.Mp, 21, out mpText);
             expBar = BuildStatRow(content, "Exp", "Exp", -100f, 10f, HudStyle.Exp, 18, out expText);
 
             var portrait = HudStyle.Place(root, "Portrait", bottomLeft, bottomLeft, new Vector2(40f, 40f), new Vector2(152f, 152f));
             HudStyle.Portrait(portrait, classData != null ? classData.icon : null, classData != null ? classData.avatarColor : pal.Felt, 6f, pal.Shadow);
+            portraitPanel = portrait;
+            portraitBase = portrait.anchoredPosition;
 
             // 味方。下から順に積む（自分の状態異常の上）。
             for (int i = 0; i < AllyRows; i++) allies.Add(BuildAlly(root, new Vector2(40f, 290f + i * 76f)));
@@ -193,6 +203,7 @@ namespace Game.UI
         {
             if (hero == null) return;
             UpdateSelf();
+            UpdateHitShake();
             UpdateStatuses();
             if (Time.unscaledTime >= nextAllyRefresh)
             {
@@ -211,6 +222,8 @@ namespace Game.UI
         {
             if (health != null && (health.CurrentHP != shownHp || health.MaxHP != shownHpMax))
             {
+                // HP が減ったら自分の欄を小さく揺らす（殴られたことに気づけるように）。
+                if (shownHp >= 0 && health.CurrentHP < shownHp && health.MaxHP == shownHpMax) hitShakeTimer = HitShakeSeconds;
                 shownHp = health.CurrentHP;
                 shownHpMax = health.MaxHP;
                 float ratio = shownHpMax > 0 ? (float)shownHp / shownHpMax : 0f;
@@ -226,19 +239,19 @@ namespace Game.UI
                 }
             }
 
-            // 勇者のSPは ManaComponent が持っている（MPは魔王専用）。
-            int cost = runtime != null && runtime.CurrentSkill != null ? runtime.CurrentSkill.spCost : 0;
-            if (mana != null && (mana.CurrentMP != shownSp || mana.MaxMP != shownSpMax || cost != shownCost))
+            // 勇者のMPは ManaComponent が持っている。消費するのは魔法系のスキルだけ。
+            int cost = runtime != null && runtime.CurrentSkill != null ? runtime.CurrentSkill.mpCost : 0;
+            if (mana != null && (mana.CurrentMP != shownMp || mana.MaxMP != shownMpMax || cost != shownCost))
             {
-                shownSp = mana.CurrentMP;
-                shownSpMax = mana.MaxMP;
+                shownMp = mana.CurrentMP;
+                shownMpMax = mana.MaxMP;
                 shownCost = cost;
-                float max = Mathf.Max(1, shownSpMax);
-                spBar.Set(shownSp / max);
-                spText.text = shownSp + " / " + shownSpMax;
-                // 選択中のスキルで減る分。足りないときは出さない（カードの消費SPが赤くなる）。
-                if (cost > 0 && cost <= shownSp) spBar.SetPreview((shownSp - cost) / max, shownSp / max);
-                else spBar.SetPreview(0f, 0f);
+                float max = Mathf.Max(1, shownMpMax);
+                mpBar.Set(shownMp / max);
+                mpText.text = shownMp + " / " + shownMpMax;
+                // 選択中のスキルで減る分。足りないときは出さない（カードの消費MPが赤くなる）。
+                if (cost > 0 && cost <= shownMp) mpBar.SetPreview((shownMp - cost) / max, shownMp / max);
+                else mpBar.SetPreview(0f, 0f);
             }
 
             if (level != null && level.CurrentLevel != shownLevel)
@@ -255,6 +268,18 @@ namespace Game.UI
                 expBar.Set(maxed ? 1f : (shownExpReq > 0 ? (float)shownExp / shownExpReq : 0f));
                 expText.text = maxed ? "MAX" : "次まで " + HudStyle.Thousands(Mathf.Max(0, shownExpReq - shownExp));
             }
+        }
+
+        // 左右に細かく揺れて、すぐ収まる。
+        private void UpdateHitShake()
+        {
+            if (selfPanel == null || hitShakeTimer <= 0f) return;
+            hitShakeTimer -= Time.unscaledDeltaTime;
+            float fade = Mathf.Clamp01(hitShakeTimer / HitShakeSeconds);
+            float t = (HitShakeSeconds - hitShakeTimer) * HitShakeFrequency;
+            Vector2 offset = new Vector2(Mathf.Sin(t * 2f * Mathf.PI), Mathf.Sin(t * 1.3f * Mathf.PI) * 0.4f) * HitShakePixels * fade * fade;
+            selfPanel.anchoredPosition = selfPanelBase + offset;
+            if (portraitPanel != null) portraitPanel.anchoredPosition = portraitBase + offset;
         }
 
         private void UpdateStatuses()

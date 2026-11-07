@@ -64,6 +64,32 @@ namespace Game.Monster
         public float spearDamageScale = 1f;
         [Tooltip("Seconds the spears stay out before sinking.")]
         public float spearHoldSeconds = 0.45f;
+        [Tooltip("Spears in the cluster at the end of the line (剣山).")]
+        public int spearFinalCount = 14;
+        [Tooltip("Radius of the final cluster (m). Heroes inside it are hit.")]
+        public float spearFinalRadius = 2.4f;
+        [Tooltip("Height of the middle spear of the final cluster, against spearHeight.")]
+        public float spearFinalHeightScale = 1.35f;
+
+        [Header("Bridge Guardian Weight")]
+        [Tooltip("Speed of the walk animation against other monsters (slower = heavier steps).")]
+        public float guardWalkAnimScale = 0.6f;
+        [Tooltip("How far the body sinks on each step (m).")]
+        public float guardStepDip = 0.18f;
+        [Tooltip("Screen shake of a hero standing right next to a step (camera offset, m).")]
+        public float guardStepShake = 0.05f;
+        [Tooltip("Heroes this close feel the steps (m).")]
+        public float guardStepShakeRadius = 20f;
+        [Tooltip("Screen shake of a hero standing right next to the slam (camera offset, m).")]
+        public float slamShake = 0.28f;
+        [Tooltip("Heroes this close feel the slam (m).")]
+        public float slamShakeRadius = 35f;
+        [Tooltip("Seconds the slam shake lasts.")]
+        public float slamShakeSeconds = 0.6f;
+        [Tooltip("Radius of the dent the slam leaves in the ground (m). 0 = no dent.")]
+        public float slamDentRadius = 2f;
+        [Tooltip("Depth of the dent at its center (m). Repeated slams dig deeper, up to BalanceConfig.digMaxDepth.")]
+        public float slamDentDepth = 0.25f;
 
         [Header("Model")]
         [Tooltip("Resources path of the model on the Knight skeleton (e.g. Goblin/goblin). Empty = keep the prefab's Body shape.")]

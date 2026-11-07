@@ -200,6 +200,20 @@ def build_desert(bm):
 
 if DESERT is not None:
     water_object("Map_Desert", water_material("MapDesert", paperize((0.72, 0.56, 0.28), "Sand")), build_desert)
+
+
+# 砂漠の広場（スコーピオンの石畳）。砂漠の面より上に、縁の濃い色と床の色の円を重ねる。
+def build_disc(plaza, radius, z):
+    def build(bm):
+        ring = [bm.verts.new((plaza["x"] + math.cos(i / 48 * math.tau) * radius, plaza["z"] + math.sin(i / 48 * math.tau) * radius, z)) for i in range(48)]
+        bm.faces.new(ring)
+    return build
+
+
+SCORPION = MAPDATA.get("scorpionPlaza")
+if SCORPION:
+    water_object("Map_ScorpionPlazaEdge", water_material("MapPlazaEdge", paperize((0.20, 0.11, 0.06), "SandstoneDark")), build_disc(SCORPION, SCORPION["radius"], 0.05))
+    water_object("Map_ScorpionPlaza", water_material("MapPlaza", paperize((0.46, 0.27, 0.15), "Sandstone")), build_disc(SCORPION, SCORPION["radius"] - 3.0, 0.07))
 DIRT = water_material("MapRoad", paperize((0.38, 0.24, 0.11), "Dirt"))
 water_object("Map_Roads", DIRT, lambda bm: [ribbon(bm, pairs(r["points"]), 2.6, 0.04) for r in MAPDATA.get("roads", []) if r["name"] != "mountain"])
 water_object("Map_Sea", SEA, build_sea)

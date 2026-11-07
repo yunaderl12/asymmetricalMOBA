@@ -38,7 +38,7 @@ namespace Game.DemonKing
 
         private void OnTriggerEnter(Collider other)
         {
-            // Heroes: intrusion only. Their SP must not regenerate from the castle.
+            // Heroes: intrusion only. Their MP must not regenerate from the castle.
             var hero = GetHero(other);
             if (hero != null)
             {

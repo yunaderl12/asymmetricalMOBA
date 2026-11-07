@@ -7,7 +7,7 @@ using Game.Hero;
 
 namespace Game.Skill
 {
-    /// 溜め→発動→余韻で動く近接スキルの共通部分。SPとクールタイムは発動の瞬間に消費し、溜めが中断されたら消費しない。
+    /// 溜め→発動→余韻で動く近接スキルの共通部分。MPとクールタイムは発動の瞬間に消費し、溜めが中断されたら消費しない。
     public abstract class MeleeSkillCast : MonoBehaviour
     {
         private enum Phase { Idle, WindUp, Active, Recover }
@@ -32,8 +32,6 @@ namespace Game.Skill
         private HealthComponent health;
         private CharacterController body;
         private NavMeshAgent agent;
-        private Camera heroCamera;
-        private float baseFov;
         private Phase phase = Phase.Idle;
         private float timer;
         private Func<bool> tryPay;
@@ -81,11 +79,6 @@ namespace Game.Skill
             this.onReleased = onReleased;
             if (ModelAnim == null) ModelAnim = GetComponent<CharacterModelAnimator>();
             if (View == null) View = GetComponent<HeroViewModel>();
-            if (heroCamera == null && cam != null)
-            {
-                heroCamera = cam.GetComponent<Camera>();
-                if (heroCamera != null) baseFov = heroCamera.fieldOfView;
-            }
 
             phase = Phase.WindUp;
             timer = 0f;
@@ -208,11 +201,11 @@ namespace Game.Skill
                 shake = UnityEngine.Random.insideUnitSphere * (shakeSize * Mathf.Clamp01(shakeTimer / shakeSeconds));
             }
             if (Controller != null) Controller.SetCameraKick(cameraPosition + shake, cameraPitch, cameraRoll);
-            if (heroCamera != null) heroCamera.fieldOfView = baseFov + cameraFov;
+            if (Controller != null) Controller.SetSkillFov(cameraFov);
             if (phase == Phase.Idle && shakeTimer <= 0f)
             {
                 if (Controller != null) Controller.SetCameraKick(Vector3.zero, 0f, 0f);
-                if (heroCamera != null) heroCamera.fieldOfView = baseFov;
+                if (Controller != null) Controller.SetSkillFov(0f);
                 cameraTouched = false;
             }
         }

@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: IronWall
   displayName: "\u9244\u58C1"
   description: Boost own Df 2x for 6s.
-  spCost: 25
+  mpCost: 0
   cooldown: 20
   effectType: 2
   damageType: 2

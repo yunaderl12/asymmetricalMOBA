@@ -202,11 +202,9 @@ MonoBehaviour:
   jumpPower: 5
   gravity: -20
   groundedStickForce: -2
-  stepLength: 1.7
-  dashStepLength: 2.2
-  stepDip: 0.045
-  stepSway: 0.018
-  stepRollDegrees: 0.45
+  stepLength: 3.2
+  dashStepLength: 4.4
+  stepDip: 0.035
   dashStartKick: 5
   dashStopKick: 2
   dashLagSmoothing: 0.2

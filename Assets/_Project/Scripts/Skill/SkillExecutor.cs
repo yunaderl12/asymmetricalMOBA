@@ -121,10 +121,10 @@ namespace Game.Skill
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
-                Debug.Log($"[Skill] {skill.skillName} on cooldown or low MP (cd={cd:F1}, mp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
+                Debug.Log($"[Skill] {skill.skillName} on cooldown or low MP (cd={cd:F1}, mp={(mana != null ? mana.CurrentMP : -1)}/{skill.mpCost})");
                 return;
             }
-            if (mana != null) mana.TryUseMana(skill.spCost);
+            if (mana != null) mana.TryUseMana(skill.mpCost);
             runtime.StartCooldown(idx);
             runtime.NotifyCast(idx);
             if (regen != null) regen.NotifyActed();
@@ -137,45 +137,38 @@ namespace Game.Skill
 
         public const string WarpSkillName = "WarpPoint";
 
-        /// Warp point skill: setting the point is free; moving costs SP and starts the cooldown only when the cast completes.
+        /// 魔法使いのワープ。1回目は門を1つ開くだけ（MP・クールタイムなし）。2回目で別の場所にもう1つ開いてつなぎ、MP とクールタイムを使う。
         private void TryWarp(int idx, SkillData skill)
         {
             var warp = GetComponent<HeroWarpPoint>();
             if (warp == null) warp = gameObject.AddComponent<HeroWarpPoint>();
-            if (warp.IsCasting)
+            if (!warp.HasPending)
             {
-                Debug.Log("[Skill] WarpPoint already casting");
-                return;
-            }
-            if (!warp.HasPoint)
-            {
-                warp.TrySetPoint();
+                if (warp.OpenFirst()) runtime.NotifyCast(idx);
                 return;
             }
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
-                Debug.Log($"[Skill] WarpPoint on cooldown or low SP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
+                Debug.Log($"[Skill] WarpPoint on cooldown or low MP (cd={cd:F1}, mp={(mana != null ? mana.CurrentMP : -1)}/{skill.mpCost})");
                 return;
             }
-            warp.BeginCast(() =>
-            {
-                if (mana != null) mana.TryUseMana(skill.spCost);
-                runtime.StartCooldown(idx);
-                runtime.NotifyCast(idx);
-                if (regen != null) regen.NotifyActed();
-            });
+            if (!warp.OpenSecond()) return;
+            if (mana != null) mana.TryUseMana(skill.mpCost);
+            runtime.StartCooldown(idx);
+            runtime.NotifyCast(idx);
+            if (regen != null) regen.NotifyActed();
         }
 
         public const string FireballSkillName = "Fireball";
 
-        /// 溜めてから放つスキル。SPとクールタイムは放った瞬間に消費するので、中断されたら消費しない。
+        /// 溜めてから放つスキル。MPとクールタイムは放った瞬間に消費するので、中断されたら消費しない。
         private void TryFireball(int idx, SkillData skill)
         {
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
-                Debug.Log($"[Skill] Fireball on cooldown or low SP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
+                Debug.Log($"[Skill] Fireball on cooldown or low MP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.mpCost})");
                 return;
             }
             if (fireball == null) fireball = GetComponent<FireballCast>();
@@ -186,7 +179,7 @@ namespace Game.Skill
                 () =>
                 {
                     if (!runtime.CanCast(idx)) return false;
-                    if (mana != null) mana.TryUseMana(skill.spCost);
+                    if (mana != null) mana.TryUseMana(skill.mpCost);
                     runtime.StartCooldown(idx);
                     runtime.NotifyCast(idx);
                     if (regen != null) regen.NotifyActed();
@@ -203,14 +196,14 @@ namespace Game.Skill
 
         public const string BlizzardSkillName = "Blizzard";
 
-        /// 狙った地面へ氷を走らせる。SPとクールタイムは放つ瞬間に消費し、ダメージは氷が届いた瞬間に入る。
+        /// 狙った地面へ氷を走らせる。MPとクールタイムは放つ瞬間に消費し、ダメージは氷が届いた瞬間に入る。
         private void TryBlizzard(int idx, SkillData skill)
         {
             if (fireball != null && fireball.IsPosing) return;
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
-                Debug.Log($"[Skill] Blizzard on cooldown or low SP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
+                Debug.Log($"[Skill] Blizzard on cooldown or low MP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.mpCost})");
                 return;
             }
             if (blizzard == null) blizzard = GetComponent<BlizzardCast>();
@@ -222,7 +215,7 @@ namespace Game.Skill
                 () =>
                 {
                     if (!runtime.CanCast(idx)) return false;
-                    if (mana != null) mana.TryUseMana(skill.spCost);
+                    if (mana != null) mana.TryUseMana(skill.mpCost);
                     runtime.StartCooldown(idx);
                     runtime.NotifyCast(idx);
                     if (regen != null) regen.NotifyActed();
@@ -257,14 +250,14 @@ namespace Game.Skill
 
         public const string TeleportSkillName = "Teleport";
 
-        /// はじまりのまちへの帰還。SPとクールタイムは飛び立つ瞬間に消費する。
+        /// はじまりのまちへの帰還。MPとクールタイムは飛び立つ瞬間に消費する。
         private void TryTeleport(int idx, SkillData skill)
         {
             if (fireball != null && fireball.IsPosing) return;
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
-                Debug.Log($"[Skill] Teleport on cooldown or low SP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
+                Debug.Log($"[Skill] Teleport on cooldown or low MP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.mpCost})");
                 return;
             }
             if (teleport == null) teleport = GetComponent<HeroTeleport>();
@@ -273,7 +266,7 @@ namespace Game.Skill
             teleport.BeginCast(skill, cameraTransform, () =>
             {
                 if (!runtime.CanCast(idx)) return false;
-                if (mana != null) mana.TryUseMana(skill.spCost);
+                if (mana != null) mana.TryUseMana(skill.mpCost);
                 runtime.StartCooldown(idx);
                 runtime.NotifyCast(idx);
                 if (regen != null) regen.NotifyActed();
@@ -281,13 +274,13 @@ namespace Game.Skill
             });
         }
 
-        /// 溜めてから出す近接スキル。SPとクールタイムは発動の瞬間に消費し、ダメージは当たった敵に入る。
+        /// 溜めてから出す近接スキル。MPとクールタイムは発動の瞬間に消費し、ダメージは当たった敵に入る。
         private void TryMelee<T>(int idx, SkillData skill) where T : MeleeSkillCast
         {
             if (!runtime.CanCast(idx))
             {
                 float cd = runtime.GetCooldownRemaining(idx);
-                Debug.Log($"[Skill] {skill.skillName} on cooldown or low SP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.spCost})");
+                Debug.Log($"[Skill] {skill.skillName} on cooldown or low MP (cd={cd:F1}, sp={(mana != null ? mana.CurrentMP : -1)}/{skill.mpCost})");
                 return;
             }
             T cast = GetComponent<T>();
@@ -300,7 +293,7 @@ namespace Game.Skill
                 () =>
                 {
                     if (!runtime.CanCast(idx)) return false;
-                    if (mana != null) mana.TryUseMana(skill.spCost);
+                    if (mana != null) mana.TryUseMana(skill.mpCost);
                     runtime.StartCooldown(idx);
                     runtime.NotifyCast(idx);
                     if (regen != null) regen.NotifyActed();

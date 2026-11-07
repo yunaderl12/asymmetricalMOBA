@@ -82,7 +82,7 @@ namespace Game.Skill
         private void Start()
         {
             if (classInit == null || classInit.ClassData == null) return;
-            var classSkills = classInit.ClassData.classSkills;
+            var classSkills = classInit.ClassSkills;
             for (int i = 0; i < 4 && i < classSkills.Count; i++) equippedSkills[i] = classSkills[i];
             equippedSkills[4] = classInit.CommonSkill;
             Debug.Log($"[SkillRuntime] equipped: " +
@@ -115,7 +115,7 @@ namespace Game.Skill
             var skill = equippedSkills[index];
             if (skill == null) return false;
             if (cooldownTimers[index] > 0f) return false;
-            if (mana != null && mana.CurrentMP < skill.spCost) return false;
+            if (mana != null && mana.CurrentMP < skill.mpCost) return false;
             return true;
         }
 

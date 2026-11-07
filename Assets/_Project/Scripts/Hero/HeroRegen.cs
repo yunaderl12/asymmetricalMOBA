@@ -49,7 +49,7 @@ namespace Game.Hero
             if (mana == null) return;
             if (classInit == null || classInit.ClassData == null) return;
             if (Time.time < nextMpAlwaysTickTime) return;
-            mana.RestoreFraction(mana.MaxMP * classInit.ClassData.spCombatRegenRate);
+            mana.RestoreFraction(mana.MaxMP * classInit.ClassData.mpCombatRegenRate);
             nextMpAlwaysTickTime = Time.time + mpAlwaysRegenInterval;
         }
 
@@ -62,7 +62,7 @@ namespace Game.Hero
         {
             if (health == null) return;
             TickMpAlwaysRegen();
-            HeroSpRecovery.RefillInTown(gameObject, mana);
+            HeroMpRecovery.RefillInTown(gameObject, mana);
             if (Time.time - lastActionTime < idleThreshold) return;
             if (Time.time < nextTickTime) return;
 

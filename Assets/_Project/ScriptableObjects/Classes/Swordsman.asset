@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   className: Swordsman
   initialHP: 120
-  initialSP: 40
+  initialMP: 40
   initialAtk: 15
   initialMAtk: 5
   initialDf: 8
   initialMDf: 6
-  initialSpd: 10
+  initialSpd: 8
   hpGrowthPerLevel: 12
-  spGrowthPerLevel: 4
+  mpGrowthPerLevel: 4
   atkGrowthPerLevel: 2
   mAtkGrowthPerLevel: 0
   dfGrowthPerLevel: 1
@@ -33,11 +33,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8e43e3485befb4351bd7cfe1134918e0, type: 2}
   - {fileID: 11400000, guid: a1a4a9c9ad15c489496fc3683fb0f2b5, type: 2}
   - {fileID: 11400000, guid: bbdbe2dc0f996427fb1604348cc195bc, type: 2}
-  exclusiveFreeSkills: []
+  extraClassSkills: []
   passives:
   - {fileID: 11400000, guid: a8017ceaba6fa479cad3c2deb180a51d, type: 2}
   - {fileID: 11400000, guid: 61591f1f5ff0e4067af87f2b94d46c0f, type: 2}
-  spCombatRegenRate: 0.0025
+  mpCombatRegenRate: 0.0025
   basicAttackMpCost: 0
   regenMultiplier: 2
   avatarColor: {r: 1, g: 0.15, b: 0.15, a: 1}

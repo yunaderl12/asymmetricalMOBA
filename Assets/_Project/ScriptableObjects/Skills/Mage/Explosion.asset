@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Explosion
   displayName: "\u7206\u767A"
   description: Charge for 5s, then a huge blast at the aimed spot.
-  spCost: 50
+  mpCost: 50
   cooldown: 40
   effectType: 0
   damageType: 1

@@ -18,7 +18,8 @@ namespace Game.Monster
         private const float RaisedHeightShare = 1.15f; // 両手の高さ（体の高さに対する割合）
         private const float RaisedForwardShare = 0.3f; // 真上だと腕がねじれるので、少し前へ上げる
         private const float RaisedLean = -0.55f;
-        private const float SlamLean = 1f;
+        private const float SlamLean = 1.4f;
+        private const float HandSpreadShare = 0.17f; // 両手を左右に離す幅（体の高さに対する割合）。寄せすぎると腕が交差する
         private const float RecoverHoldShare = 0.45f; // 硬直のうち、手を地面につけたままでいる割合
         private const float AlertLift = 0.4f;
 
@@ -45,6 +46,9 @@ namespace Game.Monster
             agent = GetComponent<NavMeshAgent>();
             health = GetComponent<HealthComponent>();
             model = GetComponent<CharacterModelAnimator>();
+            var steps = GetComponent<GolemFootsteps>();
+            if (steps == null) steps = gameObject.AddComponent<GolemFootsteps>();
+            steps.Init(data);
             FitBody();
         }
 
@@ -101,6 +105,10 @@ namespace Game.Monster
             {
                 phase = Phase.Chase;
                 AlertMark.Show(transform, data.guardBodyHeight + AlertLift);
+                // 「！」と同時に見つけた勇者の方を向く。
+                Vector3 to = target.position - transform.position;
+                to.y = 0f;
+                if (to.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(to);
                 return;
             }
             if (Vector3.Distance(transform.position, post) > PostArriveDistance) agent.SetDestination(post);
@@ -145,7 +153,7 @@ namespace Game.Monster
                 slamDirection = transform.forward;
             }
             float eased = Mathf.SmoothStep(0f, 1f, k);
-            if (model != null) model.SetCastPose(RaisedLean * eased, eased, RaisedPoint());
+            if (model != null) model.SetCastPose(RaisedLean * eased, eased, RaisedPoint(), HandSpread());
             if (k >= 1f)
             {
                 phase = Phase.Down;
@@ -158,7 +166,7 @@ namespace Game.Monster
             phaseTimer += Time.deltaTime;
             float k = Mathf.Clamp01(phaseTimer / Mathf.Max(0.01f, data.slamDownSeconds));
             float eased = k * k;
-            if (model != null) model.SetCastPose(Mathf.Lerp(RaisedLean, SlamLean, eased), 1f, Vector3.Lerp(RaisedPoint(), ImpactPoint(), eased));
+            if (model != null) model.SetCastPose(Mathf.Lerp(RaisedLean, SlamLean, eased), 1f, Vector3.Lerp(RaisedPoint(), ImpactPoint(), eased), HandSpread());
             if (k < 1f) return;
             RockSpearLine.Spawn(ImpactPoint(), slamDirection, data, gameObject, monster.CurrentAtk);
             phase = Phase.Recover;
@@ -171,7 +179,7 @@ namespace Game.Monster
             float seconds = Mathf.Max(0.01f, data.slamRecoverSeconds);
             float fade = Mathf.InverseLerp(seconds * RecoverHoldShare, seconds, phaseTimer);
             float reach = 1f - fade;
-            if (model != null) model.SetCastPose(SlamLean * reach, reach, ImpactPoint());
+            if (model != null) model.SetCastPose(SlamLean * reach, reach, ImpactPoint(), HandSpread());
             if (phaseTimer < seconds) return;
             ClearPose();
             cooldown = data.slamCooldown;
@@ -182,6 +190,11 @@ namespace Game.Monster
         private Vector3 RaisedPoint()
         {
             return transform.position + Vector3.up * data.guardBodyHeight * RaisedHeightShare + transform.forward * data.guardBodyHeight * RaisedForwardShare;
+        }
+
+        private float HandSpread()
+        {
+            return data.guardBodyHeight * HandSpreadShare;
         }
 
         private Vector3 ImpactPoint()

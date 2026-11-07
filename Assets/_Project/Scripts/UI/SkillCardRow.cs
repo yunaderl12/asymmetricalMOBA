@@ -6,8 +6,8 @@ using Game.Skill;
 namespace Game.UI
 {
     /// 試合中のスキル表示。紙のカードを5枚、少し傾けてテープで貼ったように並べる。
-    /// 左上にキー番号、右上にLv、中央にイラスト、下に名前と消費SP。選択中は浮き上がって金の縁がつき、まっすぐになる。
-    /// クールダウン中はグレーの幕が下がっていき、残り秒を出す。SPが足りないときはイラストを灰色にして消費SPを赤くする。
+    /// 左上にキー番号、右上にLv、中央にイラスト、下に名前と消費MP。選択中は浮き上がって金の縁がつき、まっすぐになる。
+    /// クールダウン中はグレーの幕が下がっていき、残り秒を出す。MPが足りないときはイラストを灰色にして消費MPを赤くする。物理系のスキルは消費MPの札を出さない。
     public class SkillCardRow : MonoBehaviour
     {
         private const float CardWidth = 118f;
@@ -104,8 +104,8 @@ namespace Game.UI
             card.Name.resizeTextMaxSize = 22;
 
             var pill = HudStyle.Place(card.Root, "Cost", top, top, new Vector2(0f, -134f), new Vector2(76f, 24f));
-            card.CostPill = HudStyle.Shape(pill, "Pill", HudShape.Kind.RoundRect, HudStyle.CostPill, 12f);
-            card.Cost = HudStyle.AddText(HudStyle.Filled(pill, "Text"), "", 17, HudStyle.CostText, TextAnchor.MiddleCenter);
+            card.CostPill = HudStyle.Shape(pill, "Pill", HudShape.Kind.RoundRect, HudStyle.MpPill, 12f);
+            card.Cost = HudStyle.AddText(HudStyle.Filled(pill, "Text"), "", 17, HudStyle.MpPillText, TextAnchor.MiddleCenter);
 
             // キー番号の札。カードの左上からはみ出させる。
             var key = HudStyle.Place(card.Root, "Key", topLeft, topLeft, new Vector2(-8f, 8f), new Vector2(38f, 38f));
@@ -167,10 +167,12 @@ namespace Game.UI
             }
             card.IconFallback.color = skill.EffectiveIconColor();
             card.Name.text = skill.DisplayName;
-            card.Cost.text = "SP " + skill.spCost;
-            card.CostPill.enabled = true;
-            card.CostPill.color = HudStyle.CostPill;
-            card.Cost.color = HudStyle.CostText;
+            // 物理系のスキルはMPを使わないので札を出さない（クールタイムだけで使える）。
+            bool usesMp = skill.mpCost > 0;
+            card.Cost.text = usesMp ? "MP " + skill.mpCost : "";
+            card.CostPill.enabled = usesMp;
+            card.CostPill.color = HudStyle.MpPill;
+            card.Cost.color = HudStyle.MpPillText;
             card.Level.text = level >= skill.maxSkillLevel ? "MAX" : "Lv" + level;
         }
 
@@ -198,15 +200,15 @@ namespace Game.UI
             return true;
         }
 
-        /// SPが足りないカード。クールダウン中は幕で十分なので変えない。
+        /// MPが足りないカード。クールダウン中は幕で十分なので変えない。
         private void UpdateAffordable(Card card, SkillData skill, bool cooling)
         {
-            bool shortOfSp = skill != null && !cooling && mana != null && mana.CurrentMP < skill.spCost;
-            if (shortOfSp == card.ShownShort) return;
-            card.ShownShort = shortOfSp;
-            card.Icon.color = shortOfSp ? IconOff : Color.white;
-            card.CostPill.color = shortOfSp ? HudStyle.Danger : HudStyle.CostPill;
-            card.Cost.color = shortOfSp ? Color.white : HudStyle.CostText;
+            bool shortOfMp = skill != null && !cooling && mana != null && mana.CurrentMP < skill.mpCost;
+            if (shortOfMp == card.ShownShort) return;
+            card.ShownShort = shortOfMp;
+            card.Icon.color = shortOfMp ? IconOff : Color.white;
+            card.CostPill.color = shortOfMp ? HudStyle.Danger : HudStyle.MpPill;
+            card.Cost.color = shortOfMp ? Color.white : HudStyle.MpPillText;
         }
     }
 }

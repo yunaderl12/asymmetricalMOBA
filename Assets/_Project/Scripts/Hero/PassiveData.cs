@@ -5,7 +5,7 @@ namespace Game.Hero
 {
     public enum PassiveType { QuickDodge, ChargedSlash, DoubleJump, BlockCircle }
 
-    /// クラスごとの選択肢から1つ選ぶパッシブ。どの動きをするかは type で決まり、使う数値は type に対応する欄だけ。
+    /// ジョブごとの選択肢から1つ選ぶパッシブ。どの動きをするかは type で決まり、使う数値は type に対応する欄だけ。
     [CreateAssetMenu(fileName = "NewPassive", menuName = "Game/Passive Data", order = 6)]
     public class PassiveData : ScriptableObject
     {
@@ -17,7 +17,8 @@ namespace Game.Hero
         public Color iconColor = new Color(0.5f, 0.8f, 1f, 1f);
 
         [Header("Cost")]
-        public int spCost;
+        [UnityEngine.Serialization.FormerlySerializedAs("spCost")]
+        public int mpCost;
         public float cooldown;
 
         [Header("Quick Dodge")]
@@ -49,13 +50,13 @@ namespace Game.Hero
         /// 詳細欄に出す数値の行。
         public string StatsLine()
         {
-            string cost = spCost > 0 ? $"消費SP {spCost}　　" : "";
+            string cost = mpCost > 0 ? $"消費MP {mpCost}　　" : "";
             if (cooldown > 0f) cost += $"CT {cooldown:0.#}秒　　";
             switch (type)
             {
                 case PassiveType.QuickDodge: return $"{cost}距離 {dodgeDistance:0.#}m";
                 case PassiveType.ChargedSlash: return $"{cost}溜め {holdSeconds:0.#}秒　　通常攻撃の{slashDamageScale:0.#}倍　　射程 {slashRange:0.#}m";
-                case PassiveType.DoubleJump: return $"消費SP {spCost}";
+                case PassiveType.DoubleJump: return mpCost > 0 ? $"消費MP {mpCost}" : "消費MPなし";
                 case PassiveType.BlockCircle: return $"防げるダメージ {blockDamage}以下　　同時に最大{1 + extraCircleLevels.Count}個（Lv{string.Join("・", extraCircleLevels)}で増加）";
                 default: return cost.TrimEnd('　');
             }

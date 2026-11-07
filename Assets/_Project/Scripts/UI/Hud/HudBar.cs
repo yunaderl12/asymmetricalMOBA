@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Game.UI
 {
     /// HUDのバー。暗い溝に色を塗り、上側に細い光を入れる。減った分は淡い色で少し残ってから追いつく。
-    /// SetPreview で、これから減る範囲を斜線で示せる（選択中スキルの消費SP）。
+    /// SetPreview で、これから減る範囲を斜線で示せる（選択中スキルの消費MP）。
     public class HudBar : MonoBehaviour
     {
         private const float TrailDelay = 0.35f;
@@ -40,7 +40,7 @@ namespace Game.UI
 
             var preview = HudStyle.Node(parent, "Preview");
             HudStyle.Stretch(preview);
-            HudStyle.Shape(preview, "Base", HudShape.Kind.RoundRect, HudStyle.SpPreview, 0f);
+            HudStyle.Shape(preview, "Base", HudShape.Kind.RoundRect, HudStyle.MpPreview, 0f);
             var stripes = HudStyle.Shape(preview, "Stripes", HudShape.Kind.RoundRect, color, 0f, HudStyle.HatchTexture);
             stripes.tileSize = 20f;
             bar.previewRect = preview;

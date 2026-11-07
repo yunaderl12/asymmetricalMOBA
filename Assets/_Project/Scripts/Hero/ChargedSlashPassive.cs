@@ -104,7 +104,7 @@ namespace Game.Hero
             ready = false;
             if (!fire)
             {
-                // 溜まる前に離したとき（溜まっていてもSPが足りないとき）は通常攻撃。
+                // 溜まる前に離したとき（溜まっていてもMPが足りないとき）は通常攻撃。
                 EndPose();
                 attack.TryBasicAttack();
                 return;

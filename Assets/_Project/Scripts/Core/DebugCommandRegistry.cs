@@ -21,7 +21,7 @@ namespace Game.Core
             Register("winhero", "魔王城コア破壊 (勇者勝利)", WinHeroCmd);
             Register("losehero", "StartTown 破壊 (魔王勝利)", LoseHeroCmd);
             Register("spawnitem", "PowerItem 強制スポーン", SpawnItemCmd);
-            Register("respawn", "勇者を StartTown でリスポーン (HP/SP 全回復)", RespawnCmd);
+            Register("respawn", "勇者を StartTown でリスポーン (HP/MP 全回復)", RespawnCmd);
             Register("skipprep", "PrepPhase スキップ", SkipPrepCmd);
             Register("usemp", "魔王 MP消費 [n=20]", UseMpCmd);
             Register("dig", "足元の地面を削る [半径m=4] [深さm=1]", DigCmd);
@@ -33,9 +33,10 @@ namespace Game.Core
             Register("commands", "デバッグキー一覧 表示切替", CommandsCmd);
             Register("skillup", "スキル [1-5] レベルアップ", SkillUpCmd);
             Register("status", "状態異常付与 [stun|slow|dot|silence] [秒=3] [self|near=self]", StatusCmd);
-            Register("warp", "ワープ地点 [info|set|go|clear] (set は範囲無視、go は詠唱なし)", WarpCmd);
+            Register("warp", "ワープの門 [info|open|link|clear] (open=1つ目を開く、link=2つ目を開いてつなぐ・距離とMPは無視)", WarpCmd);
             Register("biome", "自然湧きの数をバイオームごとに表示", BiomeCmd);
             Register("hate", "ヘイト [info|on|off] (on で全魔物がヘイトを使う、info は最寄りの魔物のヘイト表)", HateCmd);
+            Register("boss", "広場のボス [info|tp dragon|tp scorpion|tp wendigo|breath|dive|sting|charge|slash|roar|pounce|scratch|curse|kill|respawn]", BossCmd);
         }
 
         public static void Register(string name, string description, CommandHandler handler)
@@ -142,9 +143,9 @@ namespace Game.Core
             if (cc != null) cc.enabled = true;
             var hp = hero.GetComponent<HealthComponent>();
             if (hp != null) hp.ResetHealth();
-            var sp = hero.GetComponent<SkillPointComponent>();
-            if (sp != null) sp.RestoreSP(int.MaxValue);
-            return "Hero respawned at StartTown (HP/SP restored)";
+            var mana = hero.GetComponent<ManaComponent>();
+            if (mana != null) mana.RestoreMana(mana.MaxMP);
+            return "Hero respawned at StartTown (HP/MP restored)";
         }
 
         private static string SkipPrepCmd(string[] args)
@@ -282,22 +283,103 @@ namespace Game.Core
             string mode = args.Length > 0 ? args[0].ToLowerInvariant() : "info";
             switch (mode)
             {
-                case "set":
-                    warp.TrySetPoint(true);
-                    return "warp point set at " + warp.Point;
-                case "go":
-                    return warp.WarpNow() ? "warped to " + warp.Point : "no warp point";
+                case "open":
+                    return warp.OpenFirst() ? "first gate opened" : "could not open";
+                case "link":
+                    if (!warp.HasPending) warp.OpenFirst();
+                    return warp.OpenSecond(true) ? "gates linked" : "could not link";
                 case "clear":
-                    warp.ClearPoint();
-                    return "warp point cleared";
+                    warp.CloseAll();
+                    return "gates closed";
                 case "info":
-                    float progress, limit;
-                    bool ok = HeroWarpPoint.IsInWarpableArea(hero.transform.position, out progress, out limit);
-                    string limitText = float.IsNegativeInfinity(limit) ? "none" : limit.ToString("F1");
-                    return "here warpable=" + ok + " (progress " + progress.ToString("F1") + "m / destroyed-spawner limit " + limitText
-                        + ") point=" + (warp.HasPoint ? warp.Point.ToString() : "none");
+                    return "pending=" + (warp.HasPending ? warp.PendingGate.transform.position.ToString("F0") : "none")
+                        + " linked=" + (warp.LinkedGate != null && warp.LinkedGate.IsLinked
+                            ? warp.LinkedGate.transform.position.ToString("F0") + " <-> " + warp.LinkedGate.Partner.transform.position.ToString("F0") + " (" + warp.LinkedGate.Remaining.ToString("F0") + "s)"
+                            : "none");
                 default:
-                    return "usage: /debug warp [info|set|go|clear]";
+                    return "usage: /debug warp [info|open|link|clear]";
+            }
+        }
+
+        private static string BossCmd(string[] args)
+        {
+            string mode = args.Length > 0 ? args[0].ToLowerInvariant() : "info";
+            Game.Monster.DragonBoss dragon = null;
+            Game.Monster.ScorpionBoss scorpion = null;
+            Game.Monster.WendigoBoss wendigo = null;
+            foreach (var b in Game.Monster.BossBase.All)
+            {
+                if (b is Game.Monster.DragonBoss d) dragon = d;
+                if (b is Game.Monster.ScorpionBoss sc) scorpion = sc;
+                if (b is Game.Monster.WendigoBoss w) wendigo = w;
+            }
+            switch (mode)
+            {
+                case "info":
+                {
+                    var sb = new StringBuilder("bosses:");
+                    foreach (var b in Game.Monster.BossBase.All)
+                        sb.Append("\n  " + b.DisplayName + " HP " + b.Health.CurrentHP + "/" + b.Health.MaxHP + " at " + b.transform.position.ToString("F0") + (b.Engaged ? " (fighting)" : ""));
+                    return sb.ToString();
+                }
+                case "tp":
+                {
+                    var hero = FindHero();
+                    if (hero == null) return "hero not found";
+                    var map = StageMap.Map;
+                    string which = args.Length > 1 ? args[1].ToLowerInvariant() : "dragon";
+                    var plaza = which == "scorpion" ? map.scorpionPlaza : which == "wendigo" ? map.forestPlaza : map.dragonPlaza;
+                    if (plaza == null || plaza.radius <= 0f) return "plaza not in this map";
+                    // 広場の入口あたり（中心から半径の8割、南寄り）に立たせる。
+                    var spot = new Vector3(plaza.x, 300f, plaza.z - plaza.radius * 0.8f);
+                    float y = plaza.height;
+                    if (Physics.Raycast(spot, Vector3.down, out var hit, 400f, ~0, QueryTriggerInteraction.Ignore)) y = hit.point.y;
+                    var cc = hero.GetComponent<CharacterController>();
+                    if (cc != null) cc.enabled = false;
+                    var agent = hero.GetComponent<UnityEngine.AI.NavMeshAgent>();
+                    var pos = new Vector3(spot.x, y + 1f, spot.z);
+                    if (agent != null && agent.isOnNavMesh) agent.Warp(pos); else hero.transform.position = pos;
+                    if (cc != null) cc.enabled = true;
+                    return "hero moved to " + pos.ToString("F0");
+                }
+                case "breath": case "dive":
+                    if (dragon == null) return "dragon not found";
+                    dragon.Force(mode == "breath" ? Game.Monster.DragonBoss.Attack.Breath : Game.Monster.DragonBoss.Attack.Dive);
+                    return "dragon -> " + mode;
+                case "sting": case "charge": case "slash":
+                    if (scorpion == null) return "scorpion not found";
+                    scorpion.Force(mode == "sting" ? Game.Monster.ScorpionBoss.Attack.Sting : mode == "charge" ? Game.Monster.ScorpionBoss.Attack.Charge : Game.Monster.ScorpionBoss.Attack.Slash);
+                    return "scorpion -> " + mode;
+                case "roar": case "pounce": case "scratch":
+                    if (wendigo == null) return "wendigo not found";
+                    wendigo.Force(mode == "roar" ? Game.Monster.WendigoBoss.Attack.Roar : mode == "pounce" ? Game.Monster.WendigoBoss.Attack.Pounce : Game.Monster.WendigoBoss.Attack.Scratch);
+                    return "wendigo -> " + mode;
+                case "curse":
+                {
+                    // 森の呪いをかける（森の中にいるときだけ効く）。もう一度でとく。
+                    var hero = FindHero();
+                    if (hero == null) return "hero not found";
+                    var curse = hero.GetComponent<Game.Monster.ForestCurse>();
+                    if (curse != null) { UnityEngine.Object.Destroy(curse); return "curse lifted"; }
+                    bool ok = Game.Monster.ForestCurse.Apply(hero, 3f, 18f, new Color(0.07f, 0.09f, 0.08f, 1f));
+                    return ok ? "cursed (in the forest)" : "not in the forest";
+                }
+                case "kill":
+                {
+                    int n = 0;
+                    foreach (var b in new List<Game.Monster.BossBase>(Game.Monster.BossBase.All))
+                    {
+                        if (b.IsDead) continue;
+                        b.Health.TakeDamage(b.Health.CurrentHP, FindHero());
+                        n++;
+                    }
+                    return "killed " + n + " boss(es)";
+                }
+                case "respawn":
+                    if (Game.Monster.BossSpawner.Instance == null) return "BossSpawner not in scene";
+                    return "respawned " + Game.Monster.BossSpawner.Instance.RespawnNow() + " boss(es)";
+                default:
+                    return "usage: /debug boss [info|tp dragon|tp scorpion|tp wendigo|breath|dive|sting|charge|slash|roar|pounce|scratch|curse|kill|respawn]";
             }
         }
 

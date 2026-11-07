@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34ed98167838340b3b92b1cc89849f41, type: 3}
+  m_Name: Teleport
+  m_EditorClassIdentifier: 
+  skillName: Teleport
+  displayName: "\u5E30\u9084"
+  description: "\u3069\u3053\u304B\u3089\u3067\u3082\u7A7A\u3092\u98DB\u3093\u3067\u3001\u306F\u3058\u307E\u308A\u306E\u307E\u3061\u3078\u5E30\u308B\u3002\u6E9C\u3081\u306E\u9014\u4E2D\u3067\u653B\u6483\u3092\u53D7\u3051\u308B\u3068\u4E2D\u6B62\u3002"
+  mpCost: 20
+  cooldown: 30
+  effectType: 2
+  damageType: 2
+  targetType: 0
+  effectValue: 0
+  range: 0
+  duration: 0
+  durationPerLevel: 0
+  areaRadius: 0
+  statusEffect: 0
+  statusDuration: 0
+  statusPower: 0
+  statusChance: 1
+  castTime: 5
+  projectileSpeed: 28
+  castLocksMovement: 1
+  hitStopSeconds: 0.06
+  coneAngle: 120
+  dashSpeed: 24
+  knockbackDistance: 0
+  leapHeight: 0
+  diveSpeed: 0
+  directHitMultiplier: 1
+  digRadius: 0
+  digDepth: 0
+  levelGrowthRate: 0.2
+  maxSkillLevel: 5
+  sizeGrowthPerLevel: 0.1
+  iconColor: {r: 0, g: 0, b: 0, a: 0}
+  ownerClass: {fileID: 0}
+  icon: {fileID: 21300000, guid: 90e834aaa67f348739a49f4308b716bb, type: 3}

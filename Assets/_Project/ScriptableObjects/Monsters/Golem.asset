@@ -17,7 +17,7 @@ MonoBehaviour:
   atk: 30
   df: 15
   mDf: 5
-  spd: 4.5
+  spd: 3.6
   cost: 0
   spwnCool: 0
   maxSpwn: 1
@@ -45,6 +45,18 @@ MonoBehaviour:
   spearHitRadius: 1.6
   spearDamageScale: 1
   spearHoldSeconds: 0.45
+  spearFinalCount: 14
+  spearFinalRadius: 2.4
+  spearFinalHeightScale: 1.35
+  guardWalkAnimScale: 0.48
+  guardStepDip: 0.18
+  guardStepShake: 0.05
+  guardStepShakeRadius: 20
+  slamShake: 0.28
+  slamShakeRadius: 35
+  slamShakeSeconds: 0.6
+  slamDentRadius: 2
+  slamDentDepth: 0.25
   modelPath: Golem/golem
   modelMaterialPath: Golem/Golem_BodyMat
   modelScale: 1.8

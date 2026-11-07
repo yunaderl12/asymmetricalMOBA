@@ -25,11 +25,23 @@ namespace Game.Core
         public float dashSpeedMultiplier = 1.6f;
         [Tooltip("Second press of forward within this time (seconds) starts the dash")]
         public float dashDoubleTapSeconds = 0.3f;
+        [Tooltip("Field of view added while running at full speed (degrees)")]
+        public float runFovBoost = 2f;
+        [Tooltip("Field of view added while dashing (degrees)")]
+        public float dashFovBoost = 9f;
+        [Tooltip("Seconds for the field of view to follow the speed")]
+        public float speedFovSmoothing = 0.18f;
+        [Tooltip("Thin lines streaming past the edges of the screen while dashing")]
+        public bool dashSpeedLines = true;
 
         [Header("Hit Reaction (monsters)")]
         [Tooltip("Knockback distance per point of damage (m)")]
         public float knockbackPerDamage = 0.03f;
         public float knockbackMax = 1.2f;
+        [Tooltip("How far a hero is pushed when a monster or the Demon King hits them (m). Just enough to notice the hit.")]
+        public float heroHitKnockback = 0.35f;
+        [Tooltip("Screen shake when a hero is hit (camera offset, m)")]
+        public float heroHitShake = 0.04f;
         [Tooltip("Flinch per point of damage (seconds). Separate from Stun, so it causes no stun immunity.")]
         public float flinchPerDamage = 0.006f;
         public float flinchMax = 0.25f;
@@ -44,13 +56,48 @@ namespace Game.Core
         public float dkDetectDuration = 5f;
         public float dkDetectCooldown = 30f;
 
-        [Header("Warp Point Skill")]
-        [Tooltip("Cast time before moving to the warp point (seconds)")]
-        public float warpCastSeconds = 5f;
-        [Tooltip("Moving farther than this (m, horizontal) during the cast cancels it")]
-        public float warpCancelMoveDistance = 0.5f;
-        [Tooltip("A warp point can always be set within this radius (m) of StartTown")]
-        public float warpTownRadius = 20f;
+        [Header("Warp Gate Skill (Mage)")]
+        [Tooltip("How far in front of the caster a gate opens (m)")]
+        public float warpGateDistance = 2.5f;
+        [Tooltip("Gate size (m)")]
+        public float warpGateWidth = 2.6f;
+        public float warpGateHeight = 3.0f;
+        [Tooltip("The second gate must be at least this far from the first one (m)")]
+        public float warpGateMinLinkDistance = 10f;
+        [Tooltip("A first gate that is not linked closes after this many seconds")]
+        public float warpGatePendingSeconds = 60f;
+        [Tooltip("Linked gates stay open this many seconds")]
+        public float warpGateLinkedSeconds = 30f;
+        [Tooltip("Seconds for a gate to grow open")]
+        public float warpGateOpenSeconds = 0.8f;
+        [Tooltip("After passing, the same hero cannot pass again for this many seconds")]
+        public float warpGatePassCooldown = 1.5f;
+        [Tooltip("A hero comes out this far in front of the exit gate (m)")]
+        public float warpGateExitDistance = 1.6f;
+
+        [Header("Monster Alert")]
+        [Tooltip("After the ! mark appears, the monster keeps turning to face the hero for this many seconds")]
+        public float monsterAlertFaceSeconds = 1.2f;
+        [Tooltip("Turn speed while facing the hero after the ! mark (degrees per second)")]
+        public float monsterAlertTurnSpeed = 900f;
+
+        [Header("Death Camera")]
+        [Tooltip("Height of the overhead camera above the dead hero (m)")]
+        public float deathCamHeight = 6f;
+        [Tooltip("Horizontal distance of the overhead camera behind the dead hero (m)")]
+        public float deathCamBack = 7f;
+        [Tooltip("Seconds to move from the eyes to the overhead view")]
+        public float deathCamBlendSeconds = 1.2f;
+        [Tooltip("Slow turn around the dead hero (degrees per second)")]
+        public float deathCamOrbitSpeed = 8f;
+        [Tooltip("Height of the camera above the hero while the respawn animation plays (m)")]
+        public float respawnCamHeight = 3.5f;
+        [Tooltip("Horizontal distance of the camera from the hero while the respawn animation plays (m)")]
+        public float respawnCamDistance = 5.5f;
+        [Tooltip("Where the respawn camera starts, in degrees around the hero (0 = behind, 180 = in front). It swings round to behind.")]
+        public float respawnCamStartAngle = 150f;
+        [Tooltip("Seconds at the end of the respawn animation to move back into the eyes")]
+        public float respawnCamReturnSeconds = 0.6f;
 
         [Header("Archer Tower")]
         [Tooltip("Enemies inside this radius get shot (m)")]
@@ -141,8 +188,9 @@ namespace Game.Core
         public float mageBoltRange = 28f;
         [Tooltip("Mage bots stop this far from their target and shoot magic bolts (metres).")]
         public float botMageAttackRange = 10f;
-        [Tooltip("Seconds between a bot hero's SP regen ticks. Matches HeroRegen.")]
-        public float botSpRegenInterval = 1.5f;
+        [Tooltip("Seconds between a bot hero's MP regen ticks. Matches HeroRegen.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("botSpRegenInterval")]
+        public float botMpRegenInterval = 1.5f;
 
         [Header("Demon King Level")]
         [Tooltip("Monster HP / Atk growth per Demon King level (0.05 = +5%/Lv)")]
@@ -183,6 +231,10 @@ namespace Game.Core
         public float rippleInterval = 0.32f;
         [Tooltip("Radius a ripple grows to (m).")]
         public float rippleRadius = 1.6f;
+        [Tooltip("浅瀬を歩いているときに水しぶきを上げる間隔 (秒)")]
+        public float waterSplashInterval = 0.16f;
+        [Tooltip("1回の水しぶきの粒の数（水に入った瞬間はこの2倍）")]
+        public int waterSplashDrops = 7;
         [Tooltip("Speed multiplier while walking on desert sand off the road (heroes, bots and the Demon King; monsters live there and are not slowed).")]
         public float looseSandSpeedMultiplier = 0.8f;
         [Tooltip("Seconds between sand splashes while walking on loose sand.")]
@@ -194,10 +246,11 @@ namespace Game.Core
         [Tooltip("Speed lost by the Demon King on a 30 degree climb (0.25 = 25%).")]
         public float demonKingSlopePenalty = 0.25f;
 
-        [Header("Hero SP")]
-        [Tooltip("SP restored when a basic attack hits a monster, as a share of Max SP.")]
-        public float spPerBasicHit = 0.06f;
-        [Tooltip("Inside this radius of StartTown (m), SP is refilled.")]
+        [Header("Hero MP")]
+        [Tooltip("MP restored when a basic attack hits a monster, as a share of Max MP.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("spPerBasicHit")]
+        public float mpPerBasicHit = 0.06f;
+        [Tooltip("Inside this radius of StartTown (m), MP is refilled.")]
         public float townRefillRadius = 26f;
 
         [Header("Monster Behaviour")]

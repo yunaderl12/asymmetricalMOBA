@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Slash
   displayName: "\u65AC\u6483"
   description: Quick arc strike that hits every enemy in front of you.
-  spCost: 10
+  mpCost: 0
   cooldown: 2
   effectType: 0
   damageType: 0

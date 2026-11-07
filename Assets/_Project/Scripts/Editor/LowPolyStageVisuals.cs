@@ -18,7 +18,8 @@ namespace Game.Editor
         private const string ModelDir = "Assets/_Project/Art/LowPoly/";
 
         // Mesh objects inside the models that block movement.
-        private static readonly string[] SolidMeshes = { "Town_Buildings", "Castle_Buildings", "Field_Mountains", "Field_Bridges", "Field_Barrier", "Field_TreeColliders", "Field_MountainFill" };
+        // Field_Ground は起伏と窪んだ川があるので、地形の当たり判定はこのメッシュで取る（古い平らな Ground の当たり判定は切る）。
+        private static readonly string[] SolidMeshes = { "Field_Ground", "Town_Buildings", "Castle_Buildings", "Field_Mountains", "Field_Bridges", "Field_Barrier", "Field_TreeColliders", "Field_MountainFill" };
         // 当たり判定だけで、見た目に出さないメッシュ。
         private static readonly string[] HiddenMeshes = { "Field_Barrier", "Field_TreeColliders", "Field_MountainFill" };
 
@@ -123,9 +124,15 @@ namespace Game.Editor
             }
 
             AddBiomeSpawner(byName);
+            AddBossSpawner(byName);
 
             Transform ground;
-            if (byName.TryGetValue("Ground", out ground)) ground.localScale = new Vector3(map.size / 10f, 1f, map.size / 10f);
+            if (byName.TryGetValue("Ground", out ground))
+            {
+                ground.localScale = new Vector3(map.size / 10f, 1f, map.size / 10f);
+                var flat = ground.GetComponent<Collider>();
+                if (flat != null) flat.enabled = !StageGround.Available;
+            }
             Transform walls;
             if (byName.TryGetValue("Walls", out walls)) Object.DestroyImmediate(walls.gameObject);
             Transform bird;
@@ -165,6 +172,77 @@ namespace Game.Editor
             Physics.SyncTransforms();
             RebakeNavMesh();
             Debug.Log("[LowPoly] stage layout applied. Save the scene after the bake finishes.");
+        }
+
+        private const string FieldModelPath = ModelDir + "LP_Field.fbx";
+        private const string RiverMaterialDir = "Assets/_Project/Art/LowPoly/Materials/";
+        private static readonly string[] RiverSourceMaterials = { "LP_WaterShallow", "LP_WaterShallowB" };
+        private static readonly Color[] RiverColors = { new Color(0.18f, 0.62f, 0.86f, 0.5f), new Color(0.14f, 0.56f, 0.82f, 0.55f) };
+
+        /// 地形モデルの読み込み設定。浅い川の水を半透明の材質に差し替え、吊り橋のロープを動かせるようにメッシュを読めるようにする。
+        [MenuItem("Tools/LowPoly/Setup Field Import (River Water, Readable)")]
+        public static void SetupFieldImport()
+        {
+            var importer = AssetImporter.GetAtPath(FieldModelPath) as ModelImporter;
+            if (importer == null)
+            {
+                Debug.LogWarning("[LowPoly] " + FieldModelPath + " not found");
+                return;
+            }
+            if (!AssetDatabase.IsValidFolder(RiverMaterialDir.TrimEnd('/'))) AssetDatabase.CreateFolder("Assets/_Project/Art/LowPoly", "Materials");
+            for (int i = 0; i < RiverSourceMaterials.Length; i++)
+            {
+                string path = RiverMaterialDir + RiverSourceMaterials[i].Replace("LP_WaterShallow", "LP_RiverWater") + ".mat";
+                var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (material == null)
+                {
+                    material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                    AssetDatabase.CreateAsset(material, path);
+                }
+                MakeRiverWater(material, RiverColors[i]);
+                EditorUtility.SetDirty(material);
+                importer.AddRemap(new AssetImporter.SourceAssetIdentifier(typeof(Material), RiverSourceMaterials[i]), material);
+            }
+            importer.isReadable = true;
+            importer.SaveAndReimport();
+            AssetDatabase.SaveAssets();
+            Debug.Log("[LowPoly] field import set up (river water remapped, mesh readable)");
+        }
+
+        // 透ける水。水面に空が映るようになめらかにし、影は落とさない（川底が暗くならないように）。
+        private static void MakeRiverWater(Material m, Color color)
+        {
+            m.SetFloat("_Surface", 1f);
+            m.SetFloat("_Blend", 0f);
+            m.SetFloat("_AlphaClip", 0f);
+            m.SetFloat("_ZWrite", 0f);
+            m.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            m.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            m.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+            m.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            m.SetOverrideTag("RenderType", "Transparent");
+            m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            m.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            m.SetColor("_BaseColor", color);
+            m.SetFloat("_Smoothness", 0.72f);
+            m.SetFloat("_Metallic", 0f);
+            if (m.HasProperty("_CastShadows")) m.SetFloat("_CastShadows", 0f);
+            m.SetShaderPassEnabled("ShadowCaster", false);
+            m.SetShaderPassEnabled("DepthOnly", false);
+        }
+
+        // 山の広場のドラゴン、砂漠の広場のスコーピオン、森の広場のウェンディゴを出す空のオブジェクト。
+        public static void AddBossSpawner(System.Collections.Generic.Dictionary<string, Transform> byName)
+        {
+            Transform t;
+            var go = byName.TryGetValue("BossSpawner", out t) ? t.gameObject : new GameObject("BossSpawner");
+            var spawner = go.GetComponent<Game.Monster.BossSpawner>();
+            if (spawner == null) spawner = go.AddComponent<Game.Monster.BossSpawner>();
+            var so = new SerializedObject(spawner);
+            so.FindProperty("dragon").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Game.Monster.DragonData>("Assets/_Project/ScriptableObjects/Bosses/Dragon.asset");
+            so.FindProperty("scorpion").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Game.Monster.ScorpionData>("Assets/_Project/ScriptableObjects/Bosses/Scorpion.asset");
+            so.FindProperty("wendigo").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Game.Monster.WendigoData>("Assets/_Project/ScriptableObjects/Bosses/Wendigo.asset");
+            so.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // 森・山・砂漠の自然湧きを受け持つ空のオブジェクト。

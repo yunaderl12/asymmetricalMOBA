@@ -5,7 +5,7 @@ namespace Game.Core
     /// 浅瀬を歩いたときに足元から広がる波紋。
     public class WaterRipple : MonoBehaviour
     {
-        private const float WaterSurfaceY = 0.15f;
+        private const float LegacySurfaceY = 0.15f; // 平らな地面のワールドの浅瀬の水面
         private const float Seconds = 0.9f;
         private const float RingWidth = 0.12f;
         private static readonly Color RingColor = new Color(0.85f, 0.97f, 1f, 1f);
@@ -24,7 +24,7 @@ namespace Game.Core
         {
             if (!EnsureAssets()) return;
             var go = new GameObject("WaterRipple");
-            go.transform.position = new Vector3(position.x, WaterSurfaceY, position.z);
+            go.transform.position = new Vector3(position.x, SurfaceY + 0.01f, position.z);
             go.transform.localScale = new Vector3(radius * 2f, 1f, radius * 2f);
             go.AddComponent<MeshFilter>().sharedMesh = quad;
             var ripple = go.AddComponent<WaterRipple>();
@@ -33,6 +33,16 @@ namespace Game.Core
             ripple.meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             ripple.meshRenderer.receiveShadows = false;
             ripple.Apply();
+        }
+
+        /// 浅瀬の水面の高さ。窪んだ川（StageMap の shallowBedDepth がある）では地表のすぐ下。
+        public static float SurfaceY
+        {
+            get
+            {
+                var map = StageMap.Map;
+                return map != null && map.shallowBedDepth > 0f ? map.shallowWaterY : LegacySurfaceY;
+            }
         }
 
         private static bool EnsureAssets()

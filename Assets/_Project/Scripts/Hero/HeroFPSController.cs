@@ -21,12 +21,11 @@ namespace Game.Hero
         [SerializeField] private float groundedStickForce = -2f;
 
         [Header("Run Feel (camera)")]
-        [Tooltip("Metres per step while running")]
-        [SerializeField] private float stepLength = 1.7f;
-        [SerializeField] private float dashStepLength = 2.2f;
-        [SerializeField] private float stepDip = 0.045f;
-        [SerializeField] private float stepSway = 0.018f;
-        [SerializeField] private float stepRollDegrees = 0.45f;
+        [Tooltip("Metres per step. Longer = fewer bobs per second.")]
+        [SerializeField] private float stepLength = 3.2f;
+        [SerializeField] private float dashStepLength = 4.4f;
+        [Tooltip("How far the camera sinks in the middle of each step (m). Up-and-down only, no roll.")]
+        [SerializeField] private float stepDip = 0.035f;
         [Tooltip("How fast the camera falls behind when a dash starts (m/s)")]
         [SerializeField] private float dashStartKick = 5f;
         [SerializeField] private float dashStopKick = 2f;
@@ -74,6 +73,24 @@ namespace Game.Hero
         private bool dashing;
         private bool forwardHeld;
         private float lastForwardPressTime = float.NegativeInfinity;
+        private float shakeStrength;
+        private float shakeSeconds;
+        private float shakeTimer;
+        private HeroDeathCamera deathCamera;
+        private Camera viewCamera;
+        private float designFov = -1f;
+        private float skillFov;
+        private float speedFov;
+        private float speedFovVelocity;
+        private ParticleSystem dashLines;
+        private static readonly Color DashLineColor = new Color(1f, 1f, 1f, 0.32f);
+        private const float DashLineRate = 120f;
+        private Vector3 hitPushVelocity;
+        private float hitPushTimer;
+        private const float HitPushSeconds = 0.15f;
+        private const float HitShakeSeconds = 0.18f;
+        private const float ShakeFrequency = 28f;
+        private const float ShakeRollPerMeter = 12f; // 揺れ 1m あたりの傾き（度）
 
         private bool IsAnimLocked()
         {
@@ -98,10 +115,94 @@ namespace Game.Hero
             cameraKickDirty = true;
         }
 
+        /// スキル演出による視野角のずれ（度）。0 で元に戻す。視野角はここでまとめて決める（走りの広がりと足し合わせる）。
+        public void SetSkillFov(float offsetDegrees)
+        {
+            skillFov = offsetDegrees;
+        }
+
+        // 走ると視野が少し広がり、ダッシュ中はさらに広がって、視界の外へ流れる線が出る（スピード感）。
+        private void UpdateFov()
+        {
+            if (viewCamera == null && cameraTransform != null)
+            {
+                viewCamera = cameraTransform.GetComponent<Camera>();
+                if (viewCamera != null) designFov = viewCamera.fieldOfView;
+            }
+            if (viewCamera == null) return;
+            var cfg = Game.Core.BalanceConfig.Instance;
+            Vector3 velocity = controller != null && controller.enabled ? controller.velocity : Vector3.zero;
+            velocity.y = 0f;
+            float speed = velocity.magnitude;
+            bool fast = dashing && speed > moveSpeed * 0.9f;
+            float target = fast ? cfg.dashFovBoost : cfg.runFovBoost * Mathf.Clamp01(speed / Mathf.Max(0.1f, moveSpeed));
+            speedFov = Mathf.SmoothDamp(speedFov, target, ref speedFovVelocity, cfg.speedFovSmoothing);
+            float fov = designFov + skillFov + speedFov;
+            if (Mathf.Abs(viewCamera.fieldOfView - fov) > 0.001f) viewCamera.fieldOfView = fov;
+
+            if (fast && dashLines == null && cfg.dashSpeedLines)
+            {
+                dashLines = MeleeFx.SpawnSpeedLines(cameraTransform, DashLineColor);
+                var emission = dashLines.emission;
+                emission.rateOverTime = DashLineRate;
+            }
+            else if (!fast && dashLines != null) StopDashLines();
+        }
+
+        private void StopDashLines()
+        {
+            if (dashLines == null) return;
+            dashLines.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            dashLines = null;
+        }
+
+        /// 地響きなどの画面の揺れ。strength はカメラが動く幅 (m)。いま揺れているものより弱ければ足さない。
+        public void Shake(float strength, float seconds)
+        {
+            if (strength <= 0f || seconds <= 0f) return;
+            float current = shakeTimer > 0f ? shakeStrength * shakeTimer / shakeSeconds : 0f;
+            if (strength < current) return;
+            shakeStrength = strength;
+            shakeSeconds = seconds;
+            shakeTimer = seconds;
+        }
+
+        /// at から radius 以内にいる自分の勇者の画面を揺らす。近いほど強い。
+        public static void ShakeNear(Vector3 at, float strength, float radius, float seconds)
+        {
+            var hero = HumanHeroMarker.Instance;
+            if (hero == null || radius <= 0f) return;
+            float distance = Vector3.Distance(hero.transform.position, at);
+            if (distance >= radius) return;
+            var fps = hero.GetComponent<HeroFPSController>();
+            if (fps != null) fps.Shake(strength * (1f - distance / radius), seconds);
+        }
+
+        // 揺れの位置と傾き。細かく速い揺れが、時間とともに弱まる。
+        private void UpdateShake(out Vector3 position, out float roll)
+        {
+            position = Vector3.zero;
+            roll = 0f;
+            if (shakeTimer <= 0f) return;
+            shakeTimer -= Time.deltaTime;
+            float fade = Mathf.Clamp01(shakeTimer / shakeSeconds);
+            float size = shakeStrength * fade * fade;
+            float t = Time.time * ShakeFrequency;
+            position = new Vector3(Mathf.PerlinNoise(t, 0.3f) - 0.5f, Mathf.PerlinNoise(0.7f, t) - 0.5f, 0f) * 2f * size;
+            roll = (Mathf.PerlinNoise(t, 5.1f) - 0.5f) * 2f * size * ShakeRollPerMeter;
+        }
+
         private void LateUpdate()
         {
             if (cameraTransform == null) return;
+            UpdateFov();
+            // 倒れた自分やリスポーンを外から映しているあいだは、カメラを動かさない。
+            if (deathCamera == null) deathCamera = GetComponent<HeroDeathCamera>();
+            if (deathCamera != null && deathCamera.IsActive) return;
             UpdateRunFeel(out Vector3 feelPosition, out float feelRoll);
+            UpdateShake(out Vector3 shakePosition, out float shakeRoll);
+            feelPosition += shakePosition;
+            feelRoll += shakeRoll;
             bool feel = feelPosition != Vector3.zero || feelRoll != 0f;
             if (!cameraKickDirty && !feel && !runFeelApplied) return;
             cameraTransform.localPosition = cameraBaseLocalPosition + cameraKickPosition + feelPosition;
@@ -110,7 +211,7 @@ namespace Game.Hero
             runFeelApplied = feel;
         }
 
-        // 一歩ごとの沈みと左右の揺れ、ダッシュの出だしで体に遅れるカメラ。照準（AimForward）には影響しない。
+        // 一歩ごとに縦に少し沈む揺れ（左右の揺れと傾きはなし）と、ダッシュの出だしで体に遅れるカメラ。照準（AimForward）には影響しない。
         private void UpdateRunFeel(out Vector3 position, out float roll)
         {
             float dt = Time.deltaTime;
@@ -121,10 +222,11 @@ namespace Game.Hero
             stepWeight = Mathf.MoveTowards(stepWeight, running ? 1f : 0f, dt * 6f);
             stepPhase += speed * dt / (dashing ? dashStepLength : stepLength) * Mathf.PI;
 
-            float contact = 1f - Mathf.Abs(Mathf.Sin(stepPhase));
-            float size = stepWeight * (dashing ? 1.35f : 1f);
-            position = new Vector3(Mathf.Cos(stepPhase) * stepSway, -contact * contact * stepDip, 0f) * size;
-            roll = Mathf.Cos(stepPhase) * stepRollDegrees * size;
+            // 一歩（stepPhase が π 進む）ごとに、なめらかに1回沈んで戻る。
+            float sink = Mathf.Sin(stepPhase);
+            float size = stepWeight * (dashing ? 1.3f : 1f);
+            position = new Vector3(0f, -sink * sink * stepDip, 0f) * size;
+            roll = 0f;
 
             dashLag = Mathf.SmoothDamp(dashLag, 0f, ref dashLagVelocity, dashLagSmoothing, Mathf.Infinity, dt);
             dashLag = Mathf.Clamp(dashLag, -dashLagBack, dashLagForward);
@@ -157,11 +259,17 @@ namespace Game.Hero
             if (inputs == null) inputs = new HeroInputActions();
             inputs.Hero.Enable();
             inputs.Hero.Pause.performed += OnPause;
+            HealthComponent.AnyDamage += OnAnyDamage;
             LockCursor(true);
         }
 
         private void OnDisable()
         {
+            HealthComponent.AnyDamage -= OnAnyDamage;
+            StopDashLines();
+            // 死んでいるあいだなどは、走りの広がりを外して元の視野角に戻す。
+            speedFov = speedFovVelocity = 0f;
+            if (viewCamera != null && designFov > 0f) viewCamera.fieldOfView = designFov + skillFov;
             if (inputs == null) return;
             inputs.Hero.Pause.performed -= OnPause;
             inputs.Hero.Disable();
@@ -213,11 +321,33 @@ namespace Game.Hero
             }
         }
 
+        // 魔物や魔王に殴られたら、殴られた向きへほんの少し押され、画面も小さく揺れる（殴られたことに気づけるように）。
+        private void OnAnyDamage(HealthComponent target, int amount, GameObject attacker)
+        {
+            if (target == null || target.gameObject != gameObject || attacker == null || attacker == gameObject) return;
+            if (attacker.CompareTag("Player") || target.IsDead) return;
+            var cfg = Game.Core.BalanceConfig.Instance;
+            Vector3 away = transform.position - attacker.transform.position;
+            away.y = 0f;
+            if (away.sqrMagnitude < 0.01f) away = -transform.forward;
+            // 速さは直線的に落ちるので、初速は平均の2倍。
+            hitPushVelocity = away.normalized * (2f * cfg.heroHitKnockback / HitPushSeconds);
+            hitPushTimer = HitPushSeconds;
+            Shake(cfg.heroHitShake, HitShakeSeconds);
+        }
+
+        private Vector3 HitPush()
+        {
+            if (hitPushTimer <= 0f) return Vector3.zero;
+            hitPushTimer -= Time.deltaTime;
+            return hitPushVelocity * Mathf.Clamp01(hitPushTimer / HitPushSeconds);
+        }
+
         private void HandleStunnedGravity()
         {
             verticalVelocity += gravity * Time.deltaTime;
             if (controller.isGrounded && verticalVelocity < 0f) verticalVelocity = groundedStickForce;
-            Vector3 motion = IceField.ApplySlip(transform.position, Vector3.zero, ref slipVelocity);
+            Vector3 motion = IceField.ApplySlip(transform.position, Vector3.zero, ref slipVelocity) + HitPush();
             motion.y = verticalVelocity;
             controller.Move(motion * Time.deltaTime);
         }
@@ -248,7 +378,7 @@ namespace Game.Hero
                 }
             }
 
-            Vector3 motion = IceField.ApplySlip(transform.position, horizontal, ref slipVelocity);
+            Vector3 motion = IceField.ApplySlip(transform.position, horizontal, ref slipVelocity) + HitPush();
             motion.y = verticalVelocity;
             controller.Move(motion * Time.deltaTime);
         }

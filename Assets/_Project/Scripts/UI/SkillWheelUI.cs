@@ -13,7 +13,7 @@ namespace Game.UI
         [SerializeField] private RectTransform slotsParent;
         [SerializeField] private Image[] slotBackgrounds;
         [SerializeField] private Text[] slotNameTexts;
-        [SerializeField] private Text[] slotSpCostTexts;
+        [SerializeField, UnityEngine.Serialization.FormerlySerializedAs("slotSpCostTexts")] private Text[] slotMpCostTexts;
         [SerializeField] private float radius = 150f;
         [SerializeField] private Color slotNormalColor = new Color(0f, 0f, 0f, 0.7f);
         [SerializeField] private Color slotHighlightColor = new Color(1f, 0.85f, 0.2f, 0.95f);
@@ -129,8 +129,8 @@ namespace Game.UI
                 var s = runtime.EquippedSkills.Count > i ? runtime.EquippedSkills[i] : null;
                 if (slotNameTexts != null && i < slotNameTexts.Length && slotNameTexts[i] != null)
                     slotNameTexts[i].text = s != null ? s.DisplayName : "-";
-                if (slotSpCostTexts != null && i < slotSpCostTexts.Length && slotSpCostTexts[i] != null)
-                    slotSpCostTexts[i].text = s != null ? "SP " + s.spCost : "";
+                if (slotMpCostTexts != null && i < slotMpCostTexts.Length && slotMpCostTexts[i] != null)
+                    slotMpCostTexts[i].text = s != null && s.mpCost > 0 ? "MP " + s.mpCost : "";
             }
         }
 

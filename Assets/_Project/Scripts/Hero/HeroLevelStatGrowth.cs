@@ -41,12 +41,12 @@ namespace Game.Hero
             var data = classInit.ClassData;
 
             if (health != null) health.SetMaxHP(health.MaxHP + data.hpGrowthPerLevel);
-            if (mana != null) mana.SetMaxMP(mana.MaxMP + data.spGrowthPerLevel);
+            if (mana != null) mana.SetMaxMP(mana.MaxMP + data.mpGrowthPerLevel);
             classInit.ApplyLevelGrowth();
 
             int newHP = health != null ? health.MaxHP : -1;
-            int newSP = mana != null ? mana.MaxMP : -1;
-            Debug.Log($"[Hero] Lv {newLevel} stat growth: MaxHP={newHP}, MaxSP={newSP}, Atk={classInit.CurrentAtk}, MAtk={classInit.CurrentMAtk}, Df={classInit.CurrentDf}, MDf={classInit.CurrentMDf}, Spd={classInit.CurrentSpd}");
+            int newMP = mana != null ? mana.MaxMP : -1;
+            Debug.Log($"[Hero] Lv {newLevel} stat growth: MaxHP={newHP}, MaxMP={newMP}, Atk={classInit.CurrentAtk}, MAtk={classInit.CurrentMAtk}, Df={classInit.CurrentDf}, MDf={classInit.CurrentMDf}, Spd={classInit.CurrentSpd}");
         }
     }
 }

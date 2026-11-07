@@ -15,7 +15,7 @@ MonoBehaviour:
   skillName: Detect
   displayName: "\u63A2\u77E5"
   description: Reveal enemies in 20m for 10s.
-  spCost: 5
+  mpCost: 5
   cooldown: 30
   effectType: 2
   damageType: 2

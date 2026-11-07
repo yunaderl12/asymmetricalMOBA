@@ -114,7 +114,7 @@ namespace Game.Hero
                 if (hp != null)
                 {
                     hp.TakeDamage(damage, gameObject, DamageType.Physical);
-                    HeroSpRecovery.OnBasicHit(gameObject, hp);
+                    HeroMpRecovery.OnBasicHit(gameObject, hp);
                 }
             }
         }

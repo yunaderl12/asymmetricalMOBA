@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Game.Skill;
 
 namespace Game.Hero
@@ -11,7 +12,8 @@ namespace Game.Hero
 
         [Header("Initial Stats")]
         public int initialHP;
-        public int initialSP;
+        [UnityEngine.Serialization.FormerlySerializedAs("initialSP")]
+        public int initialMP;
         public int initialAtk;
         public int initialMAtk;
         public int initialDf;
@@ -20,7 +22,8 @@ namespace Game.Hero
 
         [Header("Per-Level Growth")]
         public int hpGrowthPerLevel;
-        public int spGrowthPerLevel;
+        [UnityEngine.Serialization.FormerlySerializedAs("spGrowthPerLevel")]
+        public int mpGrowthPerLevel;
         public int atkGrowthPerLevel;
         public int mAtkGrowthPerLevel;
         public int dfGrowthPerLevel;
@@ -31,17 +34,45 @@ namespace Game.Hero
         public float slopeSpeedPenalty = 0.2f;
 
         [Header("Skills")]
+        [Tooltip("このジョブのスキル。先頭の4つが1〜4枠の標準。")]
         public List<SkillData> classSkills = new List<SkillData>();
-        [Tooltip("Skills only this class can pick for the free slot (slot 5).")]
-        public List<SkillData> exclusiveFreeSkills = new List<SkillData>();
+        [FormerlySerializedAs("exclusiveFreeSkills")]
+        [Tooltip("このジョブの追加のスキル。標準の4つには入らず、ロビーで入れ替えて使う。")]
+        public List<SkillData> extraClassSkills = new List<SkillData>();
+
+        /// このジョブのスキル全部（classSkills の後に extraClassSkills）。
+        public List<SkillData> ClassSkillPool()
+        {
+            var pool = new List<SkillData>();
+            foreach (var s in classSkills) if (s != null && !pool.Contains(s)) pool.Add(s);
+            foreach (var s in extraClassSkills) if (s != null && !pool.Contains(s)) pool.Add(s);
+            return pool;
+        }
+
+        /// ロビーで選んだ1〜4枠（ジョブのスキルか共通スキル）。重複なしで4つそろっていればそれを、違えば標準（classSkills の先頭4つ）を返す。
+        /// どれを入れてよいかはロビー（HeroSkillLoadout）が決めるので、ここでは形だけ確かめる。
+        public List<SkillData> ResolveClassSkills(IList<SkillData> picks)
+        {
+            var pool = ClassSkillPool();
+            int count = Mathf.Min(4, pool.Count);
+            bool valid = picks != null && picks.Count == count;
+            if (valid)
+            {
+                var seen = new HashSet<SkillData>();
+                foreach (var s in picks) if (s == null || !seen.Add(s)) { valid = false; break; }
+            }
+            if (valid) return new List<SkillData>(picks);
+            return pool.GetRange(0, count);
+        }
 
         [Header("Passives")]
         [Tooltip("Passives this class can choose from. The player picks one.")]
         public List<PassiveData> passives = new List<PassiveData>();
 
         [Header("Magic Class")]
-        [Tooltip("SP restored even during combat: share of Max SP per tick (HeroRegen). 0.04 = 4%.")]
-        public float spCombatRegenRate = 0.025f;
+        [Tooltip("MP restored even during combat: share of Max MP per tick (HeroRegen). 0.04 = 4%.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("spCombatRegenRate")]
+        public float mpCombatRegenRate = 0.025f;
         public int basicAttackMpCost = 0;
         public float regenMultiplier = 1.0f;
 

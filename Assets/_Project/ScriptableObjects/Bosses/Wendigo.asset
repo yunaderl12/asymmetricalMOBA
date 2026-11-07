@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 018dba34511604c5ca368eb80fff88a1, type: 3}
+  m_Name: Wendigo
+  m_EditorClassIdentifier: Game.Runtime::Game.Monster.WendigoData
+  bossName: "\u30A6\u30A7\u30F3\u30C7\u30A3\u30B4"
+  hp: 3500
+  atk: 40
+  df: 12
+  mDf: 10
+  exp: 1500
+  respawnSeconds: 300
+  aggroRadius: 30
+  attackInterval: 2
+  idleRegenShare: 0.02
+  modelPath: Wendigo/wendigo
+  modelMaterialPath: Wendigo/Wendigo_BodyMat
+  modelScale: 6
+  modelYaw: 0
+  bodySize: {x: 3.5, y: 3.5, z: 5}
+  bodyCenterHeight: 1.9
+  moveSpeed: 6.5
+  turnSpeed: 150
+  stepRate: 1.7
+  roarSeconds: 2.2
+  roarRadius: 45
+  roarCooldown: 30
+  curseFogStart: 3
+  curseFogEnd: 18
+  curseFogColor: {r: 0.07, g: 0.09, b: 0.08, a: 1}
+  pounceMinRange: 6
+  pounceMaxRange: 24
+  pounceWindupSeconds: 0.7
+  pounceAirSeconds: 0.75
+  pounceHeight: 5
+  pounceHitRadius: 4
+  pounceDamageScale: 1.4
+  pounceKnockback: 6
+  pounceRecoverSeconds: 0.9
+  scratchMaxRange: 18
+  scratchWindupSeconds: 0.6
+  scratchSwingSeconds: 0.22
+  scratchRecoverSeconds: 0.8
+  debrisCount: 9
+  debrisSpreadDegrees: 55
+  debrisSpeed: 20
+  debrisRange: 24
+  debrisHitRadius: 1.1
+  debrisDamageScale: 0.55
+  scratchDigRadius: 2.2
+  scratchDigDepth: 0.5

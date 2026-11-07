@@ -19,7 +19,33 @@ namespace Game.Core
             new Color(0.70f, 0.55f, 0.33f), new Color(0.62f, 0.47f, 0.27f), new Color(0.96f, 0.88f, 0.68f),
         };
 
+        // 川の水しぶき。白っぽい水色の粒。
+        private static readonly Color[] WaterColors =
+        {
+            new Color(0.80f, 0.94f, 1.00f), new Color(0.55f, 0.82f, 0.95f), new Color(0.95f, 1.00f, 1.00f),
+        };
+
         private static ParticleSystem system;
+
+        /// 浅瀬を歩いたときの水しぶき。surfaceY は水面の高さ。粒は砂より高く跳ねて、細かい。
+        public static void SpawnWater(Vector3 position, Vector3 velocity, int drops, float surfaceY, float scale = 1f)
+        {
+            if (!EnsureSystem()) return;
+            var kick = -new Vector3(velocity.x, 0f, velocity.z) * KickBack + new Vector3(velocity.x, 0f, velocity.z) * 0.12f;
+            var p = new ParticleSystem.EmitParams();
+            for (int i = 0; i < drops; i++)
+            {
+                var side = Random.insideUnitCircle * Spread * 1.3f * scale;
+                p.position = new Vector3(position.x + side.x * 0.22f, surfaceY + 0.03f, position.z + side.y * 0.22f);
+                p.velocity = new Vector3(side.x, Random.Range(MinUp * 1.1f, MaxUp * 1.25f) * Mathf.Sqrt(scale), side.y) + kick;
+                p.startLifetime = Random.Range(MinLife, MaxLife);
+                p.startSize = Random.Range(MinSize * 0.6f, MaxSize * 0.75f) * scale;
+                p.startColor = WaterColors[Random.Range(0, WaterColors.Length)];
+                p.rotation3D = new Vector3(Random.value * 360f, Random.value * 360f, Random.value * 360f);
+                p.angularVelocity3D = Random.insideUnitSphere * 540f;
+                system.Emit(p, 1);
+            }
+        }
 
         /// position: 歩いている者の位置、velocity: その移動の速さ（m/s）。粒は少し後ろへ蹴り上がる。
         /// scale: 歩く者の見た目の大きさ（魔王は大きいので粒も高く大きく跳ねる）。
