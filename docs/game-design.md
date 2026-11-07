@@ -472,6 +472,7 @@ MaxSpwn はその魔物の最大数で、自然湧きでは1バイオームあ�
 
 - NavMesh: 500m 四方の全域に焼かれ、岩・拠点柱・コア・まちと魔王城の建物を除外。建物（Town_Buildings / Castle_Buildings）には MeshCollider があり、勇者も魔物も通り抜けられない。まちへは南東側の門（フェンスの切れ目）、魔王城へは城門からのみ入れる。建物を変えたら Tools/LowPoly/Add Building Colliders And Rebake NavMesh で焼き直す
 - カメラ: Hero/DemonKing 子 Camera（TPS）、BirdsEyeCamera（俯瞰用、orthographic）
+  - 魔王の TPS カメラは肩（ShoulderTarget）から上へ2.8m・後ろへ7mに置き、15度見下ろす（仮値。DemonKingController.cameraOffset / cameraTilt）。マウスの上下はこの角度に足される
 
 ## 4. 試合の流れ
 

@@ -21,6 +21,10 @@ namespace Game.DemonKing
         [Header("Camera")]
         [Tooltip("Radius of the sphere swept from the shoulder to the camera. Walls and pillars pull the camera in front of them.")]
         [SerializeField] private float cameraRadius = 0.2f;
+        [Tooltip("Camera position seen from the shoulder (ShoulderTarget). Higher and farther back than the prefab, so the camera looks down on the Demon King.")]
+        [SerializeField] private Vector3 cameraOffset = new Vector3(0f, 2.8f, -7f);
+        [Tooltip("Degrees the camera looks down from the shoulder's forward (added to the mouse pitch).")]
+        [SerializeField] private float cameraTilt = 15f;
 
         private static readonly RaycastHit[] CameraHits = new RaycastHit[16];
 
@@ -54,14 +58,17 @@ namespace Game.DemonKing
             mods = GetComponent<StatModifierContainer>();
             terrain = Game.Core.TerrainWalker.For(gameObject);
             terrain.SlopePenalty = Game.Core.BalanceConfig.Instance.demonKingSlopePenalty;
+            terrain.SplashScale = Game.Core.BalanceConfig.Instance.demonKingModelScale;
             if (GetComponent<Game.Core.FallRespawn>() == null) gameObject.AddComponent<Game.Core.FallRespawn>();
             if (inputs == null) inputs = new DemonKingInputActions();
             var cam = pitchTarget != null ? pitchTarget.GetComponentInChildren<Camera>(true) : null;
             if (cam != null)
-            terrain.SplashScale = Game.Core.BalanceConfig.Instance.demonKingModelScale;
             {
                 cameraTransform = cam.transform;
-                cameraRest = cameraTransform.localPosition;
+                // 少し上から斜め下を見下ろす。マウスの上下はこの角度に足される。
+                cameraTransform.localPosition = cameraOffset;
+                cameraTransform.localRotation = Quaternion.Euler(cameraTilt, 0f, 0f);
+                cameraRest = cameraOffset;
             }
         }
 
