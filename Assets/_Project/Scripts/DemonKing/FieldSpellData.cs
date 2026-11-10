@@ -12,8 +12,10 @@ namespace Game.DemonKing
         public FieldSpellKind kind;
         public string spellName;
         [TextArea(2, 5)] public string description;
-        [Tooltip("Single character drawn on the card.")]
+        [Tooltip("Single character drawn on the card when there is no icon.")]
         public string glyph = "?";
+        [Tooltip("ロビーと試合中の札のイラスト（Art/FieldSpells/<アセット名>.png。Tools/Skills/Assign Field Spell Icons で入れる）。空なら glyph の1文字。")]
+        public Sprite icon;
         public Color color = new Color(0.4f, 0.2f, 0.5f);
         [Tooltip("Lobby order.")]
         public int order;

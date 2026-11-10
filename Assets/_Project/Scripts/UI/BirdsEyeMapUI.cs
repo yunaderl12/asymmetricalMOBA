@@ -646,6 +646,9 @@ namespace Game.UI
             var vs = viewSwitcher;
             button.onClick.AddListener(() =>
             {
+                // フィールド魔法を狙ってクリックしたときは、塔の窓を開かない（魔法だけ放つ）。
+                var caster = vs != null ? vs.GetComponent<Game.DemonKing.FieldSpellCaster>() : null;
+                if (caster != null && caster.UsesClick) return;
                 var popup = SpawnerActionPopup.GetOrCreate();
                 if (popup == null) { Debug.LogError("[BirdsEyeMapUI] SpawnerActionPopup.GetOrCreate returned null"); return; }
                 popup.Show(sp, vs);

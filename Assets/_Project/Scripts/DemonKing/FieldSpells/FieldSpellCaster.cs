@@ -23,6 +23,12 @@ namespace Game.DemonKing
         public string Refusal { get; private set; } = "";
         public float RefusedAt { get; private set; } = -10f;
 
+        /// 狙っている最中か、狙いのクリック（発動・取り消し）をしたところ。
+        /// 塔の印などのボタンはクリックを離したときに反応するので、同じクリックで塔の窓を開かないように見る。
+        public bool UsesClick => Aiming >= 0 || Time.unscaledTime - aimClickAt < AimClickGrace;
+
+        private const float AimClickGrace = 0.5f;
+        private float aimClickAt = -10f;
         private float[] readyAt;
         private Vector3 aimPoint;
         private FieldSpellRing marker;
@@ -99,6 +105,7 @@ namespace Game.DemonKing
             UpdateAim();
             var mouse = Mouse.current;
             if (mouse == null) return;
+            if (mouse.leftButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame) aimClickAt = Time.unscaledTime;
             if (mouse.rightButton.wasPressedThisFrame) CancelAim();
             else if (mouse.leftButton.wasPressedThisFrame && AimValid) Confirm();
         }

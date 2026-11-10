@@ -65,8 +65,17 @@ namespace Game.UI
                 if (s != null)
                 {
                     HudStyle.Shape(icon, "Felt", HudShape.Kind.Circle, s.color, 0f, HudStyle.FeltTexture);
-                    HudStyle.Stitch(icon, pal.Light, true, 0f, 4f);
-                    HudStyle.AddText(HudStyle.Filled(icon, "Glyph"), s.glyph, 30, Color.white, TextAnchor.MiddleCenter, 4f, pal.Outline);
+                    if (s.icon != null)
+                    {
+                        var face = HudStyle.Node(icon, "Picture");
+                        HudStyle.Stretch(face, -5f);
+                        var image = HudStyle.AddGraphic<Image>(face);
+                        image.sprite = s.icon;
+                        image.preserveAspect = true;
+                        image.raycastTarget = false;
+                    }
+                    HudStyle.Stitch(icon, pal.Light, true, 0f, s.icon != null ? 3f : 4f);
+                    if (s.icon == null) HudStyle.AddText(HudStyle.Filled(icon, "Glyph"), s.glyph, 30, Color.white, TextAnchor.MiddleCenter, 4f, pal.Outline);
                 }
                 HudStyle.Label(card, "Name", top, top, new Vector2(0f, -78f), new Vector2(CardWidth - 6f, 28f), s != null ? s.spellName : "空き", s != null && s.spellName.Length > 3 ? 16 : 19, pal.Ink, TextAnchor.MiddleCenter);
                 var key = HudStyle.Place(card, "Key", new Vector2(0f, 1f), new Vector2(0.5f, 0.5f), new Vector2(8f, -6f), new Vector2(30f, 30f));

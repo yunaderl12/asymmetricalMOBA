@@ -396,7 +396,7 @@ namespace Game.UI
                 LobbyStyle.KeyCap(LobbyStyle.At(row, "Key", 12f, 12f, 40f, 40f), pal, (i + 1).ToString());
                 if (s != null)
                 {
-                    LobbyStyle.FeltToken(LobbyStyle.At(row, "Token", 62f, 14f, 84f, 84f), s.color, pal.Light, s.glyph, 34, pal, 3f);
+                    LobbyStyle.IconToken(LobbyStyle.At(row, "Token", 62f, 14f, 84f, 84f), s.color, pal.Light, s.icon, s.glyph, 34, pal, 3f);
                     LobbyStyle.Text(row, "Name", 160f, 10f, 200f, 36f, s.spellName, 24, pal.Ink);
                     LobbyStyle.Text(row, "Cool", 300f, 12f, 146f, 32f, "CT " + s.cooldown.ToString("0") + "秒", 17, pal.Ribbon, TextAnchor.MiddleRight);
                     LobbyStyle.Paragraph(row, "Desc", 160f, 46f, 288f, 70f, Short(s.description), 15, pal.Ink);
@@ -428,6 +428,7 @@ namespace Game.UI
                 options.Add(new Option
                 {
                     label = s.spellName,
+                    icon = s.icon,
                     note = other == index ? "装備中" : other >= 0 ? (other + 1) + "番と入れ替え" : "CT " + s.cooldown.ToString("0") + "秒",
                     pick = () => SetSpell(index, picked),
                     hover = () => ShowSpell(picked),
