@@ -129,10 +129,9 @@ namespace Game.UI
             for (int i = 0; i < session.BridgeGuardians.Length; i++)
                 session.BridgeGuardians[i] = guardianOn[i] && guardians.Count > 0 ? guardians[0] : null;
             Array.Copy(equipped, session.FieldSpells, equipped.Length);
-            // 塔で出せる魔物（デッキ）は、地図に置いた通常魔物。塔の最初の魔物はデッキの先頭から決まる。
-            session.DemonDeck = new List<MonsterData>();
-            foreach (var m in biomeMonsters) if (m != null && !session.DemonDeck.Contains(m)) session.DemonDeck.Add(m);
-            session.SpawnerInitialMobs = new List<MonsterData>(new MonsterData[GameSession.SPAWNER_COUNT]);
+            // 塔はすべて砂漠に立つので、塔で出せる魔物（デッキ）は砂漠に置いた通常魔物。5本の塔に順に割り振る。
+            int desert = GameSession.PlacementIndex(StageMap.Biome.Desert) * GameSession.BIOME_MONSTER_SLOTS;
+            session.SetTowerMonsters(new List<MonsterData>(biomeMonsters).GetRange(desert, GameSession.BIOME_MONSTER_SLOTS));
         }
 
         // ---- 組み立て ----

@@ -97,7 +97,12 @@ namespace Game.UI
 
         private void OnHeroClicked()
         {
-            if (GameSession.Instance != null) GameSession.Instance.CurrentRole = GameSession.PlayerRole.Hero;
+            if (GameSession.Instance != null)
+            {
+                GameSession.Instance.CurrentRole = GameSession.PlayerRole.Hero;
+                // 魔王は BOT。前に魔王ロビーで決めた配置は使わない。
+                GameSession.Instance.UseDefaultDemonPlacement();
+            }
             SceneManager.LoadScene(heroLobbyScene);
         }
 

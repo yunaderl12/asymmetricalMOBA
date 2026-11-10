@@ -45,6 +45,33 @@ namespace Game.Core
         public Game.DemonKing.FieldSpellData[] FieldSpells = new Game.DemonKing.FieldSpellData[FIELD_SPELL_SLOTS];
 
         public static int PlacementIndex(StageMap.Biome biome) => System.Array.IndexOf(PlacementBiomes, biome);
+
+        /// 塔（すべて砂漠に立つ）で出す魔物。デッキにし、5本の塔の最初の魔物に順に割り振る。空なら砂漠の表の魔物。
+        public void SetTowerMonsters(List<MonsterData> monsters)
+        {
+            var list = new List<MonsterData>();
+            if (monsters != null) foreach (var m in monsters) if (m != null && !list.Contains(m)) list.Add(m);
+            if (list.Count == 0)
+            {
+                var entry = Game.Monster.BiomeSpawnData.Load() != null ? Game.Monster.BiomeSpawnData.Load().For(StageMap.Biome.Desert) : null;
+                if (entry != null) foreach (var m in entry.monsters) if (m != null && !list.Contains(m)) list.Add(m);
+            }
+            DemonDeck = list;
+            SpawnerInitialMobs = new List<MonsterData>();
+            for (int i = 0; i < SPAWNER_COUNT; i++) SpawnerInitialMobs.Add(list.Count > 0 ? list[i % list.Count] : null);
+        }
+
+        /// 魔王ロビーを通らない試合（勇者でプレイして魔王が BOT のときなど）の配置。
+        /// 自然湧きは表のまま、中ボスと番人は全部置き、塔は砂漠の魔物（今はイフリートとミイラ）。
+        public void UseDefaultDemonPlacement()
+        {
+            PlacementChosen = false;
+            for (int i = 0; i < BiomeBossOn.Length; i++) BiomeBossOn[i] = true;
+            for (int i = 0; i < BridgeGuardianOn.Length; i++) BridgeGuardianOn[i] = true;
+            for (int i = 0; i < BridgeGuardians.Length; i++) BridgeGuardians[i] = null;
+            for (int i = 0; i < FieldSpells.Length; i++) FieldSpells[i] = null;
+            SetTowerMonsters(null);
+        }
         /// 試合をするワールド（WorldCatalog.All の番号）。
         public int WorldIndex;
         public MatchStats LastMatchStats;
@@ -86,13 +113,9 @@ namespace Game.Core
                 SelectedHeroClass = UnityEditor.AssetDatabase.LoadAssetAtPath<HeroClassData>("Assets/_Project/ScriptableObjects/Classes/Swordsman.asset");
             if (SelectedCommonSkill == null)
                 SelectedCommonSkill = UnityEditor.AssetDatabase.LoadAssetAtPath<SkillData>("Assets/_Project/ScriptableObjects/Skills/Common/Sprint.asset");
-            if (DemonDeck == null || DemonDeck.Count == 0)
-            {
-                if (DemonDeck == null) DemonDeck = new List<MonsterData>();
-                var basic = UnityEditor.AssetDatabase.LoadAssetAtPath<MonsterData>("Assets/_Project/ScriptableObjects/Monsters/BasicMob.asset");
-                if (basic != null) DemonDeck.Add(basic);
-            }
 #endif
+            // 塔の魔物の既定は砂漠の魔物（ゴブリンは森だけに湧く）。
+            if (DemonDeck == null || DemonDeck.Count == 0) UseDefaultDemonPlacement();
         }
     }
 }
