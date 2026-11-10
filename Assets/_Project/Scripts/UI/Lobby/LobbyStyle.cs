@@ -269,6 +269,25 @@ namespace Game.UI
             return HudStyle.AddText(HudStyle.Filled(rt, "Glyph"), glyph, fontSize, Color.white, TextAnchor.MiddleCenter, 4f, p.Outline);
         }
 
+        /// 丸い布の札に魔物などの丸いアイコン（ふちの縫い目は絵の外側に残す）。絵がなければ FeltToken と同じく1文字。
+        public static void IconToken(RectTransform rt, Color fill, Color stitch, Sprite icon, string glyph, int fontSize, HudStyle.Palette p, float shadow = 4f)
+        {
+            if (icon == null)
+            {
+                FeltToken(rt, fill, stitch, glyph, fontSize, p, shadow);
+                return;
+            }
+            if (shadow > 0f) HudStyle.DropShadow(rt, HudShape.Kind.Circle, p.Shadow, 0f, shadow);
+            HudStyle.Shape(rt, "Felt", HudShape.Kind.Circle, fill, 0f, HudStyle.FeltTexture);
+            var face = HudStyle.Node(rt, "Icon");
+            HudStyle.Stretch(face, -Mathf.Max(5f, rt.sizeDelta.x * 0.1f));
+            var image = HudStyle.AddGraphic<Image>(face);
+            image.sprite = icon;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            HudStyle.Stitch(rt, stitch, true, 0f, Mathf.Max(3f, rt.sizeDelta.x * 0.04f));
+        }
+
         /// 白いふちの丸い肖像（シール）。
         public static Image Sticker(RectTransform rt, Sprite sprite, Color fallback, HudStyle.Palette p)
         {

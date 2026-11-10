@@ -94,6 +94,7 @@ MonoBehaviour:
   customRig: 1
   modelMaterialPath: Mummy/Mummy_BodyMat
   modelScale: 2.1
+  icon: {fileID: 21300000, guid: 4c6cf435871084296aa9c363f4a9b077, type: 3}
   hitReactionScale: 1
   deathBlastSeconds: 0.75
   deathBlastSpeed: 11

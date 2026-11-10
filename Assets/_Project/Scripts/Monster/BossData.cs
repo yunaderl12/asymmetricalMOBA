@@ -34,6 +34,8 @@ namespace Game.Monster
         public float modelScale = 10f;
         [Tooltip("Turn of the model around Y so its head faces the boss's forward (degrees).")]
         public float modelYaw;
+        [Tooltip("魔王ロビーの丸いアイコン（Tools/Characters/Generate Monster Icons でモデルから作る）。空なら名前の頭文字。")]
+        public Sprite icon;
         [Tooltip("Size of the hit box around the body (m), before nothing else; centered on the body.")]
         public Vector3 bodySize = new Vector3(6f, 4f, 8f);
         [Tooltip("Height of the body center above the boss origin (m).")]

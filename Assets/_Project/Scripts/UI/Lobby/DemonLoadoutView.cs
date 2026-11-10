@@ -37,6 +37,7 @@ namespace Game.UI
         {
             public string label;
             public string note;
+            public Sprite icon;
             public bool disabled;
             public Action pick;
             public Action hover;
@@ -244,6 +245,17 @@ namespace Game.UI
 
         private static string NameOf(MonsterData m) => m.name == "BasicMob" ? "ゴブリン" : m.monsterName;
 
+        /// 丸い枠の内側に魔物の丸いアイコンを置く（inset はふちから内側への幅）。
+        private static void Face(RectTransform parent, Sprite icon, float inset)
+        {
+            var face = HudStyle.Node(parent, "Icon");
+            HudStyle.Stretch(face, -inset);
+            var image = HudStyle.AddGraphic<Image>(face);
+            image.sprite = icon;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+        }
+
         // ---- バイオームの札 ----
 
         private void BuildBiomeCard(int b, Vector2 plaza, Vector2 center)
@@ -272,7 +284,8 @@ namespace Game.UI
                 var m = biomeMonsters[index];
                 var slot = LobbyStyle.At(card, "Slot_" + i, 14f + i * 74f, 46f, SlotSize, SlotSize);
                 var fill = m != null ? ColorOf(m) : Empty;
-                var token = LobbyStyle.FeltToken(slot, fill, m != null ? pal.Light : new Color(pal.Stitch.r, pal.Stitch.g, pal.Stitch.b, 0.6f), m != null ? GlyphOf(m) : "＋", m != null ? 28 : 26, pal, 3f);
+                LobbyStyle.IconToken(slot, fill, m != null ? pal.Light : new Color(pal.Stitch.r, pal.Stitch.g, pal.Stitch.b, 0.6f), m != null ? m.icon : null,
+                    m != null ? GlyphOf(m) : "＋", m != null ? 28 : 26, pal, 3f);
                 LobbyStyle.Text(card, "SlotName_" + i, 4f + i * 74f, 114f, 86f, 26f, m != null ? NameOf(m) : "空き", 14, m != null ? pal.Light : new Color(pal.Light.r, pal.Light.g, pal.Light.b, 0.5f), TextAnchor.MiddleCenter);
                 LobbyStyle.MakeHitButton(slot, () => OpenMonsterPicker(b, index, slot));
                 var monster = m;
@@ -289,8 +302,12 @@ namespace Game.UI
             var ring = HudStyle.Shape(bossRt, "Ring", HudShape.Kind.Circle, bossOn[b] && boss != null ? BossGold : new Color(0.3f, 0.25f, 0.27f, 1f));
             var inner = LobbyStyle.AtCenter(bossRt, "Inner", 37f, 37f, 62f, 62f);
             HudStyle.Shape(inner, "Felt", HudShape.Kind.Circle, bossOn[b] && boss != null ? HudStyle.Hex(0x6a1e1e) : Empty, 0f, HudStyle.FeltTexture);
-            string bossGlyph = boss != null && !string.IsNullOrEmpty(boss.bossName) ? boss.bossName.Substring(0, 1) : "王";
-            HudStyle.AddText(HudStyle.Filled(inner, "Glyph"), bossOn[b] ? bossGlyph : "×", 28, bossOn[b] ? Color.white : new Color(1f, 1f, 1f, 0.4f), TextAnchor.MiddleCenter, 4f, pal.Outline);
+            if (bossOn[b] && boss != null && boss.icon != null) Face(inner, boss.icon, 3f);
+            else
+            {
+                string bossGlyph = boss != null && !string.IsNullOrEmpty(boss.bossName) ? boss.bossName.Substring(0, 1) : "王";
+                HudStyle.AddText(HudStyle.Filled(inner, "Glyph"), bossOn[b] ? bossGlyph : "×", 28, bossOn[b] ? Color.white : new Color(1f, 1f, 1f, 0.4f), TextAnchor.MiddleCenter, 4f, pal.Outline);
+            }
             LobbyStyle.Text(card, "BossName", 214f, 114f, 118f, 26f, boss == null ? "（なし）" : bossOn[b] ? boss.bossName : "置かない", 14,
                 bossOn[b] ? HudStyle.Gold : new Color(pal.Light.r, pal.Light.g, pal.Light.b, 0.5f), TextAnchor.MiddleCenter);
             LobbyStyle.Text(card, "BossCaption", 214f, 136f, 118f, 24f, "中ボス", 13, new Color(pal.Light.r, pal.Light.g, pal.Light.b, 0.6f), TextAnchor.MiddleCenter);
@@ -324,6 +341,7 @@ namespace Game.UI
                 options.Add(new Option
                 {
                     label = NameOf(m),
+                    icon = m.icon,
                     note = (same > 0 ? "×" + (same + 1) + "  " : "") + "HP " + m.hp + " / Atk " + m.atk,
                     pick = () => SetMonster(biome, index, picked),
                     hover = () => ShowMonster(picked),
@@ -348,7 +366,8 @@ namespace Game.UI
             HudStyle.DropShadow(pin, HudShape.Kind.Circle, pal.Shadow, 0f, 3f);
             var body = HudStyle.Shape(pin, "Felt", HudShape.Kind.Circle, on ? HudStyle.Hex(0x5a5048) : Empty, 0f, HudStyle.FeltTexture);
             HudStyle.Stitch(pin, on ? pal.Light : new Color(pal.Stitch.r, pal.Stitch.g, pal.Stitch.b, 0.5f), true, 0f, 5f);
-            HudStyle.AddText(HudStyle.Filled(pin, "Glyph"), on ? "番" : "×", 26, on ? Color.white : new Color(1f, 1f, 1f, 0.45f), TextAnchor.MiddleCenter, 4f, pal.Outline);
+            if (on && guardians[0].icon != null) Face(pin, guardians[0].icon, 6f);
+            else HudStyle.AddText(HudStyle.Filled(pin, "Glyph"), on ? "番" : "×", 26, on ? Color.white : new Color(1f, 1f, 1f, 0.45f), TextAnchor.MiddleCenter, 4f, pal.Outline);
             var tag = HudStyle.Place(marks, "GuardianTag_" + i, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 1f), at + new Vector2(0f, -32f), new Vector2(150f, 28f));
             HudStyle.Paper(tag, pal, HudShape.Kind.RoundRect, 6f, 3 + i, 2f);
             HudStyle.AddText(HudStyle.Filled(tag, "Text"), on ? "番人: " + NameOf(guardians[0]) : "番人なし", 15, pal.Ink, TextAnchor.MiddleCenter);
@@ -493,7 +512,13 @@ namespace Game.UI
                 var row = LobbyStyle.At(card, "Option_" + i, 12f, 56f + i * 48f, w - 24f, 42f);
                 var bg = HudStyle.Shape(row, "Back", HudShape.Kind.RoundRect, new Color(pal.Light.r, pal.Light.g, pal.Light.b, 0.08f), 10f);
                 var c = o.disabled ? new Color(pal.Light.r, pal.Light.g, pal.Light.b, 0.4f) : pal.Light;
-                LobbyStyle.Text(row, "Name", 12f, 0f, 150f, 42f, o.label, 19, c);
+                float nameX = 12f;
+                if (o.icon != null)
+                {
+                    Face(LobbyStyle.At(row, "Icon", 6f, 3f, 36f, 36f), o.icon, 0f);
+                    nameX = 50f;
+                }
+                LobbyStyle.Text(row, "Name", nameX, 0f, 150f, 42f, o.label, 19, c);
                 LobbyStyle.Text(row, "Note", 120f, 0f, w - 156f, 42f, o.note ?? "", 14, c, TextAnchor.MiddleRight);
                 if (o.disabled) continue;
                 var pick = o.pick;

@@ -26,6 +26,7 @@ MonoBehaviour:
   modelMaterialPath: Dragon/Dragon_BodyMat
   modelScale: 14
   modelYaw: 0
+  icon: {fileID: 21300000, guid: 4be6332949eec4655a49f59452959659, type: 3}
   bodySize: {x: 7, y: 4.5, z: 11}
   bodyCenterHeight: 0
   circleAltitude: 20

@@ -26,6 +26,7 @@ MonoBehaviour:
   modelMaterialPath: Scorpion/Scorpion_BodyMat
   modelScale: 7
   modelYaw: 0
+  icon: {fileID: 21300000, guid: aa78b243a945e41238763919dd167aab, type: 3}
   bodySize: {x: 6, y: 3, z: 7}
   bodyCenterHeight: 1.6
   moveSpeed: 4.8

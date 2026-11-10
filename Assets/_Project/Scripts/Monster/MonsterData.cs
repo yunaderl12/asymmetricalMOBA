@@ -178,6 +178,8 @@ namespace Game.Monster
         [Tooltip("Resources path of a material applied to every renderer. Empty = keep the FBX materials.")]
         public string modelMaterialPath;
         public float modelScale = 1f;
+        [Tooltip("魔王ロビーの丸いアイコン（Tools/Characters/Generate Monster Icons でモデルから作る）。空なら名前の頭文字。")]
+        public Sprite icon;
 
         [Header("Hit Reaction")]
         [Tooltip("Scale of knockback and flinch when hit. 0 = immune.")]

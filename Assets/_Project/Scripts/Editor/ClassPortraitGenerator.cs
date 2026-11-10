@@ -107,7 +107,7 @@ namespace Game.Editor
             }
         }
 
-        private static void AddLight(Scene scene, Vector3 euler, float intensity)
+        internal static void AddLight(Scene scene, Vector3 euler, float intensity)
         {
             var go = new GameObject("PortraitLight");
             SceneManager.MoveGameObjectToScene(go, scene);
@@ -117,7 +117,7 @@ namespace Game.Editor
             light.intensity = intensity;
         }
 
-        private static AnimationClip FindPoseClip()
+        internal static AnimationClip FindPoseClip()
         {
             AnimationClip best = null;
             foreach (var c in Resources.LoadAll<AnimationClip>(PoseClipPath))
@@ -128,7 +128,7 @@ namespace Game.Editor
             return best;
         }
 
-        private static void ApplyMaterial(GameObject model, string materialPath)
+        internal static void ApplyMaterial(GameObject model, string materialPath)
         {
             if (string.IsNullOrEmpty(materialPath)) return;
             var mat = Resources.Load<Material>(materialPath);
@@ -143,7 +143,7 @@ namespace Game.Editor
 
         // World-space vertices of the posed model. SkinnedMeshRenderer.bounds is not updated
         // in edit mode, so the skinned meshes are baked.
-        private static List<Vector3> CollectPoints(GameObject model)
+        internal static List<Vector3> CollectPoints(GameObject model)
         {
             var points = new List<Vector3>();
             foreach (var smr in model.GetComponentsInChildren<SkinnedMeshRenderer>(true))
@@ -166,9 +166,10 @@ namespace Game.Editor
         // Places the camera on ViewDirection so every point is inside the frame (perspective-exact).
         // fitWidth = false: only the height has to fit, and the frame is centred on the median x
         // (the body) instead of the extents, so props sticking out sideways are cropped.
-        private static void Fit(Camera cam, List<Vector3> points, int pxW, int pxH, float padding, bool fitWidth = true)
+        // view: direction from the model toward the camera (default ViewDirection).
+        internal static void Fit(Camera cam, List<Vector3> points, int pxW, int pxH, float padding, bool fitWidth = true, Vector3? view = null)
         {
-            var dir = ViewDirection.normalized;
+            var dir = (view ?? ViewDirection).normalized;
             var rot = Quaternion.LookRotation(-dir, Vector3.up);
             var right = rot * Vector3.right;
             var up = rot * Vector3.up;
@@ -205,7 +206,7 @@ namespace Game.Editor
 
         // Renders on black and on white and recovers alpha from the difference,
         // so it works whether or not the pipeline keeps the alpha channel.
-        private static Texture2D RenderWithAlpha(Camera cam, int w, int h)
+        internal static Texture2D RenderWithAlpha(Camera cam, int w, int h)
         {
             var rt = RenderTexture.GetTemporary(w, h, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
             cam.targetTexture = rt;
@@ -245,15 +246,16 @@ namespace Game.Editor
             return px;
         }
 
-        private static Texture2D CircleIcon(Texture2D bust, Color classColor)
+        // ring = false: no light rim (the lobby draws its own felt and stitch around it).
+        internal static Texture2D CircleIcon(Texture2D bust, Color classColor, bool ring = true)
         {
             int size = bust.width;
             var src = bust.GetPixels();
             var outPx = new Color[src.Length];
             var fill = Color.Lerp(classColor, Color.black, 0.45f);
-            var ring = Color.Lerp(classColor, Color.white, 0.25f);
+            var rim = Color.Lerp(classColor, Color.white, 0.25f);
             float r = size * 0.5f;
-            float ringWidth = size * 0.045f;
+            float ringWidth = ring ? size * 0.045f : 0f;
             for (int y = 0; y < size; y++)
             for (int x = 0; x < size; x++)
             {
@@ -262,7 +264,7 @@ namespace Game.Editor
                 float edge = Mathf.Clamp01(r - d); // 1px anti-aliased edge
                 if (edge <= 0f) { outPx[i] = Color.clear; continue; }
                 var c = Color.Lerp(fill, src[i], src[i].a);
-                if (d > r - ringWidth) c = ring;
+                if (d > r - ringWidth) c = rim;
                 c.a = edge;
                 outPx[i] = c;
             }
@@ -273,14 +275,14 @@ namespace Game.Editor
             return tex;
         }
 
-        private static void Save(Texture2D tex, string path)
+        internal static void Save(Texture2D tex, string path)
         {
             File.WriteAllBytes(path, tex.EncodeToPNG());
             Object.DestroyImmediate(tex);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
         }
 
-        private static Sprite ImportSprite(string path)
+        internal static Sprite ImportSprite(string path)
         {
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
             if (importer != null)

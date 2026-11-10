@@ -94,6 +94,7 @@ MonoBehaviour:
   customRig: 1
   modelMaterialPath: Dryad/Dryad_BodyMat
   modelScale: 1.8
+  icon: {fileID: 21300000, guid: 9169fe9e6c1d44198a9d3e30695db3da, type: 3}
   hitReactionScale: 1
   deathBlastSeconds: 0.75
   deathBlastSpeed: 11

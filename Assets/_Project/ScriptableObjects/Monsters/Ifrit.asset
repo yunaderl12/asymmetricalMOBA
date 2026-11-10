@@ -94,6 +94,7 @@ MonoBehaviour:
   customRig: 1
   modelMaterialPath: Ifrit/Ifrit_BodyMat
   modelScale: 2.2
+  icon: {fileID: 21300000, guid: 40df1fb1a3f424fe4997e27d066997cf, type: 3}
   hitReactionScale: 1
   deathBlastSeconds: 0.75
   deathBlastSpeed: 11

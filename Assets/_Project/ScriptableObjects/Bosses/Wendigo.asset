@@ -26,6 +26,7 @@ MonoBehaviour:
   modelMaterialPath: Wendigo/Wendigo_BodyMat
   modelScale: 6
   modelYaw: 0
+  icon: {fileID: 21300000, guid: b2fb4bef681ac4ee78a301970e4228cf, type: 3}
   bodySize: {x: 3.5, y: 3.5, z: 5}
   bodyCenterHeight: 1.9
   moveSpeed: 6.5

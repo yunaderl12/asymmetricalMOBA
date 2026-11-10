@@ -94,6 +94,7 @@ MonoBehaviour:
   customRig: 1
   modelMaterialPath: Cockatrice/Cockatrice_BodyMat
   modelScale: 2.6
+  icon: {fileID: 21300000, guid: ef1e0873442b4403191f68c5041bf3e2, type: 3}
   hitReactionScale: 1
   deathBlastSeconds: 0.75
   deathBlastSpeed: 11
