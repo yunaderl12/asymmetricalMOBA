@@ -6,7 +6,8 @@ using Game.Core;
 
 namespace Game.Monster
 {
-    /// 森・山・砂漠で魔物を自然に湧かせる。魔物ごとにバイオーム内の最大数まで、勇者から離れた場所に湧く。塔とは独立している。
+    /// 森・山・砂漠で魔物を自然に湧かせる。魔物ごとにバイオーム内の最大数まで、そのバイオームの立っている塔の周りの、勇者から離れた場所に湧く。
+    /// バイオームの塔がすべて壊れると、そのバイオームには湧かなくなる。
     public class BiomeSpawner : MonoBehaviour
     {
         private const float RaycastTop = 200f;
@@ -91,10 +92,18 @@ namespace Game.Monster
         private static bool TryFindPlace(StageMap.Biome biome, out Vector3 position)
         {
             var config = BalanceConfig.Instance;
+            var towers = new List<Spawner>();
+            foreach (var tower in Spawner.All)
+                if (tower != null && tower.IsFunctional && tower.Biome == biome) towers.Add(tower);
+            position = Vector3.zero;
+            if (towers.Count == 0) return false;
             var heroes = GameObject.FindGameObjectsWithTag("Player");
+            float near = Mathf.Max(0f, config.biomeSpawnTowerRadius.x), far = Mathf.Max(near, config.biomeSpawnTowerRadius.y);
             for (int i = 0; i < config.biomeSpawnAttempts; i++)
             {
-                Vector3 point = StageMap.RandomPointIn(biome);
+                var around = towers[Random.Range(0, towers.Count)].transform.position;
+                float angle = Random.Range(0f, Mathf.PI * 2f), radius = Mathf.Sqrt(Random.Range(near * near, far * far));
+                Vector3 point = new Vector3(around.x + Mathf.Cos(angle) * radius, 0f, around.z + Mathf.Sin(angle) * radius);
                 if (StageMap.BiomeAt(point) != biome || StageMap.DistanceToWater(point) < config.biomeSpawnMinWaterDistance) continue;
                 RaycastHit ground;
                 if (!Physics.Raycast(point + Vector3.up * RaycastTop, Vector3.down, out ground, RaycastTop * 2f, ~0, QueryTriggerInteraction.Ignore)) continue;
@@ -104,7 +113,6 @@ namespace Game.Monster
                 position = hit.position;
                 return true;
             }
-            position = Vector3.zero;
             return false;
         }
 

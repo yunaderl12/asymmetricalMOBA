@@ -150,7 +150,7 @@ namespace Game.UI
         {
             var spawners = new List<Spawner>(Spawner.All);
             spawners.Sort(HudStyle.CompareTowers);
-            int count = Mathf.Min(spawners.Count, 6);
+            int count = Mathf.Min(spawners.Count, 10);
             float height = 54f + count * 34f;
             var panel = HudStyle.Place(root, "Towers", Vector2.zero, Vector2.zero, new Vector2(40f, 290f), new Vector2(330f, height));
             HudStyle.Felt(panel, pal, HudShape.Kind.RoundRect, 16f, 6f, 5f);

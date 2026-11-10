@@ -36,6 +36,16 @@ namespace Game.Monster
         public static IReadOnlyList<Spawner> All => all;
 
         public bool IsFunctional { get; private set; } = true;
+        private StageMap.Biome? biome;
+        /// 塔が立っているバイオーム（森・山・砂漠）。自然湧きはこのバイオームの、立っている塔の周りだけで起きる。
+        public StageMap.Biome Biome
+        {
+            get
+            {
+                if (biome == null) biome = StageMap.BiomeAt(transform.position);
+                return biome.Value;
+            }
+        }
         public IReadOnlyList<Monster> SpawnedMonsters => spawnedMonsters;
         public IReadOnlyList<MonsterData> Inv => inv;
         public SpawnerData Data => data;
@@ -138,16 +148,29 @@ namespace Game.Monster
             // Attack is driven by Update (frame-accurate range gating) instead of a coroutine.
         }
 
+        // 同じバイオームの塔の中で何番目か（spawnerIndex、同じなら名前の順）。
+        private int IndexInBiome()
+        {
+            int index = 0;
+            foreach (var other in all)
+            {
+                if (other == null || other == this || other.Biome != Biome) continue;
+                if (other.spawnerIndex < spawnerIndex || (other.spawnerIndex == spawnerIndex && string.CompareOrdinal(other.name, name) < 0)) index++;
+            }
+            return index;
+        }
+
         private void TryResolveInvFromDeck()
         {
-            // Priority 1: GameSession.SpawnerInitialMobs[spawnerIndex]
-            if (spawnerIndex >= 0 && Game.Core.GameSession.Instance != null)
+            // Priority 1: 塔が立つバイオームで出せる魔物（GameSession.TowerMonstersFor）を、同じバイオームの塔に順に割り振る。
+            if (Game.Core.GameSession.Instance != null)
             {
-                var list = Game.Core.GameSession.Instance.SpawnerInitialMobs;
-                if (list != null && spawnerIndex < list.Count && list[spawnerIndex] != null)
+                var list = Game.Core.GameSession.Instance.TowerMonstersFor(Biome);
+                if (list != null && list.Count > 0)
                 {
-                    inv = new List<MonsterData> { list[spawnerIndex] };
-                    Debug.Log($"[Spawner] {name} inv resolved from GameSession.SpawnerInitialMobs[{spawnerIndex}]: {list[spawnerIndex].monsterName}");
+                    var first = list[IndexInBiome() % list.Count];
+                    inv = new List<MonsterData> { first };
+                    Debug.Log($"[Spawner] {name} ({Biome}) inv resolved from the tower monsters: {first.monsterName}");
                     return;
                 }
             }

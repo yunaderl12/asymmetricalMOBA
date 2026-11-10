@@ -317,6 +317,10 @@ namespace Game.UI
                 case "S": return "南";
                 case "E": return "東";
                 case "W": return "西";
+                case "ForestN": return "森北";
+                case "ForestE": return "森東";
+                case "MountainW": return "山西";
+                case "MountainS": return "山南";
                 default: return key;
             }
         }
@@ -331,17 +335,22 @@ namespace Game.UI
 
         private static int TowerOrder(string spawnerName)
         {
+            // 魔王ロビーの地図と同じく 山・森・砂漠 の順。砂漠の中は方角の順。
             switch (TowerLabel(spawnerName))
             {
-                case "北西": return 0;
-                case "北": return 1;
-                case "北東": return 2;
-                case "西": return 3;
-                case "中央": return 4;
-                case "東": return 5;
-                case "南西": return 6;
-                case "南": return 7;
-                case "南東": return 8;
+                case "山西": return 0;
+                case "山南": return 1;
+                case "森北": return 2;
+                case "森東": return 3;
+                case "北西": return 10;
+                case "北": return 11;
+                case "北東": return 12;
+                case "西": return 13;
+                case "中央": return 14;
+                case "東": return 15;
+                case "南西": return 16;
+                case "南": return 17;
+                case "南東": return 18;
                 default: return 99;
             }
         }

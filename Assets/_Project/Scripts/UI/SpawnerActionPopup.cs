@@ -211,15 +211,17 @@ namespace Game.UI
             if (picker == null) { Debug.LogError("[SpawnerActionPopup] DemonMonsterPickerUI not found in scene — check that DemonMonsterPickerUI is present in MainStage.unity"); return; }
             Debug.Log($"[SpawnerActionPopup] found picker GameObject='{picker.gameObject.name}', activeInHierarchy={picker.gameObject.activeInHierarchy}");
 
+            // 塔で出せるのは、その塔が立つバイオームの魔物だけ。
             var deckMobs = new List<MonsterData>();
-            if (GameSession.Instance != null && GameSession.Instance.DemonDeck != null)
+            var towerMobs = GameSession.Instance != null ? GameSession.Instance.TowerMonstersFor(currentSpawner.Biome) : null;
+            if (towerMobs != null)
             {
-                foreach (var m in GameSession.Instance.DemonDeck)
+                foreach (var m in towerMobs)
                 {
                     if (m != null && !deckMobs.Contains(m)) deckMobs.Add(m);
                 }
             }
-            Debug.Log($"[SpawnerActionPopup] deck has {deckMobs.Count} unique monsters; DemonDeck.Count={(GameSession.Instance != null && GameSession.Instance.DemonDeck != null ? GameSession.Instance.DemonDeck.Count : 0)}");
+            Debug.Log($"[SpawnerActionPopup] {currentSpawner.name} ({currentSpawner.Biome}) deck has {deckMobs.Count} unique monsters");
             int remaining = Mathf.Max(0, currentSpawner.MaxCost - currentSpawner.CurrentCost);
             var sp = currentSpawner;
             Debug.Log($"[SpawnerActionPopup] calling picker.Show ({sp.name}, remaining={remaining})");

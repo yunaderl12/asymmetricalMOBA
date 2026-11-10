@@ -12,7 +12,6 @@ namespace Game.Core
 
         public static GameSession Instance { get; private set; }
 
-        public const int SPAWNER_COUNT = 5;
         public const int DECK_MAX = 20;
         public const int BRIDGE_COUNT = 3;
 
@@ -23,7 +22,6 @@ namespace Game.Core
         public SkillData SelectedCommonSkill;
         public PassiveData SelectedPassive;
         public List<MonsterData> DemonDeck = new List<MonsterData>();
-        public List<MonsterData> SpawnerInitialMobs = new List<MonsterData>();
         /// 橋ごとの番人（山・砂漠・森の順）。未設定の橋には標準の番人が立つ。
         public MonsterData[] BridgeGuardians = new MonsterData[BRIDGE_COUNT];
         /// 橋ごとに番人を置くか（魔王ロビーの地図で切り替える）。
@@ -46,23 +44,41 @@ namespace Game.Core
 
         public static int PlacementIndex(StageMap.Biome biome) => System.Array.IndexOf(PlacementBiomes, biome);
 
-        /// 塔（すべて砂漠に立つ）で出す魔物。デッキにし、5本の塔の最初の魔物に順に割り振る。空なら砂漠の表の魔物。
-        public void SetTowerMonsters(List<MonsterData> monsters)
+        /// 塔で出せる魔物（PlacementBiomes の順）。塔が立つバイオームの通常魔物で、塔の最初の魔物と試合中の編成に使う。
+        public List<MonsterData>[] TowerMonsters = { new List<MonsterData>(), new List<MonsterData>(), new List<MonsterData>() };
+
+        /// そのバイオームの塔で出せる魔物。バイオームの外（旧ステージなど）は全バイオームの魔物（DemonDeck）。
+        public List<MonsterData> TowerMonstersFor(StageMap.Biome biome)
         {
-            var list = new List<MonsterData>();
-            if (monsters != null) foreach (var m in monsters) if (m != null && !list.Contains(m)) list.Add(m);
-            if (list.Count == 0)
+            int i = PlacementIndex(biome);
+            return i >= 0 && TowerMonsters != null && i < TowerMonsters.Length && TowerMonsters[i] != null ? TowerMonsters[i] : DemonDeck;
+        }
+
+        /// 塔で出せる魔物をバイオームごとに決める。地図で置いた通常魔物（PlacementChosen のとき）、なければ BiomeSpawnTable の魔物。
+        /// DemonDeck は全バイオームの分をまとめたもの。
+        public void SetTowerMonsters()
+        {
+            var table = Game.Monster.BiomeSpawnData.Load();
+            DemonDeck = new List<MonsterData>();
+            TowerMonsters = new List<MonsterData>[BIOME_COUNT];
+            for (int b = 0; b < BIOME_COUNT; b++)
             {
-                var entry = Game.Monster.BiomeSpawnData.Load() != null ? Game.Monster.BiomeSpawnData.Load().For(StageMap.Biome.Desert) : null;
+                var list = new List<MonsterData>();
+                if (PlacementChosen)
+                    for (int i = 0; i < BIOME_MONSTER_SLOTS; i++)
+                    {
+                        var m = BiomeMonsters[b * BIOME_MONSTER_SLOTS + i];
+                        if (m != null && !list.Contains(m)) list.Add(m);
+                    }
+                var entry = list.Count == 0 && table != null ? table.For(PlacementBiomes[b]) : null;
                 if (entry != null) foreach (var m in entry.monsters) if (m != null && !list.Contains(m)) list.Add(m);
+                TowerMonsters[b] = list;
+                foreach (var m in list) if (!DemonDeck.Contains(m)) DemonDeck.Add(m);
             }
-            DemonDeck = list;
-            SpawnerInitialMobs = new List<MonsterData>();
-            for (int i = 0; i < SPAWNER_COUNT; i++) SpawnerInitialMobs.Add(list.Count > 0 ? list[i % list.Count] : null);
         }
 
         /// 魔王ロビーを通らない試合（勇者でプレイして魔王が BOT のときなど）の配置。
-        /// 自然湧きは表のまま、中ボスと番人は全部置き、塔は砂漠の魔物（今はイフリートとミイラ）。
+        /// 自然湧きは表のまま、中ボスと番人は全部置き、塔はそのバイオームの表の魔物。
         public void UseDefaultDemonPlacement()
         {
             PlacementChosen = false;
@@ -70,7 +86,7 @@ namespace Game.Core
             for (int i = 0; i < BridgeGuardianOn.Length; i++) BridgeGuardianOn[i] = true;
             for (int i = 0; i < BridgeGuardians.Length; i++) BridgeGuardians[i] = null;
             for (int i = 0; i < FieldSpells.Length; i++) FieldSpells[i] = null;
-            SetTowerMonsters(null);
+            SetTowerMonsters();
         }
         /// 試合をするワールド（WorldCatalog.All の番号）。
         public int WorldIndex;
@@ -96,8 +112,6 @@ namespace Game.Core
             }
             Instance = this;
             DontDestroyOnLoad(gameObject);
-            if (SpawnerInitialMobs == null) SpawnerInitialMobs = new List<MonsterData>();
-            while (SpawnerInitialMobs.Count < SPAWNER_COUNT) SpawnerInitialMobs.Add(null);
             ApplyDefaultsIfNeeded();
         }
 
@@ -114,7 +128,7 @@ namespace Game.Core
             if (SelectedCommonSkill == null)
                 SelectedCommonSkill = UnityEditor.AssetDatabase.LoadAssetAtPath<SkillData>("Assets/_Project/ScriptableObjects/Skills/Common/Sprint.asset");
 #endif
-            // 塔の魔物の既定は砂漠の魔物（ゴブリンは森だけに湧く）。
+            // 塔の魔物の既定は、塔が立つバイオームの表の魔物。
             if (DemonDeck == null || DemonDeck.Count == 0) UseDefaultDemonPlacement();
         }
     }

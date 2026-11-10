@@ -606,8 +606,15 @@ namespace Game.UI
             spawners.Sort(HudStyle.CompareTowers);
             var list = (RectTransform)root.transform.Find("Right/TowerList");
             var topLeft = new Vector2(0f, 1f);
-            int rows = Mathf.Min(spawners.Count, 6);
-            list.sizeDelta = new Vector2(380f, 74f + rows * 40f);
+            const float RowPitch = 36f;
+            int rows = Mathf.Min(spawners.Count, 10);
+            float listHeight = 74f + rows * RowPitch;
+            list.sizeDelta = new Vector2(380f, listHeight);
+            // 塔の数に合わせて、下の「橋の番人」と操作の案内をずらす。
+            var guards = (RectTransform)root.transform.Find("Right/Guardians");
+            if (guards != null) guards.anchoredPosition = new Vector2(0f, -listHeight - 30f);
+            var keys = (RectTransform)root.transform.Find("Right/Keys");
+            if (keys != null) keys.anchoredPosition = new Vector2(0f, -listHeight - 230f);
 
             for (int i = 0; i < spawners.Count; i++)
             {
@@ -626,7 +633,7 @@ namespace Game.UI
 
                 // 右の一覧の行
                 if (i >= rows) { towers.Add(mark); continue; }
-                var row = HudStyle.Place(list, "Row_" + i, topLeft, topLeft, new Vector2(16f, -64f - i * 40f), new Vector2(348f, 34f));
+                var row = HudStyle.Place(list, "Row_" + i, topLeft, topLeft, new Vector2(16f, -64f - i * RowPitch), new Vector2(348f, 32f));
                 var rowHit = HudStyle.Shape(row, "Hit", HudShape.Kind.RoundRect, new Color(0.56f, 0.11f, 0.13f, 0.08f), 8f);
                 rowHit.raycastTarget = true;
                 AddOpenPopup(row.gameObject, rowHit, sp);

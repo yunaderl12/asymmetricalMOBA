@@ -158,6 +158,8 @@ namespace Game.Core
         public float biomeSpawnMinWaterDistance = 5f;
         [Tooltip("Tries per check to find a place for a natural spawn.")]
         public int biomeSpawnAttempts = 8;
+        [Tooltip("Natural spawns appear only around a standing tower of the same biome: distance from the tower (m), min and max.")]
+        public Vector2 biomeSpawnTowerRadius = new Vector2(6f, 22f);
 
         [Header("Bot Hunting")]
         [Tooltip("Seconds between choosing where to go next when no enemy is close.")]

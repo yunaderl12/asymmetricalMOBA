@@ -39,11 +39,15 @@
     { "boss": "wendigo", "x": -12, "z": -198, "radius": 15 }
   ],
   "spawners": [
-    { "name": "Spawner_NW", "x": -30, "z": 78, "waypoints": [-70,60, -115,130] },
-    { "name": "Spawner_NE", "x": 48, "z": 62, "waypoints": [-20,20, -70,60, -115,130] },
-    { "name": "Spawner_Center", "x": 8, "z": 22, "waypoints": [-20,20, -70,60, -115,130] },
-    { "name": "Spawner_SW", "x": -58, "z": -8, "waypoints": [-70,60, -115,130] },
-    { "name": "Spawner_SE", "x": 38, "z": -38, "waypoints": [-20,20, -70,60, -115,130] }
+    { "name": "Spawner_NW", "biome": "desert", "x": -30, "z": 78, "waypoints": [-70,60, -115,130] },
+    { "name": "Spawner_NE", "biome": "desert", "x": 48, "z": 62, "waypoints": [-20,20, -70,60, -115,130] },
+    { "name": "Spawner_Center", "biome": "desert", "x": 8, "z": 22, "waypoints": [-20,20, -70,60, -115,130] },
+    { "name": "Spawner_SW", "biome": "desert", "x": -58, "z": -8, "waypoints": [-70,60, -115,130] },
+    { "name": "Spawner_SE", "biome": "desert", "x": 38, "z": -38, "waypoints": [-20,20, -70,60, -115,130] },
+    { "name": "Spawner_ForestN", "biome": "forest", "x": -144.5, "z": -68.7, "waypoints": [-175,-40, -190,40, -195,100, -175,140] },
+    { "name": "Spawner_ForestE", "biome": "forest", "x": -55, "z": -168, "waypoints": [-90,-165, -140,-110, -175,-40, -190,40, -195,100, -175,140] },
+    { "name": "Spawner_MountainW", "biome": "mountain", "x": 99, "z": 129, "waypoints": [75,130, 55,170, 20,200, -20,210, -70,205, -110,185] },
+    { "name": "Spawner_MountainS", "biome": "mountain", "x": 193, "z": 28, "waypoints": [205,60, 165,95, 115,110, 75,130, 55,170, 20,200, -20,210, -70,205, -110,185] }
   ],
   "rocks": [
     { "name": "Rock_00", "x": 35, "z": 35 },

@@ -490,6 +490,10 @@ MOUNTAIN_LEN = line_length(MOUNTAIN_ROAD)
 BIG_PEAK = Vector((165.0, 178.0))
 SUB_PEAKS = [(95, 205, 34, 26), (228, 205, 42, 34), (238, 118, 34, 28), (125, 240, 30, 22), (232, 42, 24, 18), (58, 232, 24, 14)]
 RIVER_A = DEEP[0][1]
+# 山の塔の足元: 斜面を円く平らに削り、すぐ横の山道と同じ高さにそろえる（塔の周りに魔物が湧けるように）。
+TOWER_PAD_RADIUS, TOWER_PAD_BLEND = 10.0, 12.0
+MOUNTAIN_PADS = [(Vector((sp["x"], sp["z"])), line_dist(Vector((sp["x"], sp["z"])), MOUNTAIN_ROAD)[1])
+                 for sp in MAP["spawners"] if sp.get("biome") == "mountain"]
 
 
 def north_of_river_a(p):
@@ -531,6 +535,10 @@ def mountain_height(p):
     w = plaza_weight(p)
     if w > 0.0:
         h += (PLAZA_HEIGHT - h) * w
+    for c, cs in MOUNTAIN_PADS:
+        w = 1.0 - smooth(TOWER_PAD_RADIUS, TOWER_PAD_RADIUS + TOWER_PAD_BLEND, (p - c).length)
+        if w > 0.0:
+            h += (road_height(cs) - h) * w
     return h
 
 
