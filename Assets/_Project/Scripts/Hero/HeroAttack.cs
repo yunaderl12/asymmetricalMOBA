@@ -25,6 +25,8 @@ namespace Game.Hero
         public void SetDamage(int value) { damage = value; }
         /// false の間は押した瞬間に攻撃しない。斬撃のパッシブが、離したときに TryBasicAttack を呼ぶ。
         public bool AttackOnPress { get; set; } = true;
+        /// 通常攻撃（剣・斧）が当たる直前に、ダメージを変える（重戦士のパッシブ「怒りの一撃」）。引数は相手と元のダメージ。
+        public System.Func<HealthComponent, int, int> ModifyMeleeHit { get; set; }
 
         private const float BoltMuzzleForward = 0.7f;
         private const float BoltMuzzleRight = 0.34f;
@@ -113,7 +115,8 @@ namespace Game.Hero
                 var hp = hit.collider.GetComponentInParent<HealthComponent>();
                 if (hp != null)
                 {
-                    hp.TakeDamage(damage, gameObject, DamageType.Physical);
+                    int dealt = ModifyMeleeHit != null ? ModifyMeleeHit(hp, damage) : damage;
+                    hp.TakeDamage(dealt, gameObject, DamageType.Physical);
                     HeroMpRecovery.OnBasicHit(gameObject, hp);
                 }
             }

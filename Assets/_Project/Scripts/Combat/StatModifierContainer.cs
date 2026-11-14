@@ -12,6 +12,7 @@ namespace Game.Combat
         public float TotalSpdMultiplier { get; private set; } = 1f;
         public float TotalDfMultiplier { get; private set; } = 1f;
         public float TotalDamageTakenMultiplier { get; private set; } = 1f;
+        public float TotalMDfMultiplier { get; private set; } = 1f;
 
         public event Action OnModifiersChanged;
 
@@ -51,14 +52,16 @@ namespace Game.Combat
 
         private void Recalculate()
         {
-            float a = 1f, s = 1f, d = 1f, taken = 1f;
+            float a = 1f, s = 1f, d = 1f, taken = 1f, md = 1f;
             foreach (var m in activeModifiers)
             {
                 a *= m.atkMultiplier;
                 s *= m.spdMultiplier;
                 d *= m.dfMultiplier;
                 taken *= m.damageTakenMultiplier;
+                md *= m.mdfMultiplier;
             }
+            TotalMDfMultiplier = md;
             TotalAtkMultiplier = a;
             TotalSpdMultiplier = s;
             TotalDfMultiplier = d;

@@ -307,6 +307,7 @@ namespace Game.Skill
                     {
                         ApplyBuff(hp.gameObject, skill, value);
                         if (hp.gameObject != gameObject) SupportTracker.RecordSupport(gameObject, hp.gameObject);
+                        SupportLanded?.Invoke(skill, hp, value);
                         return;
                     }
                     if (skill.effectType == SkillEffectType.Heal)
@@ -314,6 +315,7 @@ namespace Game.Skill
                         int amount = Mathf.RoundToInt(value * damageScale);
                         hp.Heal(amount);
                         if (hp.gameObject != gameObject) SupportTracker.RecordSupport(gameObject, hp.gameObject, amount);
+                        SupportLanded?.Invoke(skill, hp, amount);
                         return;
                     }
                     hp.TakeDamage(Mathf.RoundToInt(value * damageScale), gameObject, ToDamageType(skill.damageType));
@@ -396,6 +398,40 @@ namespace Game.Skill
         private void ExecuteHeal(SkillData skill, float effectValue)
         {
             if (skill.targetType == SkillTargetType.Self && health != null) health.Heal(Mathf.RoundToInt(effectValue));
+        }
+
+        /// 回復かバフを相手に当てた瞬間（僧侶のパッシブが使う）。value は回復量、バフなら倍率。
+        public event System.Action<SkillData, HealthComponent, float> SupportLanded;
+
+        /// 回復・バフの一部を別の味方に分ける（僧侶のパッシブ「癒しの波紋」）。share は効果の割合。
+        /// バフは別の名前でかけ、本人に直接かかっているときは分けない（弱い効果で上書きしないように）。
+        public void ShareSupport(HealthComponent target, SkillData skill, float value, float share)
+        {
+            if (target == null || target.IsDead || skill == null) return;
+            if (skill.effectType == SkillEffectType.Heal)
+            {
+                int amount = Mathf.Max(1, Mathf.RoundToInt(value * share));
+                target.Heal(amount);
+                if (target.gameObject != gameObject) SupportTracker.RecordSupport(gameObject, target.gameObject, amount);
+                return;
+            }
+            if (skill.effectType != SkillEffectType.Buff) return;
+            var targetStats = target.GetComponent<StatModifierContainer>();
+            if (targetStats == null) return;
+            foreach (var m in targetStats.ActiveModifiers) if (m.sourceId == "Skill_" + skill.skillName) return;
+            float scaled = 1f + (value - 1f) * share;
+            float atkMul = 1f, spdMul = 1f, dfMul = 1f, damageTaken = 1f;
+            switch (skill.skillName)
+            {
+                case "Guard": case "IronWall": dfMul = scaled; break;
+                case "ManaShield": damageTaken = scaled; break;
+                case "Blessing": atkMul = scaled; break;
+                default: spdMul = scaled; break;
+            }
+            var mod = new StatModifier("Skill_" + skill.skillName + "_Ripple", atkMul, spdMul, dfMul, damageTaken);
+            targetStats.AddOrReplaceModifier(mod);
+            if (skill.duration > 0f) StartCoroutine(RemoveAfter(targetStats, mod, skill.skillName + " (ripple)", skill.duration));
+            if (target.gameObject != gameObject) SupportTracker.RecordSupport(gameObject, target.gameObject);
         }
 
         private void ApplyBuff(GameObject target, SkillData skill, float effectValue)

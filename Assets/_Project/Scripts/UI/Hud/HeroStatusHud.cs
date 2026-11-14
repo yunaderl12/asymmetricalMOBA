@@ -23,6 +23,7 @@ namespace Game.UI
 
         private static readonly Color LowFelt = HudStyle.Hex(0x5a1f35);
         private static readonly Color LowStitch = HudStyle.Hex(0xffb4a8);
+        private static readonly Color HitFeltFlash = HudStyle.Hex(0xc8323a);
 
         private struct StatusInfo
         {
@@ -80,6 +81,13 @@ namespace Game.UI
         private readonly List<StatusChip> chips = new List<StatusChip>();
 
         private float nextAllyRefresh, nextAreaRefresh;
+        // パッシブのゲージ（怒り・背水の構えなど、ゲージを持つパッシブのときだけ）。
+        private HeroPassive passive;
+        private float nextPassiveLookup;
+        private RectTransform passiveRoot;
+        private HudBar passiveBar;
+        private HudShape passiveGlow;
+        private bool shownPassiveLit;
         private int shownHp = -1, shownHpMax = -1, shownMp = -1, shownMpMax = -1, shownLevel = -1, shownExp = -1, shownExpReq = -1, shownCost = -1;
         private bool shownLow;
         private string shownArea;
@@ -90,6 +98,8 @@ namespace Game.UI
             var hud = root.gameObject.AddComponent<HeroStatusHud>();
             hud.Bind(hero);
             hud.Build(root);
+            HitFeedback.Create(hero);
+            LevelUpBurst.Create(hero);
             return hud;
         }
 
@@ -211,11 +221,51 @@ namespace Game.UI
                 RefreshAllies();
             }
             UpdateAllies();
+            UpdatePassiveGauge();
             if (Time.unscaledTime >= nextAreaRefresh)
             {
                 nextAreaRefresh = Time.unscaledTime + AreaRefreshInterval;
                 SetArea(AreaName(hero.transform.position));
             }
+        }
+
+        private void UpdatePassiveGauge()
+        {
+            if (passiveRoot == null)
+            {
+                if (Time.unscaledTime < nextPassiveLookup) return;
+                nextPassiveLookup = Time.unscaledTime + 1f;
+                passive = HeroPassive.Of(hero);
+                if (passive == null || passive.GaugeLabel == null) return;
+                BuildPassiveGauge(passive.GaugeLabel);
+            }
+            if (passive == null) return;
+            passiveBar.Set(Mathf.Clamp01(passive.GaugeFill));
+            bool lit = passive.GaugeLit;
+            if (lit != shownPassiveLit)
+            {
+                shownPassiveLit = lit;
+                passiveBar.SetColor(lit ? HudStyle.Hex(0xffc93c) : HudStyle.Hex(0xe0a36a));
+            }
+            // 満タン・発動中はゲージの縁が脈打つ。
+            var glow = passiveGlow.color;
+            glow.a = lit ? 0.45f + 0.35f * Mathf.Sin(Time.unscaledTime * 9f) : 0f;
+            passiveGlow.color = glow;
+        }
+
+        private void BuildPassiveGauge(string label)
+        {
+            var bottomLeft = Vector2.zero;
+            passiveRoot = HudStyle.Place(selfPanel.parent, "Passive", bottomLeft, bottomLeft, new Vector2(690f, 40f), new Vector2(200f, 64f));
+            passiveGlow = HudStyle.Shape(passiveRoot, "Glow", HudShape.Kind.RoundRect, new Color(1f, 0.79f, 0.24f, 0f), 18f);
+            HudStyle.Stretch(passiveGlow.rectTransform, 6f);
+            HudStyle.DropShadow(passiveRoot, HudShape.Kind.RoundRect, pal.Shadow, 14f, 5f);
+            HudStyle.Shape(passiveRoot, "Felt", HudShape.Kind.RoundRect, pal.Felt, 14f, HudStyle.FeltTexture);
+            HudStyle.Stitch(passiveRoot, pal.Stitch, false, 10f, 5f);
+            var topLeft = new Vector2(0f, 1f);
+            HudStyle.Label(passiveRoot, "Name", topLeft, topLeft, new Vector2(14f, -4f), new Vector2(172f, 28f), label, 19, pal.Light, TextAnchor.MiddleLeft);
+            var bar = HudStyle.Place(passiveRoot, "Bar", topLeft, topLeft, new Vector2(14f, -38f), new Vector2(172f, 12f));
+            passiveBar = HudBar.Create(bar, HudStyle.Hex(0xe0a36a), pal.Track);
         }
 
         private void UpdateSelf()
@@ -275,6 +325,9 @@ namespace Game.UI
         {
             if (selfPanel == null || hitShakeTimer <= 0f) return;
             hitShakeTimer -= Time.unscaledDeltaTime;
+            // 揺れている間、自分の欄が赤く光って元の色へ戻る。
+            float flash = Mathf.Clamp01(hitShakeTimer / HitShakeSeconds);
+            panelFelt.color = Color.Lerp(shownLow ? LowFelt : pal.Felt, HitFeltFlash, flash * flash * 0.75f);
             float fade = Mathf.Clamp01(hitShakeTimer / HitShakeSeconds);
             float t = (HitShakeSeconds - hitShakeTimer) * HitShakeFrequency;
             Vector2 offset = new Vector2(Mathf.Sin(t * 2f * Mathf.PI), Mathf.Sin(t * 1.3f * Mathf.PI) * 0.4f) * HitShakePixels * fade * fade;

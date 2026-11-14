@@ -2,7 +2,8 @@ using UnityEngine;
 
 namespace Game.Skill
 {
-    /// 剣士の Charge。身を沈めて剣を引き、向いている方向へ突進する。最初にぶつかった敵1体に当たって止まる。
+    /// 剣士の Charge。身を沈めて剣を引き、剣先を前へ突き出して、向いている方向へ突進する。最初にぶつかった敵1体に当たって止まる。
+    /// 人間の勇者は視点の向き（上を向いていれば斜め上や真上）へ進み、空中へも飛び出せる。地上で下を向いていても地面には潜らず水平に進む。
     public class ChargeCast : MeleeSkillCast
     {
         private const float ProbeRadius = 1.6f;
@@ -15,11 +16,16 @@ namespace Game.Skill
 
         private static readonly Vector3 DrawnPosition = new Vector3(0.3f, -0.17f, 0.26f);
         private static readonly Vector3 DrawnEuler = new Vector3(60f, 15f, 0f);
-        private static readonly Vector3 ThrustPosition = new Vector3(0.14f, -0.15f, 0.42f);
-        private static readonly Vector3 ThrustEuler = new Vector3(72f, -10f, 0f);
+        // 腕を前へ伸ばし、剣先を照準の向きへ突き出す（通常攻撃の突きと同じ向きを、さらに前へ）。
+        private static readonly Vector3 ThrustPosition = new Vector3(0.14f, -0.12f, 0.66f);
+        private static readonly Vector3 ThrustEuler = new Vector3(68f, -18f, -20f);
+        // 上へ突進して終わったとき、上向きの勢いのうちこの割合を残す（すぐ真下へ落ちないように）。
+        private const float UpwardCarry = 0.35f;
         private static readonly Vector3 ShieldTuckPosition = new Vector3(-0.3f, -0.3f, 0.36f);
 
         private Vector3 direction;
+        private Vector3 flatForward;
+        private bool suspended;
         private float traveled;
         private float nextGhost;
         private ParticleSystem speedLines;
@@ -40,7 +46,16 @@ namespace Game.Skill
 
         protected override void OnRelease()
         {
-            direction = transform.forward;
+            flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+            direction = flatForward;
+            if (Controller != null)
+            {
+                direction = Controller.AimForward.normalized;
+                if (Controller.IsGrounded && direction.y < 0f) direction = flatForward;
+                // 突進中は重力を止めて、狙った向きへまっすぐ進む。
+                Controller.SkillMotion = true;
+                suspended = true;
+            }
             traveled = 0f;
             nextGhost = 0f;
             MeleeFx.DustBurst(transform.position, 0.4f, 14, 3.5f);
@@ -64,7 +79,7 @@ namespace Game.Skill
                 nextGhost = seconds + GhostInterval;
             }
 
-            var targets = FindEnemies(Chest, ProbeRadius, direction, ProbeCone);
+            var targets = FindEnemies(Chest, ProbeRadius, flatForward, ProbeCone);
             if (targets.Count > 0)
             {
                 // 単体技なので、一番近い1体だけに当てる。
@@ -73,7 +88,7 @@ namespace Game.Skill
             }
 
             float step = Mathf.Min(Skill.dashSpeed * Time.deltaTime, Skill.range - traveled);
-            float moved = Vector3.ProjectOnPlane(MoveBody(direction * step), Vector3.up).magnitude;
+            float moved = MoveBody(direction * step).magnitude;
             traveled += moved;
             if (traveled >= Skill.range - 0.01f) { StopDash(); return false; }
             if (step > 0f && moved < step * StuckRatio)
@@ -115,6 +130,15 @@ namespace Game.Skill
 
         private void StopDash()
         {
+            if (suspended)
+            {
+                suspended = false;
+                if (Controller != null)
+                {
+                    Controller.SkillMotion = false;
+                    if (direction.y > 0.1f) Controller.Launch(direction.y * Skill.dashSpeed * UpwardCarry);
+                }
+            }
             if (speedLines != null)
             {
                 speedLines.Stop(true, ParticleSystemStopBehavior.StopEmitting);

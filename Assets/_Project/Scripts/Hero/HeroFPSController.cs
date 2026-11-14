@@ -49,6 +49,13 @@ namespace Game.Hero
         public System.Func<float> AirJump { get; set; }
         public float LookPitch => pitch;
         public bool IsDashing => dashing;
+
+        public enum Stance { Standing, Crouching, Sliding }
+        /// 立ち・しゃがみ・スライディング。V で切り替える（走りながら V でスライディング）。
+        public Stance CurrentStance => stance;
+        public bool IsSliding => stance == Stance.Sliding;
+        /// 前のフレームで入力やスライディングが体を動かした水平速度（回避が前への勢いを引き継ぐのに使う）。
+        public Vector3 LastMoveVelocity { get; private set; }
         /// カメラの揺れを含まない照準方向。
         public Vector3 AimForward => transform.rotation * Quaternion.Euler(pitch, 0f, 0f) * Vector3.forward;
 
@@ -72,7 +79,6 @@ namespace Game.Hero
         private bool runFeelApplied;
         private bool dashing;
         private bool forwardHeld;
-        private float lastForwardPressTime = float.NegativeInfinity;
         private float shakeStrength;
         private float shakeSeconds;
         private float shakeTimer;
@@ -92,6 +98,30 @@ namespace Game.Hero
         private const float ShakeFrequency = 28f;
         private const float ShakeRollPerMeter = 12f; // 揺れ 1m あたりの傾き（度）
 
+        // しゃがみとスライディング
+        private Stance stance;
+        private Vector3 slideVelocity;
+        private float slideTime;
+        private float crouchBlend;
+        private float slideWeight;
+        private float nextSlideDust;
+        private ParticleSystem slideLines;
+        private InputAction crouchAction;
+        private InputAction forwardTapAction;
+        private bool crouchPressed;
+        private bool dashRequested;
+        private double lastForwardTapTime = double.NegativeInfinity;
+        private const float SlideDustInterval = 0.07f;
+        private const float SlideStuckSeconds = 0.12f;
+        private const float SlideStuckRatio = 0.35f;
+        // 着地とジャンプの出だしで視点が沈んで戻る（ばね）
+        private float bounceOffset;
+        private float bounceVelocity;
+        private bool wasGrounded = true;
+        private float fallSpeed;
+        private const float BounceStiffness = 140f;
+        private const float BounceDamping = 16f;
+
         private bool IsAnimLocked()
         {
             if (modelAnim == null) modelAnim = GetComponent<CharacterModelAnimator>();
@@ -103,6 +133,11 @@ namespace Game.Hero
             controller = GetComponent<CharacterController>();
             terrain = Game.Core.TerrainWalker.For(gameObject);
             inputs = new HeroInputActions();
+            // 押した瞬間をイベントで受ける（フレームの間に押して離した素早い入力も取りこぼさない）。
+            crouchAction = new InputAction("Crouch", InputActionType.Button, "<Keyboard>/v");
+            crouchAction.performed += _ => crouchPressed = true;
+            forwardTapAction = new InputAction("ForwardTap", InputActionType.Button, "<Keyboard>/w");
+            forwardTapAction.performed += OnForwardTap;
             if (cameraTransform != null) cameraBaseLocalPosition = cameraTransform.localPosition;
         }
 
@@ -134,7 +169,7 @@ namespace Game.Hero
             Vector3 velocity = controller != null && controller.enabled ? controller.velocity : Vector3.zero;
             velocity.y = 0f;
             float speed = velocity.magnitude;
-            bool fast = dashing && speed > moveSpeed * 0.9f;
+            bool fast = (dashing || stance == Stance.Sliding) && speed > moveSpeed * 0.9f;
             float target = fast ? cfg.dashFovBoost : cfg.runFovBoost * Mathf.Clamp01(speed / Mathf.Max(0.1f, moveSpeed));
             speedFov = Mathf.SmoothDamp(speedFov, target, ref speedFovVelocity, cfg.speedFovSmoothing);
             float fov = designFov + skillFov + speedFov;
@@ -209,8 +244,9 @@ namespace Game.Hero
             if (deathCamera != null && deathCamera.IsActive) return;
             UpdateRunFeel(out Vector3 feelPosition, out float feelRoll);
             UpdateShake(out Vector3 shakePosition, out float shakeRoll);
-            feelPosition += shakePosition;
-            feelRoll += shakeRoll;
+            UpdateStanceFeel(out Vector3 stancePosition, out float stanceRoll);
+            feelPosition += shakePosition + stancePosition;
+            feelRoll += shakeRoll + stanceRoll;
             bool feel = feelPosition != Vector3.zero || feelRoll != 0f;
             if (!cameraKickDirty && !feel && !runFeelApplied) return;
             cameraTransform.localPosition = cameraBaseLocalPosition + cameraKickPosition + feelPosition;
@@ -242,17 +278,145 @@ namespace Game.Hero
             position.z += dashLag;
         }
 
-        // 前進を素早く2回押し、2回目を押し続けている間だけダッシュする。
+        // 前進を素早く2回押し、2回目を押し続けている間だけダッシュする。2回押しは W の押した瞬間のイベントで数える。
+        private void OnForwardTap(InputAction.CallbackContext ctx)
+        {
+            if (ctx.time - lastForwardTapTime <= Game.Core.BalanceConfig.Instance.dashDoubleTapSeconds)
+            {
+                dashRequested = true;
+                lastForwardTapTime = double.NegativeInfinity;
+                return;
+            }
+            lastForwardTapTime = ctx.time;
+        }
+
         private void UpdateDash(Vector2 input)
         {
             bool held = input.y > 0.5f;
-            if (held && !forwardHeld)
-            {
-                if (Time.time - lastForwardPressTime <= Game.Core.BalanceConfig.Instance.dashDoubleTapSeconds) SetDashing(true);
-                lastForwardPressTime = Time.time;
-            }
+            if (dashRequested && held) SetDashing(true);
+            dashRequested = false;
             if (!held) SetDashing(false);
             forwardHeld = held;
+        }
+
+        // ---- しゃがみとスライディング ----
+
+        private void OnCrouchPressed()
+        {
+            switch (stance)
+            {
+                case Stance.Sliding: stance = Stance.Crouching; break;
+                case Stance.Crouching: stance = Stance.Standing; break;
+                default:
+                    if (dashing && controller.isGrounded) StartSlide();
+                    else stance = Stance.Crouching;
+                    break;
+            }
+        }
+
+        // 向いている方向へ、走りより速く滑り出す。滑っている間は向きを変えられない（視点は動かせる）。
+        private void StartSlide()
+        {
+            var cfg = Game.Core.BalanceConfig.Instance;
+            Vector3 forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+            float runSpeed = moveSpeed * cfg.dashSpeedMultiplier * terrain.SpeedFactor;
+            float current = Mathf.Max(0f, Vector3.Dot(LastMoveVelocity, forward));
+            slideVelocity = forward * Mathf.Max(current, runSpeed) * cfg.slideBoost;
+            slideTime = 0f;
+            nextSlideDust = 0f;
+            stance = Stance.Sliding;
+            SetDashing(false);
+            MeleeFx.DustBurst(transform.position, 0.5f, 12, 3.5f);
+            if (cfg.dashSpeedLines && slideLines == null && cameraTransform != null)
+            {
+                slideLines = MeleeFx.SpawnSpeedLines(cameraTransform, DashLineColor);
+                var emission = slideLines.emission;
+                emission.rateOverTime = DashLineRate;
+            }
+        }
+
+        // 少しずつ減速し、W を離すと強く減速する。しゃがみ歩きの速さまで落ちたら、しゃがみに切り替わる。
+        private Vector3 TickSlide(Vector2 input)
+        {
+            var cfg = Game.Core.BalanceConfig.Instance;
+            float dt = Time.deltaTime;
+            slideTime += dt;
+            float speed = slideVelocity.magnitude;
+            float friction = input.y > 0.5f ? cfg.slideFriction : cfg.slideReleaseFriction;
+            speed = Mathf.Max(0f, speed - friction * dt);
+            float endSpeed = moveSpeed * cfg.crouchSpeedMultiplier * terrain.SpeedFactor;
+
+            // 壁などにぶつかって進めていなければ止める。
+            Vector3 actual = controller.velocity;
+            actual.y = 0f;
+            bool stuck = slideTime > SlideStuckSeconds && actual.magnitude < speed * SlideStuckRatio;
+            if (speed <= endSpeed || stuck)
+            {
+                EndSlide(Stance.Crouching);
+                return Vector3.zero;
+            }
+            slideVelocity = slideVelocity.normalized * speed;
+
+            if (slideTime >= nextSlideDust && controller.isGrounded)
+            {
+                MeleeFx.DustBurst(transform.position - slideVelocity.normalized * 0.4f, 0.25f, 3, 1.5f);
+                nextSlideDust = slideTime + SlideDustInterval;
+            }
+            return slideVelocity;
+        }
+
+        private void EndSlide(Stance next)
+        {
+            if (stance == Stance.Sliding) stance = next;
+            slideVelocity = Vector3.zero;
+            if (slideLines != null)
+            {
+                slideLines.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                slideLines = null;
+            }
+        }
+
+        // しゃがみの高さへ下がる視点、スライディング中の少しの傾き、着地とジャンプの沈み。
+        private void UpdateStanceFeel(out Vector3 position, out float roll)
+        {
+            var cfg = Game.Core.BalanceConfig.Instance;
+            float dt = Time.deltaTime;
+            float target = stance == Stance.Standing ? 0f : 1f;
+            crouchBlend = Mathf.MoveTowards(crouchBlend, target, dt / Mathf.Max(0.01f, cfg.crouchTransitionSeconds));
+            slideWeight = Mathf.MoveTowards(slideWeight, stance == Stance.Sliding ? 1f : 0f, dt * 6f);
+
+            bounceVelocity += (-BounceStiffness * bounceOffset - BounceDamping * bounceVelocity) * dt;
+            bounceOffset += bounceVelocity * dt;
+            if (Mathf.Abs(bounceOffset) < 0.0005f && Mathf.Abs(bounceVelocity) < 0.005f) bounceOffset = bounceVelocity = 0f;
+
+            float drop = Mathf.SmoothStep(0f, 1f, crouchBlend) * cfg.crouchCameraDrop;
+            position = new Vector3(0f, -drop + bounceOffset, 0f);
+            roll = slideWeight * cfg.slideCameraRoll;
+        }
+
+        // 一定の速さ以上で着地したら、視点が沈んで足元に砂ぼこりが立つ。
+        private void UpdateLanding()
+        {
+            bool grounded = controller.isGrounded;
+            if (!grounded) fallSpeed = Mathf.Max(fallSpeed, -verticalVelocity);
+            else if (!wasGrounded)
+            {
+                var cfg = Game.Core.BalanceConfig.Instance;
+                if (fallSpeed >= cfg.landingFeelMinSpeed)
+                {
+                    float dip = Mathf.Min(cfg.landingDipMax, fallSpeed * cfg.landingDipPerSpeed);
+                    Bounce(dip);
+                    MeleeFx.DustBurst(transform.position, 0.3f + dip, Mathf.RoundToInt(6 + dip * 30f), 2f + fallSpeed * 0.15f);
+                }
+                fallSpeed = 0f;
+            }
+            wasGrounded = grounded;
+        }
+
+        /// 視点を下へ沈めて、ばねで戻す（m）。
+        public void Bounce(float depth)
+        {
+            bounceVelocity -= depth * Mathf.Sqrt(BounceStiffness) * 1.6f;
         }
 
         private void SetDashing(bool value)
@@ -266,6 +430,8 @@ namespace Game.Hero
         {
             if (inputs == null) inputs = new HeroInputActions();
             inputs.Hero.Enable();
+            crouchAction?.Enable();
+            forwardTapAction?.Enable();
             inputs.Hero.Pause.performed += OnPause;
             HealthComponent.AnyDamage += OnAnyDamage;
             LockCursor(true);
@@ -275,6 +441,10 @@ namespace Game.Hero
         {
             HealthComponent.AnyDamage -= OnAnyDamage;
             StopDashLines();
+            crouchAction?.Disable();
+            forwardTapAction?.Disable();
+            EndSlide(Stance.Standing);
+            stance = Stance.Standing;
             // 死んでいるあいだなどは、走りの広がりを外して元の視野角に戻す。
             speedFov = speedFovVelocity = 0f;
             if (viewCamera != null && designFov > 0f) viewCamera.fieldOfView = designFov + skillFov;
@@ -305,6 +475,8 @@ namespace Game.Hero
             {
                 SetDashing(false);
                 forwardHeld = false;
+                crouchPressed = false;
+                if (stance == Stance.Sliding) EndSlide(Stance.Crouching);
                 HandleStunnedGravity();
             }
             else HandleMove();
@@ -336,11 +508,13 @@ namespace Game.Hero
             if (target == null || target.gameObject != gameObject || attacker == null || attacker == gameObject) return;
             if (attacker.CompareTag("Player") || target.IsDead) return;
             var cfg = Game.Core.BalanceConfig.Instance;
+            var resist = GetComponent<ICrowdControlResist>();
+            float knock = resist != null ? resist.KnockbackScale : 1f;
             Vector3 away = transform.position - attacker.transform.position;
             away.y = 0f;
             if (away.sqrMagnitude < 0.01f) away = -transform.forward;
             // 速さは直線的に落ちるので、初速は平均の2倍。
-            hitPushVelocity = away.normalized * (2f * cfg.heroHitKnockback / HitPushSeconds);
+            hitPushVelocity = away.normalized * (2f * cfg.heroHitKnockback * knock / HitPushSeconds);
             hitPushTimer = HitPushSeconds;
             Shake(cfg.heroHitShake, HitShakeSeconds);
         }
@@ -363,18 +537,35 @@ namespace Game.Hero
 
         private void HandleMove()
         {
+            var cfg = Game.Core.BalanceConfig.Instance;
             Vector2 input = inputs.Hero.Move.ReadValue<Vector2>();
             UpdateDash(input);
-            float speed = dashing ? moveSpeed * Game.Core.BalanceConfig.Instance.dashSpeedMultiplier : moveSpeed;
+            if (crouchPressed)
+            {
+                crouchPressed = false;
+                OnCrouchPressed();
+            }
+            // しゃがみ中に走り出したら立ち上がる。
+            if (stance == Stance.Crouching && dashing) stance = Stance.Standing;
+            float speed = dashing ? moveSpeed * cfg.dashSpeedMultiplier : moveSpeed;
+            if (stance == Stance.Crouching) speed = moveSpeed * cfg.crouchSpeedMultiplier;
             speed *= terrain.SpeedFactor;
-            Vector3 horizontal = BurstVelocity != Vector3.zero ? BurstVelocity : (transform.right * input.x + transform.forward * input.y) * speed;
+            Vector3 horizontal;
+            if (BurstVelocity != Vector3.zero) horizontal = BurstVelocity;
+            else if (stance == Stance.Sliding) horizontal = TickSlide(input);
+            else horizontal = (transform.right * input.x + transform.forward * input.y) * speed;
+            LastMoveVelocity = horizontal;
 
             if (controller.isGrounded)
             {
                 if (verticalVelocity < 0f) verticalVelocity = groundedStickForce;
                 if (inputs.Hero.Jump.WasPerformedThisFrame())
                 {
+                    // しゃがみ・スライディングからのジャンプは立ち上がって跳ぶ。
+                    if (stance != Stance.Standing) EndSlide(Stance.Standing);
+                    stance = Stance.Standing;
                     verticalVelocity = jumpPower;
+                    Bounce(cfg.jumpDip);
                 }
             }
             else
@@ -390,6 +581,7 @@ namespace Game.Hero
             Vector3 motion = IceField.ApplySlip(transform.position, horizontal, ref slipVelocity) + HitPush();
             motion.y = verticalVelocity;
             controller.Move(motion * Time.deltaTime);
+            UpdateLanding();
         }
 
         private void HandleClickToRelock()

@@ -228,6 +228,8 @@ namespace Game.UI
                     CollectEnabled(go.GetComponentsInChildren<Renderer>(), hidden);
             foreach (var clouds in FindObjectsByType<StormClouds>(FindObjectsSortMode.None))
                 CollectEnabled(clouds.GetComponentsInChildren<Renderer>(), hidden);
+            foreach (var dome in FindObjectsByType<Game.Monster.SpawnerRangeDome>(FindObjectsSortMode.None))
+                CollectEnabled(dome.GetComponentsInChildren<Renderer>(), hidden);
             var canvases = new List<Canvas>();
             foreach (var c in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
                 if (c.renderMode == RenderMode.WorldSpace && c.enabled) { c.enabled = false; canvases.Add(c); }

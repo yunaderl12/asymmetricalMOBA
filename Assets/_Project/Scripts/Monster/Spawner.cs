@@ -49,6 +49,8 @@ namespace Game.Monster
         public IReadOnlyList<Monster> SpawnedMonsters => spawnedMonsters;
         public IReadOnlyList<MonsterData> Inv => inv;
         public SpawnerData Data => data;
+        /// 勇者を撃つ距離（検知範囲と攻撃の届く距離の短いほう）。射程の球の半径と、塔の上空視点を動かせる範囲。
+        public float ShootRange => data != null ? Mathf.Min(data.detectRange, data.attackRange) : 0f;
 
         public int CurrentCost
         {
@@ -131,6 +133,7 @@ namespace Game.Monster
 
             Game.Core.VisionRing.Create(transform, data.detectRange, new Color(0f, 1f, 1f, 0.8f));
             Game.Core.VisionRing.Create(transform, data.attackRange, new Color(1f, 0f, 0.3f, 0.8f));
+            SpawnerRangeDome.Create(this, ShootRange);
 
             TryResolveInvFromDeck();
 
@@ -424,6 +427,10 @@ namespace Game.Monster
             activePortals.Clear();
             pendingSpawns.Clear();
             Debug.Log($"[Spawner] {name} destroyed. spawnedMonsters surviving: {spawnedMonsters.Count}");
+            // 画面の上に知らせる。魔王側は赤い帯。
+            string label = Game.UI.HudStyle.TowerLabel(name);
+            bool demon = Game.Core.GameSession.Instance != null && Game.Core.GameSession.Instance.CurrentRole == Game.Core.GameSession.PlayerRole.DemonKing;
+            Game.UI.MatchNotice.Show(demon ? label + "の塔が壊された" : label + "の塔を破壊した！", 3.5f, demon);
         }
     }
 }

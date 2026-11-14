@@ -57,6 +57,10 @@ namespace Game.UI
             alpha = Mathf.MoveTowards(alpha, visible ? 1f : 0f, Time.unscaledDeltaTime / FadeSeconds);
             group.alpha = alpha;
             transform.localScale = Vector3.one * Mathf.Lerp(0.92f, 1f, alpha);
+            // 上から滑り込んで、消えるときは上へ戻る。
+            var rt = (RectTransform)transform;
+            float ease = 1f - (1f - alpha) * (1f - alpha);
+            rt.anchoredPosition = new Vector2(0f, Mathf.Lerp(-60f, -150f, ease));
             if (!visible && alpha <= 0f) gameObject.SetActive(false);
         }
     }

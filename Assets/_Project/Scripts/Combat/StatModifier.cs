@@ -11,6 +11,8 @@ namespace Game.Combat
         public float spdMultiplier = 1f;
         public float dfMultiplier = 1f;
         public float damageTakenMultiplier = 1f;
+        /// 魔法防御 mDf への倍率（勇者だけが使う）。
+        public float mdfMultiplier = 1f;
 
         public StatModifier() { }
 

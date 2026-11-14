@@ -115,6 +115,7 @@ namespace Game.Monster
                 towerRenderer.SetPropertyBlock(block, i);
             }
             enabled = false;
+            TowerCollapse.Play(towerRenderer != null ? towerRenderer.transform : transform, transform.position);
         }
 
         private void Update()

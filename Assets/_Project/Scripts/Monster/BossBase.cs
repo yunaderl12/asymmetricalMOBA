@@ -269,12 +269,18 @@ namespace Game.Monster
             deathTimer = 0f;
             if (body != null) body.enabled = false;
             OnDeathStart();
+            // 倒した瞬間、近くの勇者の画面が大きく揺れ、一瞬だけ時間が止まる。
+            Game.Hero.HeroFPSController.ShakeNear(transform.position, 0.3f, 45f, 0.9f);
+            var hero = Game.Hero.HumanHeroMarker.Instance;
+            if (hero != null && Vector3.Distance(hero.transform.position, transform.position) < 45f) Game.Skill.HitStop.Play(0.15f);
             Debug.Log("[Boss] " + DisplayName + " defeated");
         }
 
         private void Vanish()
         {
             Game.Skill.DeathBurst.Spawn(transform.position + Vector3.up * baseData.bodyCenterHeight, DeathParticles);
+            Game.Skill.ShockRing.Spawn(transform.position + Vector3.up * 0.2f, 1f, 12f, 0.7f, 0.7f, new Color(1.4f, 1.2f, 0.8f, 0.9f));
+            Game.Hero.HeroFPSController.ShakeNear(transform.position, 0.2f, 45f, 0.6f);
             if (spawner != null) spawner.OnBossDefeated(this);
             Destroy(gameObject);
         }

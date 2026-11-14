@@ -10,11 +10,12 @@ namespace Game.DemonKing
         [SerializeField] private Camera overheadCamera;
         [SerializeField] private AudioListener overheadAudio;
         [SerializeField] private float yawSpeed = 0.2f;     // deg per mouse-delta-pixel
-        // Pitch is locked at 0 (horizontal). The user requested horizontal-only rotation.
-        [SerializeField] private float fixedPitch = 0f;
+        [SerializeField] private float pitchLimit = 80f;
+        private const float GroundClearance = 1.5f;
 
         private DemonKingViewSwitcher viewSwitcher;
         private float yaw;
+        private float pitch;
         private GameObject hintHUD;
         private Text hintText;
 
@@ -68,7 +69,8 @@ namespace Game.DemonKing
             if (overhead)
             {
                 yaw = 0f;
-                if (overheadCamera != null) overheadCamera.transform.rotation = Quaternion.Euler(fixedPitch, yaw, 0f);
+                pitch = 0f;
+                if (overheadCamera != null) overheadCamera.transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
             }
         }
 
@@ -80,8 +82,11 @@ namespace Game.DemonKing
             if (Mouse.current != null)
             {
                 Vector2 d = Mouse.current.delta.ReadValue();
-                yaw += d.x * yawSpeed * Game.Core.GameSettings.MouseSensitivity; // horizontal only
-                if (overheadCamera != null) overheadCamera.transform.rotation = Quaternion.Euler(fixedPitch, yaw, 0f);
+                float sensitivity = yawSpeed * Game.Core.GameSettings.MouseSensitivity;
+                yaw += d.x * sensitivity;
+                pitch = Mathf.Clamp(pitch - d.y * sensitivity, -pitchLimit, pitchLimit);
+                if (overheadCamera != null) overheadCamera.transform.rotation = Quaternion.Euler(pitch, yaw, 0f);
+                MoveInsideRange();
 
                 if (Mouse.current.rightButton.wasPressedThisFrame)
                 {
@@ -93,6 +98,32 @@ namespace Game.DemonKing
             {
                 viewSwitcher.ExitSpawnerOverhead();
             }
+        }
+
+        // WASD で見ている向きへ、Space / Ctrl で上下へ動く。塔の射程の球の外と地面の下へは出ない。
+        private void MoveInsideRange()
+        {
+            var sp = viewSwitcher.OverheadSpawner;
+            var keyboard = Keyboard.current;
+            if (overheadCamera == null || sp == null || keyboard == null) return;
+            var cam = overheadCamera.transform;
+            Vector3 input = Vector3.zero;
+            if (keyboard.wKey.isPressed) input += cam.forward;
+            if (keyboard.sKey.isPressed) input -= cam.forward;
+            if (keyboard.dKey.isPressed) input += cam.right;
+            if (keyboard.aKey.isPressed) input -= cam.right;
+            if (keyboard.spaceKey.isPressed) input += Vector3.up;
+            if (keyboard.leftCtrlKey.isPressed) input -= Vector3.up;
+            if (input.sqrMagnitude > 1f) input.Normalize();
+            Vector3 position = cam.position + input * (Game.Core.BalanceConfig.Instance.towerViewMoveSpeed * Time.unscaledDeltaTime);
+
+            Vector3 center = sp.transform.position;
+            float range = sp.ShootRange;
+            Vector3 offset = position - center;
+            if (offset.magnitude > range) position = center + offset.normalized * range;
+            float ground = Game.Core.StageGround.Available ? Game.Core.StageGround.HeightAt(position.x, position.z) : center.y;
+            if (position.y < ground + GroundClearance) position.y = ground + GroundClearance;
+            cam.position = position;
         }
 
         private void ShowHint(bool visible)
@@ -109,7 +140,7 @@ namespace Game.DemonKing
             hintHUD.transform.SetParent(canvas.transform, false);
             var rt = hintHUD.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0f, 1f); rt.anchorMax = new Vector2(0f, 1f); rt.pivot = new Vector2(0f, 1f);
-            rt.sizeDelta = new Vector2(360f, 36f);
+            rt.sizeDelta = new Vector2(820f, 36f);
             rt.anchoredPosition = new Vector2(12f, -12f);
             var img = hintHUD.GetComponent<Image>();
             img.color = new Color(0f, 0f, 0f, 0.6f); img.raycastTarget = false;
@@ -122,7 +153,7 @@ namespace Game.DemonKing
             hintText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             hintText.fontSize = 14; hintText.fontStyle = FontStyle.Bold;
             hintText.alignment = TextAnchor.MiddleLeft; hintText.color = Color.white;
-            hintText.text = "戦況確認: マウスで視点回転 / Esc または右クリックで俯瞰に戻る";
+            hintText.text = "塔の射程の中: WASD 移動 / Space・Ctrl 上下 / マウスで向き / Esc・右クリックで俯瞰へ";
             hintText.raycastTarget = false;
         }
     }

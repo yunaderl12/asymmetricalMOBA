@@ -34,6 +34,31 @@ namespace Game.Core
         [Tooltip("Thin lines streaming past the edges of the screen while dashing")]
         public bool dashSpeedLines = true;
 
+        [Header("Crouch And Slide")]
+        [Tooltip("Move speed multiplier while crouching")]
+        public float crouchSpeedMultiplier = 0.5f;
+        [Tooltip("How far the view drops when crouching or sliding (m)")]
+        public float crouchCameraDrop = 0.55f;
+        [Tooltip("Seconds for the view to drop to / rise from crouch height")]
+        public float crouchTransitionSeconds = 0.14f;
+        [Tooltip("Slide start speed as a multiple of the running speed")]
+        public float slideBoost = 1.3f;
+        [Tooltip("Slide slowdown while forward is held (m/s per second)")]
+        public float slideFriction = 9f;
+        [Tooltip("Slide slowdown after forward is let go (m/s per second)")]
+        public float slideReleaseFriction = 24f;
+        [Tooltip("Camera roll while sliding (degrees)")]
+        public float slideCameraRoll = 3f;
+
+        [Header("Landing And Jump Feel")]
+        [Tooltip("Falling faster than this (m/s) makes the landing dip and dust")]
+        public float landingFeelMinSpeed = 5f;
+        [Tooltip("Camera dip per m/s of landing speed (m), capped by landingDipMax")]
+        public float landingDipPerSpeed = 0.02f;
+        public float landingDipMax = 0.28f;
+        [Tooltip("Camera dip when a jump starts (m)")]
+        public float jumpDip = 0.07f;
+
         [Header("Hit Reaction (monsters)")]
         [Tooltip("Knockback distance per point of damage (m)")]
         public float knockbackPerDamage = 0.03f;
@@ -160,6 +185,19 @@ namespace Game.Core
         public int biomeSpawnAttempts = 8;
         [Tooltip("Natural spawns appear only around a standing tower of the same biome: distance from the tower (m), min and max.")]
         public Vector2 biomeSpawnTowerRadius = new Vector2(6f, 22f);
+
+        [Header("Tower Range View")]
+        [Tooltip("Colour of the faint sphere showing where a tower shoots")]
+        public Color towerRangeDomeColor = new Color(1f, 0.55f, 0.6f, 1f);
+        [Tooltip("Alpha of the sphere where it faces the camera (almost clear)")]
+        public float towerRangeDomeBaseAlpha = 0.008f;
+        [Tooltip("Extra alpha at the sphere's outline")]
+        public float towerRangeDomeRimAlpha = 0.1f;
+        [Tooltip("Line where the sphere meets the ground")]
+        public Color towerRangeRingColor = new Color(1f, 0.12f, 0.12f, 0.5f);
+        public float towerRangeRingWidth = 0.35f;
+        [Tooltip("Demon King's camera above a tower: move speed (m/s) inside the tower's range")]
+        public float towerViewMoveSpeed = 12f;
 
         [Header("Bot Hunting")]
         [Tooltip("Seconds between choosing where to go next when no enemy is close.")]

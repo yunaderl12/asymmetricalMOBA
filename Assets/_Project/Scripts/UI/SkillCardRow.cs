@@ -45,6 +45,8 @@ namespace Game.UI
             public float Hover;
             public float BaseX;
             public float RestTilt;
+            public bool WasCooling;
+            public float Ready; // クールタイムが明けた瞬間に 1 になり、0 へ戻る（札が跳ねて光る）
         }
 
         private readonly HudStyle.Palette pal = HudStyle.HeroPalette;
@@ -135,6 +137,7 @@ namespace Game.UI
                 UpdateHover(cards[i], i == selected, blend);
                 bool cooling = UpdateCooldown(cards[i], skill, i);
                 UpdateAffordable(cards[i], skill, cooling);
+                UpdateReadyPop(cards[i], cooling);
             }
             // 選択中のカードは隣より手前に描く。
             if (selected != lastSelected && selected >= 0 && selected < cards.Length)
@@ -198,6 +201,23 @@ namespace Game.UI
             card.ShadeRect.anchorMax = new Vector2(1f, ratio);
             card.Cooldown.text = remaining >= 10f ? Mathf.CeilToInt(remaining).ToString() : remaining.ToString("F1");
             return true;
+        }
+
+        private const float ReadyPopSeconds = 0.4f;
+
+        // クールタイムが明けたら、札がぽんと跳ねて金の縁が光る。
+        private static void UpdateReadyPop(Card card, bool cooling)
+        {
+            if (card.WasCooling && !cooling) card.Ready = 1f;
+            card.WasCooling = cooling;
+            if (card.Ready <= 0f) return;
+            card.Ready = Mathf.Max(0f, card.Ready - Time.unscaledDeltaTime / ReadyPopSeconds);
+            float bump = Mathf.Sin((1f - card.Ready) * Mathf.PI);
+            card.Root.localScale *= 1f + 0.18f * bump;
+            card.Root.anchoredPosition += new Vector2(0f, 14f * bump);
+            var gold = card.Gold.color;
+            gold.a = Mathf.Max(gold.a, card.Ready);
+            card.Gold.color = gold;
         }
 
         /// MPが足りないカード。クールダウン中は幕で十分なので変えない。

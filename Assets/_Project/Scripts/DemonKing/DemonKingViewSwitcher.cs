@@ -64,9 +64,13 @@ namespace Game.DemonKing
             ApplyState();
         }
 
+        /// 上空視点で見ている塔。
+        public Game.Monster.Spawner OverheadSpawner { get; private set; }
+
         public void EnterSpawnerOverhead(Game.Monster.Spawner sp)
         {
             if (sp == null) return;
+            OverheadSpawner = sp;
             if (spawnerOverheadPlainCamera != null)
             {
                 // Place the camera at the SPAWNER'S TOP (renderer bounds), not high above.
@@ -77,14 +81,16 @@ namespace Game.DemonKing
                 float maxY = float.NegativeInfinity;
                 foreach (var rend in sp.GetComponentsInChildren<Renderer>())
                 {
-                    if (rend.enabled) maxY = Mathf.Max(maxY, rend.bounds.max.y);
+                    // 射程の球や地面の輪は塔の高さに含めない。
+                    if (!rend.enabled || rend is LineRenderer || rend.GetComponentInParent<Game.Monster.SpawnerRangeDome>() != null) continue;
+                    maxY = Mathf.Max(maxY, rend.bounds.max.y);
                 }
                 if (!float.IsNegativeInfinity(maxY)) topY = maxY + 0.5f;
                 spawnerOverheadPlainCamera.transform.position = new Vector3(
                     sp.transform.position.x,
                     topY,
                     sp.transform.position.z);
-                // Horizontal view (pitch = 0). Yaw is driven by SpawnerOverheadCamera.
+                // Horizontal view (pitch = 0). SpawnerOverheadCamera moves and turns it inside the tower's range.
                 spawnerOverheadPlainCamera.transform.rotation = Quaternion.Euler(0f, 0f, 0f);
             }
             currentMode = ViewMode.SpawnerOverhead;

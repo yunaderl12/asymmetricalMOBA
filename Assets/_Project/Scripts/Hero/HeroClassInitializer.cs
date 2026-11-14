@@ -23,7 +23,7 @@ namespace Game.Hero
 
         // Df buffs (Guard / IronWall / PowerItem) come through StatModifierContainer.
         public int Df => Mathf.RoundToInt(CurrentDf * (mods != null ? mods.TotalDfMultiplier : 1f));
-        public int MDf => CurrentMDf;
+        public int MDf => Mathf.RoundToInt(CurrentMDf * (mods != null ? mods.TotalMDfMultiplier : 1f));
 
         private HealthComponent health;
         private StatModifierContainer mods;

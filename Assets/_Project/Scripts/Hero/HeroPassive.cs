@@ -34,6 +34,12 @@ namespace Game.Hero
                 case PassiveType.ChargedSlash: passive = hero.AddComponent<ChargedSlashPassive>(); break;
                 case PassiveType.DoubleJump: passive = hero.AddComponent<DoubleJumpPassive>(); break;
                 case PassiveType.BlockCircle: passive = hero.AddComponent<BlockCirclePassive>(); break;
+                case PassiveType.HealRipple: passive = hero.AddComponent<HealRipplePassive>(); break;
+                case PassiveType.Cleanse: passive = hero.AddComponent<CleansePassive>(); break;
+                case PassiveType.LightStep: passive = hero.AddComponent<LightStepPassive>(); break;
+                case PassiveType.Unshakable: passive = hero.AddComponent<UnshakablePassive>(); break;
+                case PassiveType.LastStand: passive = hero.AddComponent<LastStandPassive>(); break;
+                case PassiveType.Rage: passive = hero.AddComponent<RagePassive>(); break;
             }
             if (passive != null) passive.Init(data);
             Debug.Log($"[Passive] {hero.name}: {data.passiveName}");
@@ -47,6 +53,16 @@ namespace Game.Hero
         }
 
         protected virtual void OnInit() { }
+
+        /// HUD に出すパッシブのゲージ（怒り・背水の構えなど）。名前が null ならゲージを出さない。
+        public virtual string GaugeLabel => null;
+        /// ゲージの溜まり具合（0〜1）。
+        public virtual float GaugeFill => 0f;
+        /// 効果が出ている・満タンのとき true（ゲージが光る）。
+        public virtual bool GaugeLit => false;
+
+        /// 自分が持っているパッシブ（なければ null）。
+        public static HeroPassive Of(GameObject hero) => hero != null ? hero.GetComponent<HeroPassive>() : null;
 
         protected virtual void Awake()
         {

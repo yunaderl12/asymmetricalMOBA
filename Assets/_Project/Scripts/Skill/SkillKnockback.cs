@@ -25,6 +25,8 @@ namespace Game.Skill
                 if (monster.IsEmerging) return;
                 if (monster.Data != null) distance *= monster.Data.hitReactionScale;
             }
+            var resist = target.GetComponent<ICrowdControlResist>();
+            if (resist != null) distance *= resist.KnockbackScale;
             if (distance <= 0f) return;
             if (target.GetComponent<NavMeshAgent>() == null && target.GetComponent<CharacterController>() == null) return;
 

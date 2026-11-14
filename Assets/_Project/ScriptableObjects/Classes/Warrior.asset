@@ -34,7 +34,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 607725091e58d428286f7bd46defd9e2, type: 2}
   - {fileID: 11400000, guid: 6b76f33f4a2c4464abeb1a85526755ce, type: 2}
   extraClassSkills: []
-  passives: []
+  passives:
+  - {fileID: 11400000, guid: 7cac02a918e1d4755a5a52e17e4751d5, type: 2}
+  - {fileID: 11400000, guid: d21dd1a585b2540a199225c13828e21c, type: 2}
+  - {fileID: 11400000, guid: 713e17f122fcb4ddf88639181007c925, type: 2}
   mpCombatRegenRate: 0.0025
   basicAttackMpCost: 0
   regenMultiplier: 2

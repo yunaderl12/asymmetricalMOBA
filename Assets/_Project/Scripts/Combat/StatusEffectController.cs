@@ -76,6 +76,12 @@ namespace Game.Combat
         {
             if (type == StatusEffectType.None || duration <= 0f) return;
             if (health != null && health.IsDead) return;
+            if (type == StatusEffectType.Stun)
+            {
+                var resist = GetComponent<ICrowdControlResist>();
+                if (resist != null) duration *= resist.StunDurationScale;
+                if (duration <= 0f) return;
+            }
             if (type == StatusEffectType.Stun && Time.time < stunImmuneUntil)
             {
                 Debug.Log($"[Status] {name} stun ignored (immune {stunImmuneUntil - Time.time:F1}s)");
@@ -92,6 +98,16 @@ namespace Game.Combat
             Debug.Log($"[Status] {name} {type} {e.remaining:F1}s power={e.power} from {(source != null ? source.name : "null")}");
             RefreshSlow();
             OnEffectsChanged?.Invoke();
+        }
+
+        /// 1種類だけ解く（僧侶のパッシブ「浄化の手」）。かかっていたら true。
+        public bool Clear(StatusEffectType type)
+        {
+            if (!IsActive(type)) return false;
+            effects[(int)type] = default;
+            RefreshSlow();
+            OnEffectsChanged?.Invoke();
+            return true;
         }
 
         public void ClearAll()
