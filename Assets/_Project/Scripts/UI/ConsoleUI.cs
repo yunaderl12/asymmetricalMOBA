@@ -51,9 +51,12 @@ namespace Game.UI
 
             if (!IsActive)
             {
-                if (Time.frameCount == suppressOpenFrame) return;
-                if (Keyboard.current.slashKey.wasPressedThisFrame) OpenInput("/");
-                else if (Keyboard.current.tabKey.wasPressedThisFrame) OpenInput("");
+                // メニューを開いているあいだ（操作キーの入力待ちも含む）は、裏でコンソールを開かない。
+                if (Time.frameCount != suppressOpenFrame && !InGameMenu.IsOpen)
+                {
+                    if (Keyboard.current.slashKey.wasPressedThisFrame) OpenInput("/");
+                    else if (Keyboard.current.tabKey.wasPressedThisFrame) OpenInput("");
+                }
             }
             else
             {

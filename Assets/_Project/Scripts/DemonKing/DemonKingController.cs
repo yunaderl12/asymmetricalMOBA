@@ -47,7 +47,7 @@ namespace Game.DemonKing
         {
             get
             {
-                if (inputs == null) inputs = new DemonKingInputActions();
+                if (inputs == null) { inputs = new DemonKingInputActions(); Game.Core.KeyBindings.Track(inputs.asset); }
                 return inputs;
             }
         }
@@ -60,7 +60,7 @@ namespace Game.DemonKing
             terrain.SlopePenalty = Game.Core.BalanceConfig.Instance.demonKingSlopePenalty;
             terrain.SplashScale = Game.Core.BalanceConfig.Instance.demonKingModelScale;
             if (GetComponent<Game.Core.FallRespawn>() == null) gameObject.AddComponent<Game.Core.FallRespawn>();
-            if (inputs == null) inputs = new DemonKingInputActions();
+            if (inputs == null) { inputs = new DemonKingInputActions(); Game.Core.KeyBindings.Track(inputs.asset); }
             var cam = pitchTarget != null ? pitchTarget.GetComponentInChildren<Camera>(true) : null;
             if (cam != null)
             {
@@ -90,9 +90,13 @@ namespace Game.DemonKing
             cameraTransform.localPosition = cameraRest * (nearest / full);
         }
 
+        private Game.Hero.CharacterModelAnimator modelAnim;
+        private float airTime;
+
         private void Start()
         {
-            Game.Hero.CharacterModelAnimator.AttachDemonKingModel(gameObject);
+            modelAnim = Game.Hero.CharacterModelAnimator.AttachDemonKingModel(gameObject);
+            if (modelAnim != null) modelAnim.NominalSpeed = moveSpeed;
             HideCoreHealthBar();
         }
 
@@ -106,7 +110,7 @@ namespace Game.DemonKing
 
         private void OnEnable()
         {
-            if (inputs == null) inputs = new DemonKingInputActions();
+            if (inputs == null) { inputs = new DemonKingInputActions(); Game.Core.KeyBindings.Track(inputs.asset); }
             inputs.DemonKing.Enable();
             LockCursor(true);
         }
@@ -160,6 +164,12 @@ namespace Game.DemonKing
 
             var motion = Game.Skill.IceField.ApplySlip(transform.position, horizontal, ref slipVelocity);
             motion.y = verticalVelocity;
+            if (modelAnim != null && modelAnim.Body != null)
+            {
+                airTime = controller.isGrounded ? 0f : airTime + Time.deltaTime;
+                modelAnim.Body.Airborne = airTime > 0.15f;
+                modelAnim.Body.VerticalSpeed = verticalVelocity;
+            }
             controller.Move(motion * Time.deltaTime);
         }
 

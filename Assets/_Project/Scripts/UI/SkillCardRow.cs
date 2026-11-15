@@ -68,9 +68,23 @@ namespace Game.UI
             row.cards = new Card[count];
             for (int i = 0; i < count; i++) row.cards[i] = row.BuildCard(i);
 
-            HudStyle.Label(rt, "WheelHint", new Vector2(0f, 1f), Vector2.zero, new Vector2(0f, 40f), new Vector2(300f, 30f),
-                "SHIFT スキルホイール", 21, Color.white, TextAnchor.LowerLeft, 4f, row.pal.Outline);
+            row.wheelHint = HudStyle.Label(rt, "WheelHint", new Vector2(0f, 1f), Vector2.zero, new Vector2(0f, 40f), new Vector2(300f, 30f),
+                "", 21, Color.white, TextAnchor.LowerLeft, 4f, row.pal.Outline);
+            row.RefreshWheelHint();
+            Game.Core.KeyBindings.Changed += row.RefreshWheelHint;
             return row;
+        }
+
+        private Text wheelHint;
+
+        private void RefreshWheelHint()
+        {
+            if (wheelHint != null) wheelHint.text = Game.Core.KeyBindings.DisplayName(Game.Core.GameKey.SkillWheel) + " スキルホイール";
+        }
+
+        private void OnDestroy()
+        {
+            Game.Core.KeyBindings.Changed -= RefreshWheelHint;
         }
 
         private Card BuildCard(int index)

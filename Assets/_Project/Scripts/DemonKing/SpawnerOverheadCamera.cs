@@ -108,12 +108,12 @@ namespace Game.DemonKing
             if (overheadCamera == null || sp == null || keyboard == null) return;
             var cam = overheadCamera.transform;
             Vector3 input = Vector3.zero;
-            if (keyboard.wKey.isPressed) input += cam.forward;
-            if (keyboard.sKey.isPressed) input -= cam.forward;
-            if (keyboard.dKey.isPressed) input += cam.right;
-            if (keyboard.aKey.isPressed) input -= cam.right;
-            if (keyboard.spaceKey.isPressed) input += Vector3.up;
-            if (keyboard.leftCtrlKey.isPressed) input -= Vector3.up;
+            if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.MoveForward)) input += cam.forward;
+            if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.MoveBack)) input -= cam.forward;
+            if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.MoveRight)) input += cam.right;
+            if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.MoveLeft)) input -= cam.right;
+            if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.Jump)) input += Vector3.up;
+            if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.Descend)) input -= Vector3.up;
             if (input.sqrMagnitude > 1f) input.Normalize();
             Vector3 position = cam.position + input * (Game.Core.BalanceConfig.Instance.towerViewMoveSpeed * Time.unscaledDeltaTime);
 
@@ -129,7 +129,16 @@ namespace Game.DemonKing
         private void ShowHint(bool visible)
         {
             if (visible && hintHUD == null) BuildHintHUD();
+            if (visible && hintText != null) hintText.text = HintLine();
             if (hintHUD != null) hintHUD.SetActive(visible);
+        }
+
+        // 操作キーの設定に合わせた案内。
+        private static string HintLine()
+        {
+            string Name(Game.Core.GameKey key) => Game.Core.KeyBindings.DisplayName(key);
+            return "塔の射程の中: " + Name(Game.Core.GameKey.MoveForward) + Name(Game.Core.GameKey.MoveLeft) + Name(Game.Core.GameKey.MoveBack) + Name(Game.Core.GameKey.MoveRight)
+                + " 移動 / " + Name(Game.Core.GameKey.Jump) + "・" + Name(Game.Core.GameKey.Descend) + " 上下 / マウスで向き / Esc・右クリックで俯瞰へ";
         }
 
         private void BuildHintHUD()
@@ -153,7 +162,7 @@ namespace Game.DemonKing
             hintText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             hintText.fontSize = 14; hintText.fontStyle = FontStyle.Bold;
             hintText.alignment = TextAnchor.MiddleLeft; hintText.color = Color.white;
-            hintText.text = "塔の射程の中: WASD 移動 / Space・Ctrl 上下 / マウスで向き / Esc・右クリックで俯瞰へ";
+            hintText.text = HintLine();
             hintText.raycastTarget = false;
         }
     }

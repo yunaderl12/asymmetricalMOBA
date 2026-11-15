@@ -91,7 +91,12 @@ namespace Game.Hero.EditorTools
         private static void EnsureController()
         {
             var existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
-            if (existing != null) return;
+            if (existing != null)
+            {
+                EnsureUpperLayer(existing);
+                EnsureAttackSpeed(existing);
+                return;
+            }
 
             // Verify at least one source FBX exists; otherwise quietly skip so we
             // don't spam errors on freshly-cloned repos.
@@ -142,9 +147,99 @@ namespace Game.Hero.EditorTools
                 t.AddCondition(AnimatorConditionMode.If, 0f, "Trig_" + s.state);
             }
 
+            EnsureUpperLayer(controller);
+            EnsureAttackSpeed(controller);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
             Debug.Log("[KnightAnimatorControllerSetup] generated controller at " + ControllerPath + " with " + States.Length + " states");
+        }
+
+        /// <summary>
+        /// 斬りのクリップは 1.5 秒あり、そのままだと攻撃の間隔（0.3〜0.6 秒）では構えしか見えない。
+        /// 攻撃の状態（全身の Attacking と上半身の UpperAttack）だけ早回しにして、振りが出るようにする。
+        /// 速さは CharacterModelAnimator.AttackStateSpeed。
+        /// </summary>
+        private static void EnsureAttackSpeed(AnimatorController controller)
+        {
+            float speed = Game.Hero.CharacterModelAnimator.AttackStateSpeed;
+            string scale = Game.Hero.CharacterModelAnimator.AttackSpeedScaleParameter;
+            bool changed = false;
+            // 走りの足の回転（animator.speed）を打ち消すための掛け率。既定は 1（何も設定しない体でも普通に流れる）。
+            bool hasScale = false;
+            foreach (var p in controller.parameters) if (p.name == scale) hasScale = true;
+            if (!hasScale)
+            {
+                controller.AddParameter(new AnimatorControllerParameter { name = scale, type = AnimatorControllerParameterType.Float, defaultFloat = 1f });
+                changed = true;
+            }
+            foreach (var layer in controller.layers)
+            {
+                foreach (var child in layer.stateMachine.states)
+                {
+                    var state = child.state;
+                    if (state.name != "Attacking" && state.name != "UpperAttack") continue;
+                    if (Mathf.Approximately(state.speed, speed) && state.speedParameterActive && state.speedParameter == scale) continue;
+                    state.speed = speed;
+                    state.speedParameterActive = true;
+                    state.speedParameter = scale;
+                    EditorUtility.SetDirty(state);
+                    changed = true;
+                }
+            }
+            if (!changed) return;
+            EditorUtility.SetDirty(controller);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[KnightAnimatorControllerSetup] set the attack states' speed to " + speed);
+        }
+
+        const string UpperMaskPath = "Assets/_Project/Resources/Knight/KnightUpperBody.mask";
+
+        /// <summary>
+        /// 上半身だけのレイヤー（Upper）。走りながらの攻撃で、足は走りのクリップのまま、背骨から上だけ斬りのクリップを流す。
+        /// 既定の状態 Empty は何も流さず、下のレイヤーがそのまま見える。CharacterModelAnimator が UpperAttack へ切り替える。
+        /// すでにあるコントローラーにも、足りなければ後から足す（アセットを作り直さないので GUID は変わらない）。
+        /// </summary>
+        private static void EnsureUpperLayer(AnimatorController controller)
+        {
+            foreach (var layer in controller.layers)
+                if (layer.name == "Upper") return;
+
+            var knight = AssetDatabase.LoadAssetAtPath<GameObject>(ResourcesKnight + "knight.fbx");
+            if (knight == null) return;
+            var mask = AssetDatabase.LoadAssetAtPath<AvatarMask>(UpperMaskPath);
+            if (mask == null)
+            {
+                mask = new AvatarMask();
+                var bones = knight.GetComponentsInChildren<Transform>(true);
+                mask.transformCount = bones.Length;
+                for (int b = 0; b < bones.Length; b++)
+                {
+                    string path = AnimationUtility.CalculateTransformPath(bones[b], knight.transform);
+                    mask.SetTransformPath(b, path);
+                    mask.SetTransformActive(b, path.Contains("Spine02"));
+                }
+                AssetDatabase.CreateAsset(mask, UpperMaskPath);
+            }
+
+            var machine = new AnimatorStateMachine { name = "Upper", hideFlags = HideFlags.HideInHierarchy };
+            AssetDatabase.AddObjectToAsset(machine, controller);
+            var empty = machine.AddState("Empty", new Vector3(250f, 0f, 0f));
+            empty.writeDefaultValues = false;
+            var attack = machine.AddState("UpperAttack", new Vector3(250f, 60f, 0f));
+            attack.motion = FindClip(ResourcesKnight + "knight_Right_Hand_Sword_Slash.fbx", "Right_Hand_Sword_Slash");
+            attack.writeDefaultValues = false;
+            machine.defaultState = empty;
+            controller.AddLayer(new AnimatorControllerLayer
+            {
+                name = "Upper",
+                defaultWeight = 1f,
+                avatarMask = mask,
+                blendingMode = AnimatorLayerBlendingMode.Override,
+                stateMachine = machine,
+            });
+            EditorUtility.SetDirty(controller);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[KnightAnimatorControllerSetup] added the upper-body attack layer");
         }
 
         private static AnimationClip FindClip(string fbxAssetPath, string hint)

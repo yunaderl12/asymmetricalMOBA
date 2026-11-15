@@ -38,6 +38,8 @@ namespace Game.Hero
             rightTap = new InputAction("DodgeRight", InputActionType.Button, "<Keyboard>/d");
             leftTap.performed += ctx => OnTap(-1, ctx.time);
             rightTap.performed += ctx => OnTap(1, ctx.time);
+            Game.Core.KeyBindings.Track(leftTap, Game.Core.GameKey.MoveLeft);
+            Game.Core.KeyBindings.Track(rightTap, Game.Core.GameKey.MoveRight);
         }
 
         protected override void OnEnable()

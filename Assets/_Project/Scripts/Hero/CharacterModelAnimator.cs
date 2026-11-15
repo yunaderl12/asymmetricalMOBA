@@ -13,8 +13,9 @@ namespace Game.Hero
     /// hooks the Animator to the shared AnimatorController at
     /// Resources/Knight/KnightAnimator.controller (every model uses the Knight
     /// skeleton, so the Knight clips play on all of them), then drives state changes
-    /// by firing triggers — Trig_Idle / Trig_Forward / Trig_BackLeft / Trig_BackRight
-    /// / Trig_Dying / Trig_Respawning / Trig_Attacking.
+    /// by cross-fading to the states Idle / Forward / BackLeft / BackRight / Dying /
+    /// Respawning / Attacking. A second layer (Upper) plays the attack clip on the upper
+    /// body only while moving, and BodyMotion adds procedural motion on top of the clips.
     ///
     /// The local human hero drives states from input; bots and the Demon King drive
     /// them from their actual movement (call <see cref="PlayAttack"/> for attacks).
@@ -101,8 +102,23 @@ namespace Game.Hero
         /// 走るアニメーションの速さの倍率（大きな体をゆっくり重く歩かせる）。
         public float RunAnimSpeedScale { get; set; } = 1f;
 
+        /// クリップの上に重ねる体の動き（ひねり・傾き・空中・しゃがみ・被弾など）。モデルができるまでは null。
+        public BodyMotion Body { get; private set; }
+        /// 普段の移動の速さ（m/s）。入れておくと、実際の速さに合わせて足の回転が変わる。
+        public float NominalSpeed { get; set; }
+
         private GameObject model;
         private Animator animator;
+        private bool upperAttack;
+        private float upperBlend;
+        private bool attackRestart;
+        private bool hasUpperLayer;
+        private bool hasAttackSpeedScale;
+        private const int UpperLayer = 1;
+        private const float UpperAttackMinSpeed = 1.2f;
+        private static readonly string[] StateNames = { "Idle", "Forward", "BackLeft", "BackRight", "Dying", "Respawning", "Attacking" };
+        // 状態を切り替えるときに、前の動きとなめらかにつなぐ秒数。
+        private static readonly float[] StateFade = { 0.2f, 0.16f, 0.16f, 0.16f, 0.08f, 0.05f, 0.07f };
         private AnimState currentState = AnimState.Idle;
         private float attackTimer;
         private bool respawning;
@@ -166,12 +182,6 @@ namespace Game.Hero
             idleFidgetAt = Time.time + Random.Range(3f, 9f);
         }
 
-        private static readonly string[] TriggerNames =
-        {
-            "Trig_Idle", "Trig_Forward", "Trig_BackLeft", "Trig_BackRight",
-            "Trig_Dying", "Trig_Respawning", "Trig_Attacking"
-        };
-
         /// <summary>
         /// Must be called right after AddComponent (before Start).
         /// hideFromOwnCamera: move the model to avatarLayerName so the local FPS camera skips it.
@@ -224,8 +234,30 @@ namespace Game.Hero
         public void PlayAttack()
         {
             if (health != null && health.IsDead) return;
-            attackTimer = attackClipDuration;
+            BeginAttack();
         }
+
+        // 攻撃のたびにクリップを頭から流し直す。動いている最中なら上半身だけで振って、足は走り続ける。
+        private void BeginAttack()
+        {
+            attackTimer = attackClipDuration;
+            attackRestart = true;
+            if (Body != null) Body.Lunge(AttackLungeSeconds);
+        }
+
+        /// 斬りのクリップ（1.5 秒）を攻撃の状態で流す速さ。コントローラーの Attacking / UpperAttack に入れる
+        /// （KnightAnimatorControllerSetup）。構えのゆっくりした出だしは飛ばして、押してから約 0.1 秒で振り抜く。
+        public const float AttackStateSpeed = 2.5f;
+        /// 攻撃の状態の速さに掛ける Animator のパラメーター。走りの足の回転（animator.speed）を打ち消して、
+        /// 走りながらでも振りの速さが変わらないようにする。
+        public const string AttackSpeedScaleParameter = "AttackSpeedScale";
+        private static readonly int AttackSpeedScaleId = Animator.StringToHash(AttackSpeedScaleParameter);
+        // クリップの何秒目から流すか（0.2 秒目から構えが動き出し、0.5 秒目で振り抜く）。
+        private const float AttackClipStart = 0.2f;
+        // CrossFadeInFixedTime の開始位置は「状態の秒数」（クリップの秒数 ÷ 状態の速さ）で渡す。
+        private const float AttackStateStart = AttackClipStart / AttackStateSpeed;
+        // 踏み込みの長さ（秒）。振り抜きに合わせる。
+        private const float AttackLungeSeconds = 0.34f;
 
         /// lean: -1 で後ろへ反り、+1 で前へ踏み込む / reach: 両手を holdPoint へ向ける強さ（0〜1）。
         /// spread: 両手を holdPoint から左右へ離す幅 (m)。肩幅の広い体は、手を寄せすぎると腕が胸の前で交差する。
@@ -258,9 +290,59 @@ namespace Game.Hero
             guardPoint = point;
         }
 
+        /// 片手を高く掲げてから前へ振り下ろす短いしぐさ（魔王のフィールド魔法など、専用の姿勢を持たない詠唱に使う）。
+        public void PlayCastGesture(float seconds = 0.75f)
+        {
+            gestureSeconds = Mathf.Max(0.1f, seconds);
+            gestureTimer = gestureSeconds;
+        }
+
+        private float gestureTimer, gestureSeconds;
+        private bool gesturePosed;
+
+        // 掲げる（前半）→ 振り下ろす → 力を抜く。近接スキルの姿勢（SetMeleePose）と同じ仕組みで骨を回す。
+        private void UpdateCastGesture()
+        {
+            if (gestureTimer <= 0f)
+            {
+                if (gesturePosed) { gesturePosed = false; ClearMeleePose(); }
+                return;
+            }
+            gestureTimer -= Time.deltaTime;
+            float p = 1f - Mathf.Clamp01(gestureTimer / gestureSeconds);
+            float scale = Mathf.Abs(model.transform.lossyScale.y);
+            Vector3 chest = transform.position + transform.up * (1.1f * scale);
+            Vector3 high = chest + (transform.up * 1.6f + transform.forward * 0.3f + transform.right * 0.3f) * scale;
+            Vector3 low = chest + (transform.forward * 1.6f + transform.up * 0.1f + transform.right * 0.15f) * scale;
+            float lean, reach;
+            Vector3 point;
+            if (p < 0.4f)
+            {
+                float k = p / 0.4f;
+                k = 1f - (1f - k) * (1f - k);
+                lean = -0.7f * k; reach = k; point = high;
+            }
+            else if (p < 0.62f)
+            {
+                float k = (p - 0.4f) / 0.22f;
+                k = k * k * (3f - 2f * k);
+                lean = Mathf.Lerp(-0.7f, 0.9f, k); reach = 1f; point = Vector3.Slerp(high - chest, low - chest, k) + chest;
+            }
+            else
+            {
+                float k = (p - 0.62f) / 0.38f;
+                lean = 0.9f * (1f - k) * (1f - k); reach = (1f - k) * (1f - k); point = low;
+            }
+            gesturePosed = true;
+            SetMeleePose(lean, 0f, reach, point);
+        }
+
         private void LateUpdate()
         {
             if (model == null || animator == null) return;
+            bool alive = !(health != null && health.IsDead);
+            if (Body != null && alive && !respawning && !customRig) Body.Apply();
+            UpdateCastGesture();
             bool casting = castLean != 0f || castReach != 0f;
             bool melee = meleeLean != 0f || meleeSpin != 0f || meleeReach != 0f;
             if (idleLife) ApplyIdleLife(currentState == AnimState.Idle && !casting && !melee && guardReach == 0f && !(health != null && health.IsDead));
@@ -364,6 +446,7 @@ namespace Game.Hero
         {
             health = GetComponent<HealthComponent>();
             inputs = new HeroInputActions();
+            Game.Core.KeyBindings.Track(inputs.asset);
         }
 
         private void OnEnable()
@@ -382,6 +465,7 @@ namespace Game.Hero
         private void OnDestroy()
         {
             inputs?.Dispose();
+            HealthComponent.AnyDamage -= OnAnyDamage;
             if (whiteFlashMaterial != null) Destroy(whiteFlashMaterial);
         }
 
@@ -390,12 +474,25 @@ namespace Game.Hero
             SpawnModel();
             if (model == null) { enabled = false; return; }
             AttachAnimatorController();
+            if (!customRig)
+            {
+                Body = new BodyMotion(transform, model.transform);
+                HealthComponent.AnyDamage += OnAnyDamage;
+            }
             if (driveFromInput) AttachRespawnEvents();
             lastPosition = transform.position;
             wasDead = health != null && health.IsDead;
             // Force idle as the initial state.
             FireTrigger(AnimState.Idle);
             currentState = AnimState.Idle;
+        }
+
+        // 攻撃を受けたら、攻撃の来た向きと反対へ上体がのけぞる。
+        private void OnAnyDamage(HealthComponent victim, int amount, GameObject attacker)
+        {
+            if (victim != health || Body == null || amount <= 0 || attacker == null || attacker == gameObject) return;
+            float ratio = health != null && health.MaxHP > 0 ? (float)amount / health.MaxHP : 0.05f;
+            Body.Flinch(transform.position - attacker.transform.position, 0.6f + ratio * 6f);
         }
 
         // プレハブの固定の高さだと大きいモデルの体にバーが埋もれるので、モデルの頭の上へ移す。
@@ -495,6 +592,9 @@ namespace Game.Hero
                 return;
             }
             animator.runtimeAnimatorController = controller;
+            hasUpperLayer = animator.layerCount > UpperLayer;
+            hasAttackSpeedScale = false;
+            foreach (var p in animator.parameters) if (p.nameHash == AttackSpeedScaleId) hasAttackSpeedScale = true;
             if (logStates) Debug.Log("[CharacterModelAnimator] assigned controller '" + controller.name + "'");
         }
 
@@ -508,18 +608,80 @@ namespace Game.Hero
             }
             if (driveFromInput && !CastLocked && inputs.Hero.Attack.WasPerformedThisFrame() && !(health != null && health.IsDead))
             {
-                attackTimer = attackClipDuration;
+                BeginAttack();
             }
+            if (Body != null)
+            {
+                Body.NominalSpeed = NominalSpeed;
+                Body.Tick(Time.deltaTime);
+            }
+            UpdateUpperAttack();
             // Without RespawnManager events (bots), treat dead -> alive as the respawn moment.
             bool dead = health != null && health.IsDead;
             if (!driveFromInput && wasDead && !dead) OnRespawnFinished();
             wasDead = dead;
             ApplyState(ComputeState());
+            UpdateAnimatorSpeed();
             lastPosition = transform.position;
+        }
+
+        // 動きながらの攻撃は、上半身のレイヤーだけで斬りのクリップを流す（足は走りのまま）。
+        private void UpdateUpperAttack()
+        {
+            if (animator == null || !hasUpperLayer) { attackRestart = attackRestart && attackTimer > 0f; return; }
+            bool dead = health != null && health.IsDead;
+            if (attackRestart && !dead && !respawning)
+            {
+                bool moving = Body != null && Body.PlanarSpeed > UpperAttackMinSpeed;
+                if (moving)
+                {
+                    upperAttack = true;
+                    attackRestart = false;
+                    animator.CrossFadeInFixedTime("UpperAttack", 0.06f, UpperLayer, AttackStateStart);
+                }
+            }
+            if (upperAttack && (attackTimer <= 0f || dead || respawning || CastLocked))
+            {
+                upperAttack = false;
+                animator.CrossFadeInFixedTime("Empty", dead ? 0.05f : 0.18f, UpperLayer);
+            }
+            // レイヤーのつなぎと同じ速さで、上半身を起こす補正を出し入れする。
+            upperBlend = Mathf.MoveTowards(upperBlend, upperAttack ? 1f : 0f, Time.deltaTime / (upperAttack ? 0.06f : 0.18f));
+            if (Body != null) Body.UpperOverride = upperBlend;
+        }
+
+        // 走りは実際の速さに合わせて足の回転を変える。空中では足をほぼ止める。
+        private void UpdateAnimatorSpeed()
+        {
+            if (animator == null || animator.runtimeAnimatorController == null) return;
+            // 倒れる演出の間は、演出側が再生速度を決める（倒れた姿勢で止めるなど）。
+            if (currentState == AnimState.Dying || currentState == AnimState.Respawning) return;
+            bool running = currentState == AnimState.Forward || currentState == AnimState.BackLeft || currentState == AnimState.BackRight;
+            float speed = 1f;
+            if (running)
+            {
+                speed = Game.Core.BalanceConfig.Instance.runAnimationSpeed * RunAnimSpeedScale;
+                if (Body != null)
+                {
+                    speed *= Body.StrideFactor;
+                    if (Body.Airborne) speed *= 0.25f;
+                    if (Body.Slide > 0.5f) speed = 0f;
+                }
+            }
+            animator.speed = speed;
+            if (hasAttackSpeedScale) animator.SetFloat(AttackSpeedScaleId, speed > 0.05f ? 1f / speed : 1f);
         }
 
         private Vector2 ReadMove()
         {
+            if (Body != null)
+            {
+                // 実際に動いた向きで決める。横移動は前走りのクリップを流し、腰のひねり（BodyMotion）で進む向きへ向ける。
+                Vector3 local = Body.LocalVelocity;
+                if (Body.PlanarSpeed < moveThreshold) return Vector2.zero;
+                if (local.z < -0.25f * Body.PlanarSpeed) return new Vector2(local.x < 0f ? -1f : 1f, -1f);
+                return new Vector2(0f, 1f);
+            }
             if (driveFromInput) return inputs != null ? inputs.Hero.Move.ReadValue<Vector2>() : Vector2.zero;
             if (Time.deltaTime <= 0f) return Vector2.zero;
             Vector3 v = transform.InverseTransformDirection((transform.position - lastPosition) / Time.deltaTime);
@@ -537,7 +699,7 @@ namespace Game.Hero
             if (health != null && health.IsDead) return AnimState.Dying;
             if (respawning) return AnimState.Respawning;
             if (CastLocked) return AnimState.Idle;
-            if (attackTimer > 0f) return AnimState.Attacking;
+            if (attackTimer > 0f && !upperAttack) return AnimState.Attacking;
             Vector2 move = ReadMove();
             if (move.y > 0.1f) return AnimState.Forward;
             if (move.y < -0.1f)
@@ -547,7 +709,17 @@ namespace Game.Hero
 
         private void ApplyState(AnimState s)
         {
-            if (s == currentState) return;
+            if (s == currentState)
+            {
+                // 続けて攻撃したら、斬りのクリップを頭から流し直す。
+                if (s == AnimState.Attacking && attackRestart)
+                {
+                    attackRestart = false;
+                    FireTrigger(s);
+                }
+                return;
+            }
+            if (s == AnimState.Attacking) attackRestart = false;
             currentState = s;
             FireTrigger(s);
             if (logStates) Debug.Log("[CharacterModelAnimator] state -> " + s);
@@ -556,11 +728,9 @@ namespace Game.Hero
         private void FireTrigger(AnimState s)
         {
             if (animator == null || animator.runtimeAnimatorController == null) return;
-            // Reset all triggers to avoid stacking (e.g. if multiple frames flipped quickly).
-            for (int i = 0; i < TriggerNames.Length; i++) animator.ResetTrigger(TriggerNames[i]);
-            animator.SetTrigger(TriggerNames[(int)s]);
-            bool running = s == AnimState.Forward || s == AnimState.BackLeft || s == AnimState.BackRight;
-            animator.speed = running ? Game.Core.BalanceConfig.Instance.runAnimationSpeed * RunAnimSpeedScale : 1f;
+            // トリガーの即時切り替えではなく、前の動きから短くなめらかにつなぐ。
+            animator.CrossFadeInFixedTime(StateNames[(int)s], StateFade[(int)s], 0, s == AnimState.Attacking ? AttackStateStart : 0f);
+            UpdateAnimatorSpeed();
         }
 
         private void OnDeath()

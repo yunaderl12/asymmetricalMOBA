@@ -72,6 +72,7 @@ namespace Game.Hero
             mana = GetComponent<ManaComponent>();
             regen = GetComponent<HeroRegen>();
             Inputs = new HeroInputActions();
+            Game.Core.KeyBindings.Track(Inputs.asset);
         }
 
         protected virtual void OnEnable()

@@ -130,6 +130,7 @@ namespace Game.Bot
         {
             if (dead || agent == null || !agent.isOnNavMesh) return;
             agent.speed = baseSpeed * mods.TotalSpdMultiplier * terrain.SpeedFactor;
+            if (modelAnim != null) modelAnim.NominalSpeed = baseSpeed;
             HeroMpRecovery.RefillInTown(gameObject, GetComponent<ManaComponent>());
             if (StatusEffectController.IsStunnedObj(gameObject)) { agent.SetDestination(transform.position); return; }
             if (skills != null && skills.IsCasting) return;

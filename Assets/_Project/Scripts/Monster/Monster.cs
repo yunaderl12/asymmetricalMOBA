@@ -179,6 +179,7 @@ namespace Game.Monster
             if (data == null || string.IsNullOrEmpty(data.modelPath) || GetComponent<CharacterModelAnimator>() != null) return;
             var anim = gameObject.AddComponent<CharacterModelAnimator>();
             anim.Configure(data.modelPath, data.modelMaterialPath, data.modelScale, false, false, false);
+            anim.NominalSpeed = data.spd;
             anim.ConfigureDeath(data.deathFallSeconds, data.deathHoldSeconds, data.deathParticleCount);
             anim.ConfigureBlastDeath(data.deathBlastSeconds, data.deathBlastSpeed);
             if (data.customRig) anim.UseCustomRig();

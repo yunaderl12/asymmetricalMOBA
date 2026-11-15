@@ -124,6 +124,63 @@ namespace Game.Monster
             if (rig == null) return;
             rig.Begin();
             Pose();
+            ApplySecondaryMotion();
+        }
+
+        // ---- ボス共通の、体の重さを出す動き（各ボスの Pose のあとに重ねる）
+        //  - 走り出すと前のめりになり、止まると起き上がって揺れ戻る。曲がると内側へ傾く。
+        //  - 攻撃を受けると、受けた向きへ体が揺れて戻る（ダメージが大きいほど大きく）。
+        //  - スタン中は、ふらふらと揺れる。
+        private const float SecondaryStiffness = 60f;
+        private const float SecondaryDamping = 9f;
+        private const float RecoilStiffness = 140f;
+        private const float RecoilDamping = 11f;
+        private Vector3 secondaryLastPosition;
+        private float secondaryLastYaw, secondaryLastForward;
+        private float pitchSpring, pitchVelocity, bankSpring, bankVelocity;
+        private Vector2 recoil, recoilVelocity; // x: 横への傾き、y: 前後の傾き（度）
+        private bool secondaryStarted;
+
+        private void ApplySecondaryMotion()
+        {
+            float dt = Time.deltaTime;
+            if (model == null || dead || dt <= 0f) return;
+            if (!secondaryStarted)
+            {
+                secondaryStarted = true;
+                secondaryLastPosition = transform.position;
+                secondaryLastYaw = transform.eulerAngles.y;
+            }
+            Vector3 velocity = Flat(transform.position - secondaryLastPosition) / dt;
+            secondaryLastPosition = transform.position;
+            if (velocity.sqrMagnitude > 80f * 80f) velocity = Vector3.zero; // 瞬間移動は数えない
+            float yaw = transform.eulerAngles.y;
+            float yawRate = Mathf.Clamp(Mathf.DeltaAngle(secondaryLastYaw, yaw) / dt, -300f, 300f);
+            secondaryLastYaw = yaw;
+            float forwardSpeed = transform.InverseTransformDirection(velocity).z;
+            float accel = Mathf.Clamp((forwardSpeed - secondaryLastForward) / dt, -40f, 40f);
+            secondaryLastForward = forwardSpeed;
+
+            float pitchGoal = Mathf.Clamp(accel * 0.25f, -4f, 4f);
+            float bankGoal = Mathf.Clamp(-yawRate * 0.03f, -5f, 5f) * Mathf.Clamp01(velocity.magnitude / 3f);
+            pitchVelocity += ((pitchGoal - pitchSpring) * SecondaryStiffness - pitchVelocity * SecondaryDamping) * dt;
+            pitchSpring += pitchVelocity * dt;
+            bankVelocity += ((bankGoal - bankSpring) * SecondaryStiffness - bankVelocity * SecondaryDamping) * dt;
+            bankSpring += bankVelocity * dt;
+            recoilVelocity += (-recoil * RecoilStiffness - recoilVelocity * RecoilDamping) * dt;
+            recoil += recoilVelocity * dt;
+            float daze = Stunned ? Mathf.Sin(Time.time * Mathf.PI * 2f * 1.4f) * 3f : 0f;
+            model.localRotation = model.localRotation * Quaternion.Euler(pitchSpring + recoil.y, 0f, bankSpring + recoil.x + daze);
+        }
+
+        private void OnAnyDamageSecondary(HealthComponent victim, int amount, GameObject attacker)
+        {
+            if (victim != health || dead || amount <= 0 || attacker == null) return;
+            Vector3 push = transform.InverseTransformDirection(Flat(transform.position - attacker.transform.position)).normalized;
+            // 小さな一撃でも1度ほど、大きな一撃で3〜4度ゆれる。
+            float kick = Mathf.Clamp(3f + (float)amount / Mathf.Max(1, health.MaxHP) * 160f, 3f, 9f) * 10f;
+            // 前から受けたら後ろへのけぞり、横から受けたら反対側へ傾く。連続で受けても傾きすぎない。
+            recoilVelocity = Vector2.ClampMagnitude(recoilVelocity + new Vector2(-push.x, push.z) * kick, 110f);
         }
 
         protected bool Stunned => StatusEffectController.IsStunnedObj(gameObject);
@@ -285,8 +342,8 @@ namespace Game.Monster
             Destroy(gameObject);
         }
 
-        protected virtual void OnEnable() { All.Add(this); }
-        protected virtual void OnDisable() { All.Remove(this); }
+        protected virtual void OnEnable() { All.Add(this); HealthComponent.AnyDamage += OnAnyDamageSecondary; }
+        protected virtual void OnDisable() { All.Remove(this); HealthComponent.AnyDamage -= OnAnyDamageSecondary; }
 
         private void OnDestroy()
         {

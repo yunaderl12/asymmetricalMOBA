@@ -13,17 +13,21 @@ namespace Game.Skill
         private const float BeamSeconds = 0.42f;
         private const float StrikeSeconds = 0.08f;
         private const float ShakeSeconds = 0.18f;
-        private const float ShakeSize = 0.05f;
+        private const float ShakeSize = 0.03f;
 
         private static readonly Vector3 WandDownPosition = new Vector3(0.1f, -0.2f, 0.46f);
         private static readonly Vector3 WandDownEuler = new Vector3(70f, -5f, -5f);
+
+        // 振り下ろした杖は、そのまま下で残す。
+        protected override Vector3 ReleaseWandPosition => WandDownPosition;
+        protected override Vector3 ReleaseWandEuler => WandDownEuler;
 
         private readonly List<HealthComponent> single = new List<HealthComponent>(1);
         private Vector3 strikeArmPoint;
 
         protected override void OnRelease()
         {
-            ReleaseFlash(1.6f);
+            ReleaseFlash(1f);
             Vector3 eye = CameraTransform != null ? CameraTransform.position : Chest;
             Vector3 aim = Controller != null ? Controller.AimForward : transform.forward;
             Vector3 point = eye + aim * Skill.range;
@@ -37,9 +41,9 @@ namespace Game.Skill
             strikeArmPoint = Chest + (strike - Chest).normalized * 2f;
 
             LightPillar.Spawn(strike, BeamRadius * SizeScale, BeamHeight, BeamSeconds, Palette.Main * 1.2f, false);
-            ShockRing.Spawn(strike, 0.3f, 2.8f * SizeScale, 0.32f, 0.4f, Palette.Core);
-            FireFlash.Spawn(strike + Vector3.up * 0.6f, 3f * SizeScale, 0.16f, 0.6f, Palette.Core, Palette.Main, Palette.Light, 3f);
-            FireballVfx.SpawnSparks(strike + Vector3.up * 0.1f, Vector3.up, Mathf.RoundToInt(20 * SizeScale), Color.white, Palette.Spark);
+            ShockRing.Spawn(strike, 0.3f, 2.2f * SizeScale, 0.32f, 0.2f, Palette.Light);
+            FireFlash.Spawn(strike + Vector3.up * 0.6f, 1.8f * SizeScale, 0.16f, 0.6f, Palette.Core, Palette.Main, Palette.Light, 3f);
+            FireballVfx.SpawnSparks(strike + Vector3.up * 0.1f, Vector3.up, Mathf.RoundToInt(12 * SizeScale), Color.white, Palette.Spark);
             Shake(ShakeSeconds, ShakeSize * SizeScale);
 
             int hits = 0;

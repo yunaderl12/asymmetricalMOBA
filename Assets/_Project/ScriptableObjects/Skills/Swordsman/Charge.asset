@@ -29,7 +29,7 @@ MonoBehaviour:
   statusDuration: 0
   statusPower: 0
   statusChance: 1
-  castTime: 0.4
+  castTime: 0.12
   projectileSpeed: 28
   castLocksMovement: 1
   hitStopSeconds: 0.09

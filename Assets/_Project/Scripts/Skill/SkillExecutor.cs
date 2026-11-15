@@ -36,14 +36,14 @@ namespace Game.Skill
             classInit = GetComponent<HeroClassInitializer>();
             stats = GetComponent<StatModifierContainer>();
             regen = GetComponent<Game.Hero.HeroRegen>();
-            if (inputs == null) inputs = new HeroInputActions();
+            if (inputs == null) { inputs = new HeroInputActions(); Game.Core.KeyBindings.Track(inputs.asset); }
         }
 
         private void OnEnable()
         {
             // BOTはキー入力で動かない（BotSkillUser が CastSlot を呼ぶ）。
             if (GetComponent<Game.Bot.BotHero>() != null) return;
-            if (inputs == null) inputs = new HeroInputActions();
+            if (inputs == null) { inputs = new HeroInputActions(); Game.Core.KeyBindings.Track(inputs.asset); }
             inputs.Hero.Enable();
             inputs.Hero.SkillCast.performed += OnSkillCastPerformed;
         }

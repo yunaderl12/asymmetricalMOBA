@@ -104,12 +104,12 @@ namespace Game.Hero
                 Vector3 dir = Vector3.zero;
                 var fwd = cameraTransform.forward;
                 var right = cameraTransform.right;
-                if (Keyboard.current.wKey.isPressed) dir += fwd;
-                if (Keyboard.current.sKey.isPressed) dir -= fwd;
-                if (Keyboard.current.dKey.isPressed) dir += right;
-                if (Keyboard.current.aKey.isPressed) dir -= right;
-                if (Keyboard.current.spaceKey.isPressed) dir += Vector3.up;
-                if (Keyboard.current.leftCtrlKey.isPressed || Keyboard.current.cKey.isPressed) dir -= Vector3.up;
+                if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.MoveForward)) dir += fwd;
+                if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.MoveBack)) dir -= fwd;
+                if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.MoveRight)) dir += right;
+                if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.MoveLeft)) dir -= right;
+                if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.Jump)) dir += Vector3.up;
+                if (Game.Core.KeyBindings.IsPressed(Game.Core.GameKey.Descend)) dir -= Vector3.up;
                 if (dir.sqrMagnitude > 0.01f)
                     cameraTransform.position += dir.normalized * flySpeed * Time.deltaTime;
             }

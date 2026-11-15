@@ -24,8 +24,12 @@ namespace Game.Hero
         private const float SwayPerDegree = 0.0016f;
         private const float SwayLimit = 0.05f;
         private const float SwaySharpness = 10f;
-        private const float AttackPullSeconds = 0.06f;
-        private const float AttackSwingSeconds = 0.12f;
+        // 通常攻撃の振り: 引く → 振り抜く → 振り抜いた先で少し残る。
+        private const float AttackPullSeconds = 0.07f;
+        private const float AttackSwingSeconds = 0.1f;
+        private const float AttackFollowSeconds = 0.13f;
+        // 続けて振るときに、次の振りを返しの振り（左から右）にする間隔。
+        private const float ComboSeconds = 0.9f;
 
         private const float ArmStretch = 0.94f;
 
@@ -63,6 +67,13 @@ namespace Game.Hero
         private Vector3 sway;
         private float lastYaw;
         private float lastPitch;
+        // 体の動きに合わせた腕の揺れ（空中の遅れ、止まる・走り出す揺り戻し、姿勢ごとの構え、横移動の傾き、息づかい）。
+        private float airLag, airLagVelocity;
+        private float surge, surgeVelocity, lastForwardSpeed;
+        private float dashBlend, crouchBlend, slideBlend, strafeRoll;
+        private float breathPhase;
+        private bool backhand;
+        private float lastAttackTime = -10f;
 
         public bool IsVisible => root != null && root.gameObject.activeSelf;
         public Transform LeftHand => left != null ? left.Hand : null;
@@ -243,6 +254,9 @@ namespace Game.Hero
 
         private void OnAttacked()
         {
+            // 続けて振ると、振り下ろしと返しの振りが交互に出る。
+            backhand = Time.time - lastAttackTime < ComboSeconds && !backhand;
+            lastAttackTime = Time.time;
             attackAge = 0f;
         }
 
@@ -271,10 +285,36 @@ namespace Game.Hero
         private void UpdateSway(float dt)
         {
             Vector3 velocity = characterController != null && characterController.enabled ? characterController.velocity : Vector3.zero;
+            float vertical = velocity.y;
             velocity.y = 0f;
-            bobPhase += velocity.magnitude * BobPerMeter * dt;
+            float speed = velocity.magnitude;
+            Vector3 local = transform.InverseTransformDirection(velocity);
+            bool grounded = characterController == null || characterController.isGrounded;
+            float blend = 1f - Mathf.Exp(-9f * dt);
+            dashBlend = Mathf.Lerp(dashBlend, controller != null && controller.IsDashing ? 1f : 0f, blend);
+            slideBlend = Mathf.Lerp(slideBlend, controller != null && controller.IsSliding ? 1f : 0f, blend);
+            crouchBlend = Mathf.Lerp(crouchBlend, controller != null && controller.CurrentStance == HeroFPSController.Stance.Crouching ? 1f : 0f, blend);
+
+            // 歩きの沈み（縦だけ。走ると少し大きくなる）。スライディング中は足を動かさないので止める。
+            bobPhase += speed * BobPerMeter * dt;
             float sink = Mathf.Sin(bobPhase);
-            Vector3 bob = new Vector3(0f, -sink * sink, 0f) * (BobSize * Mathf.Clamp01(velocity.magnitude / 3f));
+            Vector3 bob = new Vector3(0f, -sink * sink, 0f) * (BobSize * Mathf.Clamp01(speed / 3f) * (1f + 0.6f * dashBlend) * (1f - slideBlend) * (grounded ? 1f : 0f));
+
+            // 立ち止まっているときの息づかい。
+            breathPhase += dt;
+            Vector3 breath = new Vector3(0f, Mathf.Sin(breathPhase * Mathf.PI * 2f * 0.22f) * 0.0035f, 0f) * (1f - Mathf.Clamp01(speed / 1.5f));
+
+            // 空中: 跳び上がるときは腕が遅れて下がり、落ちるときは浮く。着地で沈んでから戻る。
+            float lagTarget = grounded ? 0f : Mathf.Clamp(-vertical * 0.007f, -0.06f, 0.05f);
+            airLag = Mathf.SmoothDamp(airLag, lagTarget, ref airLagVelocity, 0.09f, Mathf.Infinity, dt);
+
+            // 走り出すと腕が遅れて手前へ、止まると前へ流れてから戻る。
+            float accel = dt > 0f ? (local.z - lastForwardSpeed) / dt : 0f;
+            lastForwardSpeed = local.z;
+            surge = Mathf.SmoothDamp(surge, Mathf.Clamp(-accel * 0.0009f, -0.03f, 0.03f), ref surgeVelocity, 0.1f, Mathf.Infinity, dt);
+
+            // 横へ動くと、動く向きへ武器が少し傾く。
+            strafeRoll = Mathf.Lerp(strafeRoll, Mathf.Clamp(-local.x * 0.45f, -3f, 3f), blend);
 
             float yaw = transform.eulerAngles.y;
             float pitch = controller != null ? controller.LookPitch : 0f;
@@ -283,33 +323,84 @@ namespace Game.Hero
             sway = Vector3.Lerp(sway, target, 1f - Mathf.Exp(-SwaySharpness * dt));
             lastYaw = yaw;
             lastPitch = pitch;
-            root.localPosition = bob + sway;
+
+            // 姿勢ごとの構え: 走りは武器を少し下げて前へ倒す。しゃがみは体に引き寄せる。スライディングは持ち上げて傾ける。
+            Vector3 stance = dashBlend * new Vector3(0f, -0.03f, -0.015f)
+                + crouchBlend * new Vector3(-0.012f, 0.012f, -0.02f)
+                + slideBlend * new Vector3(0.02f, 0.03f, -0.03f);
+            float stancePitch = dashBlend * 7f - slideBlend * 6f - airLag * 90f;
+            float stanceRoll = strafeRoll - crouchBlend * 4f + slideBlend * 10f;
+            root.localPosition = bob + sway + breath + stance + new Vector3(0f, airLag, surge);
+            root.localRotation = Quaternion.Euler(stancePitch, 0f, stanceRoll);
         }
 
-        // 通常攻撃の小さな振り。魔法のジョブは突き出すだけ。
+        // 通常攻撃の振り。剣や斧は「引く → 振り抜く → 残る」で、続けて振ると返しの振りになる。魔法のジョブは杖を引いてから突き出す。
         private void UpdateAttack(float dt)
         {
             if (attackAge < 0f || right.PoseFrame == Time.frameCount) return;
             attackAge += dt;
-            float total = AttackPullSeconds + AttackSwingSeconds;
+            float total = AttackPullSeconds + AttackSwingSeconds + AttackFollowSeconds;
             if (attackAge >= total)
             {
                 attackAge = -1f;
                 return;
             }
             Vector3 idleEuler = right.IdleRotation.eulerAngles;
+            Vector3 pullPos, pullEuler, hitPos, hitEuler, endPos, endEuler;
             if (thrustAttack)
             {
-                PoseRight(right.IdlePosition + new Vector3(-0.05f, 0.04f, 0.22f), idleEuler + new Vector3(35f, 0f, 0f));
+                pullPos = new Vector3(0.02f, -0.02f, -0.09f); pullEuler = new Vector3(-14f, 0f, 0f);
+                hitPos = new Vector3(-0.05f, 0.05f, 0.26f); hitEuler = new Vector3(40f, 0f, -6f);
+                endPos = new Vector3(-0.04f, 0.03f, 0.2f); endEuler = new Vector3(30f, 0f, -4f);
             }
-            else if (attackAge < AttackPullSeconds)
+            else if (backhand)
             {
-                PoseRight(right.IdlePosition + new Vector3(0.08f, 0.12f, -0.05f), idleEuler + new Vector3(-25f, 10f, -15f));
+                // 返しの振り: 左に引いて、右上へ払う。
+                pullPos = new Vector3(-0.24f, 0.02f, 0.02f); pullEuler = new Vector3(20f, -45f, 30f);
+                hitPos = new Vector3(0.14f, 0.06f, 0.24f); hitEuler = new Vector3(35f, 40f, -45f);
+                endPos = new Vector3(0.2f, 0.1f, 0.16f); endEuler = new Vector3(25f, 55f, -55f);
             }
             else
             {
-                PoseRight(right.IdlePosition + new Vector3(-0.28f, -0.08f, 0.2f), idleEuler + new Vector3(70f, -30f, 15f));
+                // 振り下ろし: 右上に引いて、左下へ斬る。
+                pullPos = new Vector3(0.1f, 0.14f, -0.06f); pullEuler = new Vector3(-32f, 12f, -18f);
+                hitPos = new Vector3(-0.28f, -0.09f, 0.22f); hitEuler = new Vector3(72f, -32f, 16f);
+                endPos = new Vector3(-0.34f, -0.16f, 0.15f); endEuler = new Vector3(86f, -40f, 22f);
             }
+
+            Vector3 position, euler;
+            if (attackAge < AttackPullSeconds)
+            {
+                float k = EaseOut(attackAge / AttackPullSeconds);
+                position = pullPos * k;
+                euler = pullEuler * k;
+            }
+            else if (attackAge < AttackPullSeconds + AttackSwingSeconds)
+            {
+                // 振り抜きは出だしが速い。
+                float k = EaseOut((attackAge - AttackPullSeconds) / AttackSwingSeconds);
+                position = Vector3.Lerp(pullPos, hitPos, k);
+                euler = Vector3.Lerp(pullEuler, hitEuler, k);
+            }
+            else
+            {
+                float k = (attackAge - AttackPullSeconds - AttackSwingSeconds) / AttackFollowSeconds;
+                position = Vector3.Lerp(hitPos, endPos, k);
+                euler = Vector3.Lerp(hitEuler, endEuler, k);
+            }
+            PoseRight(right.IdlePosition + position, idleEuler + euler);
+            // 反対の手は、振りと逆へ少し引いて釣り合いをとる（盾や本を持つ手）。
+            if (left.PoseFrame != Time.frameCount)
+            {
+                float swing = Mathf.Sin(Mathf.Clamp01(attackAge / total) * Mathf.PI);
+                PoseLeft(left.IdlePosition + new Vector3(-0.03f, -0.02f, -0.05f) * swing, left.IdleRotation.eulerAngles);
+            }
+        }
+
+        private static float EaseOut(float k)
+        {
+            k = Mathf.Clamp01(k);
+            return 1f - (1f - k) * (1f - k);
         }
 
         private void UpdateArm(Arm arm, float dt)

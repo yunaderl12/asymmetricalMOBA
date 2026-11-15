@@ -110,6 +110,9 @@ namespace Game.Hero
         private InputAction forwardTapAction;
         private bool crouchPressed;
         private bool dashRequested;
+        // 走りからスライディングに入ったあと、立ち上がるか W を押し直したら走りに戻すための覚え（EndSlide から数秒で切れる）。
+        private bool runAfterSlide;
+        private float runAfterSlideUntil = float.PositiveInfinity;
         private double lastForwardTapTime = double.NegativeInfinity;
         private const float SlideDustInterval = 0.07f;
         private const float SlideStuckSeconds = 0.12f;
@@ -133,11 +136,14 @@ namespace Game.Hero
             controller = GetComponent<CharacterController>();
             terrain = Game.Core.TerrainWalker.For(gameObject);
             inputs = new HeroInputActions();
+            Game.Core.KeyBindings.Track(inputs.asset);
             // 押した瞬間をイベントで受ける（フレームの間に押して離した素早い入力も取りこぼさない）。
             crouchAction = new InputAction("Crouch", InputActionType.Button, "<Keyboard>/v");
             crouchAction.performed += _ => crouchPressed = true;
             forwardTapAction = new InputAction("ForwardTap", InputActionType.Button, "<Keyboard>/w");
             forwardTapAction.performed += OnForwardTap;
+            Game.Core.KeyBindings.Track(crouchAction, Game.Core.GameKey.Crouch);
+            Game.Core.KeyBindings.Track(forwardTapAction, Game.Core.GameKey.MoveForward);
             if (cameraTransform != null) cameraBaseLocalPosition = cameraTransform.localPosition;
         }
 
@@ -281,7 +287,9 @@ namespace Game.Hero
         // 前進を素早く2回押し、2回目を押し続けている間だけダッシュする。2回押しは W の押した瞬間のイベントで数える。
         private void OnForwardTap(InputAction.CallbackContext ctx)
         {
-            if (ctx.time - lastForwardTapTime <= Game.Core.BalanceConfig.Instance.dashDoubleTapSeconds)
+            // 走りからのスライディングのあとは、W を1回押すだけで走りに戻る。
+            bool resume = runAfterSlide && stance == Stance.Crouching && Time.time <= runAfterSlideUntil;
+            if (resume || ctx.time - lastForwardTapTime <= Game.Core.BalanceConfig.Instance.dashDoubleTapSeconds)
             {
                 dashRequested = true;
                 lastForwardTapTime = double.NegativeInfinity;
@@ -293,7 +301,21 @@ namespace Game.Hero
         private void UpdateDash(Vector2 input)
         {
             bool held = input.y > 0.5f;
-            if (dashRequested && held) SetDashing(true);
+            if (runAfterSlide && stance != Stance.Sliding)
+            {
+                if (Time.time > runAfterSlideUntil) runAfterSlide = false;
+                else if (stance == Stance.Standing)
+                {
+                    // スライディングからジャンプや V で立ち上がったとき、W を押していれば走りを続ける。
+                    if (held) dashRequested = true;
+                    runAfterSlide = false;
+                }
+            }
+            if (dashRequested && held && stance != Stance.Sliding)
+            {
+                SetDashing(true);
+                runAfterSlide = false;
+            }
             dashRequested = false;
             if (!held) SetDashing(false);
             forwardHeld = held;
@@ -309,7 +331,7 @@ namespace Game.Hero
                 case Stance.Crouching: stance = Stance.Standing; break;
                 default:
                     if (dashing && controller.isGrounded) StartSlide();
-                    else stance = Stance.Crouching;
+                    else { stance = Stance.Crouching; runAfterSlide = false; }
                     break;
             }
         }
@@ -325,6 +347,8 @@ namespace Game.Hero
             slideTime = 0f;
             nextSlideDust = 0f;
             stance = Stance.Sliding;
+            runAfterSlide = true;
+            runAfterSlideUntil = float.PositiveInfinity;
             SetDashing(false);
             MeleeFx.DustBurst(transform.position, 0.5f, 12, 3.5f);
             if (cfg.dashSpeedLines && slideLines == null && cameraTransform != null)
@@ -352,7 +376,8 @@ namespace Game.Hero
             bool stuck = slideTime > SlideStuckSeconds && actual.magnitude < speed * SlideStuckRatio;
             if (speed <= endSpeed || stuck)
             {
-                EndSlide(Stance.Crouching);
+                // 滑り終わりに W を押していれば、立ち上がってそのまま走りに戻る。離していれば、しゃがみになる。
+                EndSlide(input.y > 0.5f && !stuck ? Stance.Standing : Stance.Crouching);
                 return Vector3.zero;
             }
             slideVelocity = slideVelocity.normalized * speed;
@@ -367,7 +392,11 @@ namespace Game.Hero
 
         private void EndSlide(Stance next)
         {
-            if (stance == Stance.Sliding) stance = next;
+            if (stance == Stance.Sliding)
+            {
+                stance = next;
+                runAfterSlideUntil = Time.time + Game.Core.BalanceConfig.Instance.slideRunResumeSeconds;
+            }
             slideVelocity = Vector3.zero;
             if (slideLines != null)
             {
@@ -428,7 +457,7 @@ namespace Game.Hero
 
         private void OnEnable()
         {
-            if (inputs == null) inputs = new HeroInputActions();
+            if (inputs == null) { inputs = new HeroInputActions(); Game.Core.KeyBindings.Track(inputs.asset); }
             inputs.Hero.Enable();
             crouchAction?.Enable();
             forwardTapAction?.Enable();
@@ -454,8 +483,26 @@ namespace Game.Hero
             LockCursor(false);
         }
 
+        // 他の人から見える体（CharacterModelAnimator）へ、空中・しゃがみ・スライディングの状態を渡す。
+        private float airTime;
+        private void SyncBody()
+        {
+            if (modelAnim == null) modelAnim = GetComponent<CharacterModelAnimator>();
+            if (modelAnim == null) return;
+            modelAnim.NominalSpeed = moveSpeed;
+            var body = modelAnim.Body;
+            if (body == null) return;
+            // 坂や段差で一瞬浮くだけでは、空中の姿勢にしない。
+            airTime = controller.isGrounded ? 0f : airTime + Time.deltaTime;
+            body.Airborne = airTime > 0.1f;
+            body.VerticalSpeed = verticalVelocity;
+            body.Slide = slideWeight;
+            body.Crouch = Mathf.Clamp01(crouchBlend - slideWeight);
+        }
+
         private void Update()
         {
+            SyncBody();
             if (Game.UI.InGameMenu.BlocksGameInput || Suspended) return;
             if (IsAnimLocked())
             {

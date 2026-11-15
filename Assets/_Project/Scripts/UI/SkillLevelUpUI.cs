@@ -7,23 +7,21 @@ using Game.Skill;
 
 namespace Game.UI
 {
-    /// レベルアップのメモ。レベルが上がると、まず画面の真ん中に大きく出て（上に「レベルアップ！ Lv n」のリボン）、
-    /// 数秒たつと右下（スキルカードの上）へ縮みながら移動して、スキルの割り当てが終わるまでそこに残る。
+    /// スキルポイントのメモ。レベルアップの演出（LevelUpBurst）が終わるころ、右下（スキルカードの上）に
+    /// ぽんと貼り出されて、スキルの割り当てが終わるまでそこに残る。
     public class SkillLevelUpUI : MonoBehaviour
     {
         // 右下に置いたときの位置（右下の角から）と大きさ。
         private static readonly Vector2 DockPosition = new Vector2(-40f, 252f);
         private static readonly Vector2 NoteSize = new Vector2(300f, 78f);
-        private const float CenterScale = 1.6f;
-        private const float PopInSeconds = 0.3f;
-        private const float HoldSeconds = 1.7f; // 出てくる0.3秒と合わせて、真ん中に2秒出してから右下へ動かす
-        private const float MoveSeconds = 0.6f;
+        // レベルアップの演出が消え始めるころに貼り出す。
+        private const float PopDelay = LevelUpBurst.Seconds - 0.45f;
+        private const float PopInSeconds = 0.32f;
 
         private RectTransform note;
-        private RectTransform banner;
-        private Text bannerText;
-        private CanvasGroup bannerGroup;
         private float popStart = -1f;
+        // すでに右下に貼ってある（ポイントが残っている間に次のレベルアップが来たら、貼ったままにする）。
+        private bool docked;
 
         [SerializeField] private GameObject root;
         [SerializeField] private Text pointsText;
@@ -32,7 +30,7 @@ namespace Game.UI
         private LevelComponent level;
         private SkillRuntime runtime;
 
-        private static readonly Key[] DigitKeys = new Key[] { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5 };
+        private static readonly GameKey[] DigitKeys = { GameKey.Slot1, GameKey.Slot2, GameKey.Slot3, GameKey.Slot4, GameKey.Slot5 };
 
         private void Awake()
         {
@@ -59,7 +57,8 @@ namespace Game.UI
             runtime = hero.GetComponent<SkillRuntime>();
             if (level != null) level.OnLevelChanged += OnLevelChanged;
             if (runtime != null) runtime.OnLevelUpPointsChanged += OnPointsChanged;
-            if (hintText != null) hintText.text = "1〜5キーで割り当て";
+            if (hintText != null) hintText.text = SlotHint();
+            KeyBindings.Changed += OnKeysChanged;
             Refresh();
         }
 
@@ -77,19 +76,13 @@ namespace Game.UI
             pointsText = HudStyle.Label(note, "Points", topLeft, topLeft, new Vector2(14f, -8f), new Vector2(272f, 32f), "", 23, pal.Ribbon, TextAnchor.MiddleLeft);
             hintText = HudStyle.Label(note, "Hint", topLeft, topLeft, new Vector2(14f, -42f), new Vector2(272f, 28f), "", 20, pal.Ink, TextAnchor.MiddleLeft);
 
-            // 真ん中に出ているあいだだけ見せるリボン。
-            banner = HudStyle.Place(note, "Banner", new Vector2(0.5f, 1f), new Vector2(0.5f, 0f), new Vector2(0f, 8f), new Vector2(290f, 46f));
-            var ribbon = HudStyle.Shape(banner, "Ribbon", HudShape.Kind.Ribbon, pal.Ribbon);
-            ribbon.notch = 16f;
-            bannerText = HudStyle.AddText(HudStyle.Filled(banner, "Text"), "", 24, Color.white, TextAnchor.MiddleCenter);
-            bannerGroup = banner.gameObject.AddComponent<CanvasGroup>();
-            bannerGroup.alpha = 0f;
             root = note.gameObject;
             root.SetActive(false);
         }
 
         private void OnDestroy()
         {
+            KeyBindings.Changed -= OnKeysChanged;
             if (level != null) level.OnLevelChanged -= OnLevelChanged;
             if (runtime != null) runtime.OnLevelUpPointsChanged -= OnPointsChanged;
         }
@@ -101,14 +94,12 @@ namespace Game.UI
             Pop(newLevel);
         }
 
-        /// 真ん中に大きく出してから右下へ動かす。
+        /// レベルアップの演出のあとに、右下へ貼り出す。
         public void Pop(int newLevel)
         {
             if (note == null) return;
-            bannerText.text = "レベルアップ！ Lv " + newLevel;
-            popStart = Time.unscaledTime;
-            root.SetActive(true);
-            Animate();
+            popStart = Time.unscaledTime + PopDelay;
+            Refresh();
         }
 
         private bool Popping => popStart >= 0f;
@@ -116,50 +107,52 @@ namespace Game.UI
         private void Animate()
         {
             if (note == null) return;
-            if (!Popping)
+            float t = Time.unscaledTime - popStart;
+            if (docked)
             {
-                note.anchoredPosition = DockPosition;
-                note.localScale = Vector3.one;
-                bannerGroup.alpha = 0f;
+                popStart = -1f;
                 return;
             }
-            float t = Time.unscaledTime - popStart;
-            float scale, move, bannerAlpha;
-            if (t < PopInSeconds)
+            if (t < 0f)
             {
-                // ぽんと膨らんで少し戻る。
-                float k = t / PopInSeconds;
-                float back = 1f + 2.2f * Mathf.Pow(k - 1f, 3f) + 1.2f * Mathf.Pow(k - 1f, 2f);
-                scale = CenterScale * Mathf.LerpUnclamped(0.5f, 1f, back);
-                move = 0f;
-                bannerAlpha = k;
+                note.localScale = Vector3.zero;
+                return;
             }
-            else if (t < PopInSeconds + HoldSeconds)
+            float k = Mathf.Clamp01(t / PopInSeconds);
+            // 下から滑り込みながら、少し行きすぎて戻る。
+            float s = k - 1f;
+            float back = 1f + 2.7f * s * s * s + 1.7f * s * s;
+            note.localScale = new Vector3(back, back, 1f);
+            note.anchoredPosition = DockPosition + new Vector2(0f, -36f * (1f - k) * (1f - k));
+            note.localEulerAngles = new Vector3(0f, 0f, -1.2f + 6f * (1f - k));
+            if (k >= 1f)
             {
-                scale = CenterScale;
-                move = 0f;
-                bannerAlpha = 1f;
+                popStart = -1f;
+                docked = true;
+                note.localScale = Vector3.one;
+                note.anchoredPosition = DockPosition;
+                note.localEulerAngles = new Vector3(0f, 0f, -1.2f);
+                Refresh();
             }
-            else
-            {
-                float k = Mathf.Clamp01((t - PopInSeconds - HoldSeconds) / MoveSeconds);
-                move = k * k * (3f - 2f * k);
-                scale = Mathf.Lerp(CenterScale, 1f, move);
-                bannerAlpha = 1f - move;
-                if (k >= 1f) popStart = -1f;
-            }
-            note.localScale = new Vector3(scale, scale, 1f);
-            note.anchoredPosition = Vector2.Lerp(CenterPosition(scale), DockPosition, move);
-            bannerGroup.alpha = bannerAlpha;
-            if (!Popping) Refresh();
         }
 
-        // 真ん中（少し上）に置くときの anchoredPosition。メモは右下の角が基準。
-        private Vector2 CenterPosition(float scale)
+        private void OnKeysChanged()
         {
-            var canvas = (RectTransform)HudStyle.Canvas.transform;
-            Vector2 size = canvas.rect.size;
-            return new Vector2(-size.x * 0.5f + NoteSize.x * scale * 0.5f, size.y * 0.5f + 60f - NoteSize.y * scale * 0.5f);
+            if (hintText != null) hintText.text = SlotHint();
+        }
+
+        // 初期のキーなら「1〜5キー」、変えてあれば今のキーを並べる。
+        private static string SlotHint()
+        {
+            string keys = "";
+            bool defaults = true;
+            for (int i = 0; i < DigitKeys.Length; i++)
+            {
+                var entry = KeyBindings.Get(DigitKeys[i]);
+                if (entry.Path != entry.DefaultPath) defaults = false;
+                keys += (i > 0 ? "・" : "") + KeyBindings.DisplayName(DigitKeys[i]);
+            }
+            return defaults ? "1〜5キーで割り当て" : keys + " で割り当て";
         }
 
         private void OnPointsChanged(int newCount)
@@ -170,6 +163,7 @@ namespace Game.UI
         private void Refresh()
         {
             int pts = runtime != null ? runtime.LevelUpPointsAvailable : 0;
+            if (pts <= 0) docked = false;
             if (root != null) root.SetActive(pts > 0 || Popping);
             if (pointsText != null) pointsText.text = "スキルアップ +" + pts;
         }
@@ -183,7 +177,7 @@ namespace Game.UI
             if (InGameMenu.BlocksGameInput) return;
             for (int i = 0; i < DigitKeys.Length; i++)
             {
-                if (Keyboard.current[DigitKeys[i]].wasPressedThisFrame)
+                if (KeyBindings.WasPressed(DigitKeys[i]))
                 {
                     if (runtime.SpendLevelUpPoint(i))
                     {

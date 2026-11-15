@@ -9,13 +9,13 @@ using Game.Core;
 namespace Game.UI
 {
     /// 試合中に ESC で開くメニュー（勇者でも魔王でも同じ）。開いているあいだも試合は止まらない。
-    ///  - ゲームに戻る / 設定（マウス感度・音量）/ 試合から退出（確認のあとタイトルへ戻る）
+    ///  - ゲームに戻る / 設定（マウス感度・音量・操作キー）/ 試合から退出（確認のあとタイトルへ戻る）
     /// 開いているあいだは自分のキャラクターの操作を止め、マウスカーソルを出す（BlocksGameInput）。
     /// ESC はほかの画面（コンソール、塔のポップアップ、魔物の選択、塔の俯瞰）が開いていればそちらが使う。
     [DefaultExecutionOrder(-1000)]
     public class InGameMenu : MonoBehaviour
     {
-        private enum Page { Closed, Main, Settings, Leave }
+        private enum Page { Closed, Main, Settings, Keys, Leave }
 
         public static InGameMenu Instance { get; private set; }
         public static bool IsOpen => Instance != null && Instance.page != Page.Closed;
@@ -29,7 +29,7 @@ namespace Game.UI
         private int closedFrame = -1;
         private CursorLockMode savedLock;
         private bool savedVisible;
-        private GameObject root, mainPanel, settingsPanel, leavePanel;
+        private GameObject root, mainPanel, settingsPanel, keysPanel, leavePanel;
         private Text sensitivityValue, volumeValue;
 
         /// MainStage で1つだけ作る。
@@ -54,6 +54,8 @@ namespace Game.UI
         {
             var keys = Keyboard.current;
             if (page != Page.Closed && !CanStayOpen()) { Close(); return; }
+            // キーの入力待ちの間の ESC は、操作キーの一覧が「やめる」に使う。
+            if (KeyBindingsPanel.Listening) return;
             if (keys == null || !keys.escapeKey.wasPressedThisFrame) return;
             switch (page)
             {
@@ -61,6 +63,7 @@ namespace Game.UI
                     if (CanOpen()) Open();
                     break;
                 case Page.Main: Close(); break;
+                case Page.Keys: Show(Page.Settings); break;
                 default: Show(Page.Main); break;
             }
         }
@@ -112,6 +115,7 @@ namespace Game.UI
             page = p;
             mainPanel.SetActive(true);
             settingsPanel.SetActive(p == Page.Settings);
+            keysPanel.SetActive(p == Page.Keys);
             leavePanel.SetActive(p == Page.Leave);
         }
 
@@ -161,29 +165,34 @@ namespace Game.UI
             HudStyle.AddText(HudStyle.Filled(title, "Text"), "メニュー", 40, p.Light, TextAnchor.MiddleCenter, 3f, p.Outline);
 
             MenuButton(mp, "ゲームに戻る", new Vector2(0f, 120f), p, () => Close());
-            MenuButton(mp, "設定", new Vector2(0f, 10f), p, () => Show(page == Page.Settings ? Page.Main : Page.Settings));
+            MenuButton(mp, "設定", new Vector2(0f, 10f), p, () => Show(page == Page.Settings || page == Page.Keys ? Page.Main : Page.Settings));
             MenuButton(mp, "試合から退出", new Vector2(0f, -100f), p, () => Show(page == Page.Leave ? Page.Main : Page.Leave));
             HudStyle.Label(mp, "Note", new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 34f), new Vector2(460f, 40f),
                 "メニューを開いているあいだも試合は進みます", 22, new Color(p.Light.r, p.Light.g, p.Light.b, 0.75f), TextAnchor.MiddleCenter);
 
             settingsPanel = BuildSettings(canvasGo.transform, p);
+            keysPanel = KeyBindingsPanel.Build(canvasGo.transform, p, () => Show(Page.Settings)).gameObject;
             leavePanel = BuildLeave(canvasGo.transform, p);
             root.SetActive(false);
         }
 
         private GameObject BuildSettings(Transform parent, HudStyle.Palette p)
         {
-            var rt = HudStyle.Place(parent, "Settings", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(680f, 0f), new Vector2(760f, 470f));
+            var rt = HudStyle.Place(parent, "Settings", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(680f, 0f), new Vector2(760f, 580f));
             rt.localRotation = Quaternion.Euler(0f, 0f, -0.6f);
             HudStyle.Paper(rt, p, HudShape.Kind.Torn, 0f, 21, 7f);
             HudStyle.Label(rt, "Title", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(600f, 60f), "設定", 46, p.Ink, TextAnchor.MiddleCenter);
-            sensitivityValue = SliderRow(rt, "マウス感度", new Vector2(0f, 60f), GameSettings.MinSensitivity, GameSettings.MaxSensitivity, GameSettings.MouseSensitivity, p,
+            sensitivityValue = SliderRow(rt, "マウス感度", new Vector2(0f, 115f), GameSettings.MinSensitivity, GameSettings.MaxSensitivity, GameSettings.MouseSensitivity, p,
                 v => { GameSettings.MouseSensitivity = v; sensitivityValue.text = "×" + v.ToString("0.0"); });
             sensitivityValue.text = "×" + GameSettings.MouseSensitivity.ToString("0.0");
-            volumeValue = SliderRow(rt, "音量", new Vector2(0f, -50f), 0f, 1f, GameSettings.MasterVolume, p,
+            volumeValue = SliderRow(rt, "音量", new Vector2(0f, 15f), 0f, 1f, GameSettings.MasterVolume, p,
                 v => { GameSettings.MasterVolume = v; volumeValue.text = Mathf.RoundToInt(v * 100f) + "%"; });
             volumeValue.text = Mathf.RoundToInt(GameSettings.MasterVolume * 100f) + "%";
-            SmallButton(rt, "戻る", new Vector2(0f, -170f), p.Felt, p, () => Show(Page.Main));
+            // 操作キーの一覧と変更は、別の紙で開く。
+            var keyRow = HudStyle.Place(rt, "操作キー", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -90f), new Vector2(680f, 80f));
+            HudStyle.Label(keyRow, "Label", new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(10f, 0f), new Vector2(190f, 60f), "操作キー", 32, p.Ink, TextAnchor.MiddleLeft);
+            SmallButton(keyRow, "一覧と変更", new Vector2(120f, 0f), HudStyle.Brown, p, () => Show(Page.Keys));
+            SmallButton(rt, "戻る", new Vector2(0f, -215f), p.Felt, p, () => Show(Page.Main));
             return rt.gameObject;
         }
 

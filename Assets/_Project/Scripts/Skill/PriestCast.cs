@@ -4,7 +4,8 @@ using Game.Combat;
 
 namespace Game.Skill
 {
-    /// 僧侶のスキルの共通部分。杖の先に光を集めて、放つ瞬間に解き放つ。
+    /// 僧侶のスキルの共通部分。杖を回しながら掲げて光を集め、放つ瞬間に前へ振り出す。
+    /// 回復と加護の光は、柱や輪ではなく、やわらかい光と立ちのぼる粒で包む（GentleLight）。
     public abstract class PriestCast : MeleeSkillCast
     {
         private const float GlowMaxSize = 1.1f;
@@ -12,13 +13,26 @@ namespace Game.Skill
         private const float LocalFlashScale = 0.3f;
         private const float LocalGlowScale = 0.25f;
         private const float AimRadius = 0.5f;
-        private const float BeamWidth = 0.22f;
-        private const float BeamSeconds = 0.26f;
 
         protected static readonly Vector3 WandUpPosition = new Vector3(0.24f, -0.05f, 0.42f);
         protected static readonly Vector3 WandUpEuler = new Vector3(-8f, -12f, -14f);
         protected static readonly Vector3 BookUpPosition = new Vector3(-0.28f, -0.16f, 0.42f);
         protected static readonly Vector3 BookUpEuler = new Vector3(-10f, 30f, 0f);
+        // 掲げきったときに杖を後ろへ倒す角度と、掲げながら杖先で描く円の大きさ。
+        private const float RaiseTiltBack = 24f;
+        private const float StirRadius = 0.035f;
+        private const float StirTurns = 1.25f;
+        // 放つ瞬間に杖を前へ振り出す構え（放ったあとの前半だけ）。
+        private static readonly Vector3 WandCastPosition = new Vector3(0.15f, -0.03f, 0.64f);
+        private static readonly Vector3 WandCastEuler = new Vector3(44f, -6f, -8f);
+        private static readonly Vector3 BookOpenOffset = new Vector3(-0.07f, 0.04f, 0.07f);
+        private const float CastSwingRatio = 0.55f;
+        /// 回復と加護の光の色（淡いクリーム色）。
+        protected static readonly Color SoftLight = new Color(1f, 0.93f, 0.7f, 1f);
+
+        /// 放ったあとの杖の構え。標準は前へ振り出す。
+        protected virtual Vector3 ReleaseWandPosition => WandCastPosition;
+        protected virtual Vector3 ReleaseWandEuler => WandCastEuler;
 
         private static readonly List<HealthComponent> AllyBuffer = new List<HealthComponent>();
         private static readonly HashSet<HealthComponent> AllySeen = new HashSet<HealthComponent>();
@@ -50,23 +64,28 @@ namespace Game.Skill
         /// 溜めの姿勢。標準は杖を高く掲げて身を反らす。
         protected virtual void PoseForWindUp(float e)
         {
-            PoseArms(WandUpPosition, WandUpEuler, BookUpPosition, BookUpEuler);
+            // 杖先で小さな円を描きながら掲げ、掲げきるほど後ろへ倒して力をためる。本は胸の前へ引き寄せる。
+            float turn = e * StirTurns * Mathf.PI * 2f;
+            Vector3 stir = new Vector3(Mathf.Cos(turn), Mathf.Sin(turn), 0f) * (StirRadius * Mathf.Sin(e * Mathf.PI));
+            PoseArms(WandUpPosition + stir + new Vector3(0f, 0.05f * e, -0.04f * e), WandUpEuler + new Vector3(-RaiseTiltBack * e, 0f, 0f),
+                BookUpPosition + new Vector3(0.03f * e, 0.02f * e, -0.03f * e), BookUpEuler);
             if (ModelAnim == null) return;
-            ModelAnim.SetMeleePose(-0.5f * e, 0f, e, Chest + Vector3.up * 2f + transform.forward * 0.4f + transform.right * 0.2f);
-            ModelAnim.SetGuardArm(e, Chest + transform.forward * 1f + Vector3.up * 0.1f - transform.right * 0.3f);
+            ModelAnim.SetMeleePose(-0.7f * e, 0f, e, Chest + Vector3.up * 2.2f + transform.forward * 0.25f + transform.right * 0.2f + transform.right * (Mathf.Cos(turn) * 0.25f));
+            ModelAnim.SetGuardArm(e, Chest + transform.forward * 0.8f + Vector3.up * 0.2f - transform.right * 0.25f);
         }
 
         protected override void OnRecover(float seconds, float k)
         {
             RemoveGlow();
             float settle = (1f - k) * (1f - k);
-            if (View != null && settle > 0.3f) PoseArms(WandUpPosition, WandUpEuler, BookUpPosition, BookUpEuler);
+            // 前半は杖を前へ振り出して本を開き、後半は力を抜いて普段の構えへ戻る。
+            if (View != null && k < CastSwingRatio) PoseArms(ReleaseWandPosition, ReleaseWandEuler, BookUpPosition + BookOpenOffset, BookUpEuler);
             if (ModelAnim != null)
             {
-                ModelAnim.SetMeleePose(0.3f * settle, 0f, settle, Chest + Vector3.up * 2f + transform.forward * 0.4f + transform.right * 0.2f);
-                ModelAnim.SetGuardArm(settle, Chest + transform.forward * 1f + Vector3.up * 0.1f - transform.right * 0.3f);
+                ModelAnim.SetMeleePose(0.8f * settle, 0f, settle, Chest + transform.forward * 1.5f + Vector3.up * 0.35f + transform.right * 0.15f);
+                ModelAnim.SetGuardArm(settle, Chest + transform.forward * 0.7f + Vector3.up * 0.05f - transform.right * 0.5f);
             }
-            SetCamera(Vector3.zero, 1f * settle, 0f, 2f * settle);
+            SetCamera(new Vector3(0f, 0f, 0.03f * settle), 1.5f * settle, 0f, 2f * settle);
         }
 
         protected override void OnPoseEnd()
@@ -91,15 +110,19 @@ namespace Game.Skill
             FireFlash.Spawn(WandTip, flash, 0.16f, 0f, Palette.Core, Palette.Main, Palette.Light, 2.5f);
         }
 
-        /// 光の柱と立ちのぼる粒で、回復された相手を示す。
-        protected void BlessEffect(HealthComponent target, float radius, float height, float seconds)
+        /// やわらかい光とゆっくり昇る粒で、回復された相手を包む。
+        protected void BlessEffect(HealthComponent target, float seconds)
         {
-            Vector3 feet = target.transform.position;
-            LightPillar.Spawn(feet, radius, height, seconds, Palette.Main * 1.6f, true, PillarLayerFor(target));
-            FireballVfx.SpawnSparks(feet + Vector3.up * 0.2f, Vector3.up, Mathf.RoundToInt(18 * SizeScale), Color.white, Palette.Spark);
+            GentleLight.Wrap(target.transform, SizeScale, seconds, SoftLight, PillarLayerFor(target));
         }
 
-        /// 光の柱を置く層。操作している本人に立つ柱は、視界をふさがないよう本人のカメラに映らない層（本人のモデルと同じ）にする。
+        /// 杖の先から相手へ、小さな光の玉を飛ばす。
+        protected void SendOrbs(HealthComponent target)
+        {
+            GentleLight.Orbs(WandTip, target.transform, 0.34f, SoftLight, SizeScale);
+        }
+
+        /// 光の本体を置く層。操作している本人を包む光は、視界をふさがないよう本人のカメラに映らない層（本人のモデルと同じ）にする。
         protected static int PillarLayerFor(HealthComponent target)
         {
             if (target.GetComponent<Game.Hero.HumanHeroMarker>() == null) return -1;
@@ -128,22 +151,6 @@ namespace Game.Skill
                 bestDistance = h.distance;
             }
             return bestDistance < wall ? best : null;
-        }
-
-        /// 杖先から相手へ送る光の筋。
-        protected void SpawnBeam(Vector3 from, Vector3 to)
-        {
-            var go = new GameObject("HealBeam");
-            var line = go.AddComponent<LineRenderer>();
-            line.sharedMaterial = FireballVfx.Trail;
-            line.positionCount = 2;
-            line.SetPosition(0, from);
-            line.SetPosition(1, to);
-            line.widthMultiplier = BeamWidth * SizeScale;
-            line.startColor = line.endColor = new Color(1f, 0.85f, 0.4f, 1f);
-            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            line.receiveShadows = false;
-            Destroy(go, BeamSeconds);
         }
 
         /// 半径内の生きている味方（自分を含む）。

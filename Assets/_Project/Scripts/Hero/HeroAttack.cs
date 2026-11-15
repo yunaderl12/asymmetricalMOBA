@@ -49,6 +49,7 @@ namespace Game.Hero
         private void Awake()
         {
             inputs = new HeroInputActions();
+            Game.Core.KeyBindings.Track(inputs.asset);
             regen = GetComponent<HeroRegen>();
             classInit = GetComponent<HeroClassInitializer>();
             if (mana == null) mana = GetComponent<ManaComponent>();
@@ -56,7 +57,7 @@ namespace Game.Hero
 
         private void OnEnable()
         {
-            if (inputs == null) inputs = new HeroInputActions();
+            if (inputs == null) { inputs = new HeroInputActions(); Game.Core.KeyBindings.Track(inputs.asset); }
             inputs.Hero.Enable();
             inputs.Hero.Attack.performed += OnAttackPerformed;
         }

@@ -12,7 +12,7 @@ namespace Game.DemonKing
     public class FieldSpellCaster : MonoBehaviour
     {
         private const float AimDistance = 400f;
-        private static readonly Key[] Keys = { Key.Digit1, Key.Digit2, Key.Digit3, Key.Digit4, Key.Digit5 };
+        private static readonly Game.Core.GameKey[] Keys = { Game.Core.GameKey.Slot1, Game.Core.GameKey.Slot2, Game.Core.GameKey.Slot3, Game.Core.GameKey.Slot4, Game.Core.GameKey.Slot5 };
         private static readonly RaycastHit[] Hits = new RaycastHit[32];
 
         public FieldSpellData[] Slots { get; private set; }
@@ -97,10 +97,8 @@ namespace Game.DemonKing
         private void Update()
         {
             if (Game.UI.InGameMenu.BlocksGameInput) return;
-            var kb = Keyboard.current;
-            if (kb != null)
-                for (int i = 0; i < Keys.Length && i < Slots.Length; i++)
-                    if (kb[Keys[i]].wasPressedThisFrame) Select(i);
+            for (int i = 0; i < Keys.Length && i < Slots.Length; i++)
+                if (Game.Core.KeyBindings.WasPressed(Keys[i])) Select(i);
             if (Aiming < 0) return;
             UpdateAim();
             var mouse = Mouse.current;
@@ -226,6 +224,9 @@ namespace Game.DemonKing
             var s = Slots[i];
             if (s == null) return;
             if (FieldSpellEffect.Cast(s, at, gameObject) == null) return;
+            // 魔王の体も、片手を掲げて振り下ろす。
+            var body = GetComponent<Game.Hero.CharacterModelAnimator>();
+            if (body != null) body.PlayCastGesture();
             readyAt[i] = Time.time + s.cooldown;
         }
 

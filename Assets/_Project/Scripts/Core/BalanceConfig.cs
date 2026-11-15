@@ -49,6 +49,8 @@ namespace Game.Core
         public float slideReleaseFriction = 24f;
         [Tooltip("Camera roll while sliding (degrees)")]
         public float slideCameraRoll = 3f;
+        [Tooltip("After a slide that started from a run, pressing forward (or standing up while holding it) within this many seconds resumes the run")]
+        public float slideRunResumeSeconds = 3f;
 
         [Header("Landing And Jump Feel")]
         [Tooltip("Falling faster than this (m/s) makes the landing dip and dust")]

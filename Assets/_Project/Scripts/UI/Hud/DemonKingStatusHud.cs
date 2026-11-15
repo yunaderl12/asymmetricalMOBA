@@ -318,7 +318,7 @@ namespace Game.UI
         private void UpdateContext(bool inside)
         {
             string text = null;
-            if (view != null && view.IsAtViewer && view.TpsActive) text = "V で俯瞰へ";
+            if (view != null && view.IsAtViewer && view.TpsActive) text = Game.Core.KeyBindings.DisplayName(Game.Core.GameKey.DemonView) + " で俯瞰へ";
             else if (debuff != null && debuff.IsDraining) text = "城外にいる間 MP が減り続ける";
             bool show = text != null;
             if (contextRoot.activeSelf != show) contextRoot.SetActive(show);
