@@ -13,6 +13,8 @@ namespace Game.Core
         Attack, Skill, SkillAlt, SkillWheel,
         Slot1, Slot2, Slot3, Slot4, Slot5,
         DemonView,
+        // 後ろに足す（PlayerPrefs は名前で持つが、Entries は並び順で引く）。
+        DemonAttack,
     }
 
     /// 操作キーの割り当て（試合中の ESC メニュー → 設定 → 操作キーで変える）。PlayerPrefs に保存して、次の起動でも使う。
@@ -78,6 +80,7 @@ namespace Game.Core
             Add(GameKey.Slot4, "<Keyboard>/4", "スキル4を強化 ／ 魔王はフィールド魔法4", Side.Both);
             Add(GameKey.Slot5, "<Keyboard>/5", "スキル5を強化 ／ 魔王はフィールド魔法5", Side.Both);
             Add(GameKey.DemonView, "<Keyboard>/v", "俯瞰に切り替える（魔王。コアに触れているとき）", Side.Demon);
+            Add(GameKey.DemonAttack, "<Mouse>/leftButton", "本体で斬る（フィールド魔法を狙っていないとき）", Side.Demon);
             InputSystem.onDeviceChange += (_, __) => controlsDirty = true;
         }
 

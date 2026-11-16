@@ -83,6 +83,20 @@ namespace Game.Core
         public float dkDetectDuration = 5f;
         public float dkDetectCooldown = 30f;
 
+        [Header("Demon King Melee (placeholder until the Demon King skills are decided)")]
+        [Tooltip("Physical attack value of the Demon King's sword swing at Lv1. Reduced by the hero's Df.")]
+        public int dkAttackPower = 40;
+        [Tooltip("Attack growth per Demon King level (0.05 = +5%/Lv, the same pace as monsters).")]
+        public float dkAttackGrowthPerLevel = 0.05f;
+        [Tooltip("Reach of the swing in front of the Demon King (m).")]
+        public float dkAttackRange = 3.5f;
+        [Tooltip("Width of the swing in front of the Demon King (degrees, whole arc).")]
+        public float dkAttackArc = 140f;
+        [Tooltip("Seconds between swings.")]
+        public float dkAttackInterval = 1.2f;
+        [Tooltip("Seconds from the button press to the hit, so heroes can see the swing coming.")]
+        public float dkAttackWindup = 0.25f;
+
         [Header("Warp Gate Skill (Mage)")]
         [Tooltip("How far in front of the caster a gate opens (m)")]
         public float warpGateDistance = 2.5f;
@@ -233,6 +247,30 @@ namespace Game.Core
         [Tooltip("Seconds between a bot hero's MP regen ticks. Matches HeroRegen.")]
         [UnityEngine.Serialization.FormerlySerializedAs("botSpRegenInterval")]
         public float botMpRegenInterval = 1.5f;
+
+        [Header("Bot Demon King")]
+        [Tooltip("Walking speed (m/s). The same as the human Demon King (DemonKing.prefab moveSpeed).")]
+        public float botDkMoveSpeed = 4.5f;
+        [Tooltip("Seconds between the bot Demon King's decisions (moving, attacking).")]
+        public float botDkThinkInterval = 0.2f;
+        [Tooltip("Seconds between adding monsters to towers (one monster per step).")]
+        public float botDkReinforceInterval = 4f;
+        [Tooltip("Seconds between considering a field spell.")]
+        public float botDkSpellThinkInterval = 1f;
+        [Tooltip("Minimum seconds between two field spells, so they come one at a time.")]
+        public float botDkSpellGap = 8f;
+        [Tooltip("When no hero has been seen for this long, use the detect skill (if MP allows).")]
+        public float botDkDetectAfterSeconds = 20f;
+        [Tooltip("MP kept back after using detect.")]
+        public int botDkDetectMpReserve = 20;
+        [Tooltip("While marching, heroes this close are fought before going on (m).")]
+        public float botDkEngageRadius = 14f;
+        [Tooltip("Inside the castle, how far the bot wanders from where it started (m). The castle interior (RegenTrigger) is only about 6m across.")]
+        public float botDkWanderRadius = 1.5f;
+        [Tooltip("Heroes within this distance of the castle centre are fought; the bot steps out of the castle to reach them and comes back (m).")]
+        public float botDkGuardRadius = 10f;
+        [Tooltip("Heroes the bot can see with its own eyes: within this distance and not behind walls (m). A human Demon King sees them on screen.")]
+        public float botDkSightRadius = 25f;
 
         [Header("Demon King Level")]
         [Tooltip("Monster HP / Atk growth per Demon King level (0.05 = +5%/Lv)")]

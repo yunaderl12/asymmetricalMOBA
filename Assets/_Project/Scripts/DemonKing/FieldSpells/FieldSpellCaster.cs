@@ -67,12 +67,19 @@ namespace Game.DemonKing
             Slots = LoadEquipped();
             readyAt = new float[Slots.Length];
             view = GetComponent<DemonKingViewSwitcher>();
+            // BOT 魔王は Cast を直接呼ぶ。キーも札の HUD も使わない。
+            playerControlled = GetComponent<DemonKingController>() != null;
         }
+
+        private bool playerControlled;
 
         private void Start()
         {
-            Game.UI.FieldSpellBar.Create(this);
+            if (playerControlled) Game.UI.FieldSpellBar.Create(this);
         }
+
+        /// その魔法をいま撃てるか（クールタイムが明けている）。
+        public bool IsReady(int i) => i >= 0 && i < Slots.Length && Slots[i] != null && CooldownLeft(i) <= 0f;
 
         public float CooldownLeft(int i) => i >= 0 && i < readyAt.Length ? Mathf.Max(0f, readyAt[i] - Time.time) : 0f;
 
@@ -96,7 +103,7 @@ namespace Game.DemonKing
 
         private void Update()
         {
-            if (Game.UI.InGameMenu.BlocksGameInput) return;
+            if (!playerControlled || Game.UI.InGameMenu.BlocksGameInput) return;
             for (int i = 0; i < Keys.Length && i < Slots.Length; i++)
                 if (Game.Core.KeyBindings.WasPressed(Keys[i])) Select(i);
             if (Aiming < 0) return;

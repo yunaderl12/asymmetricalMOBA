@@ -143,6 +143,14 @@ namespace Game.Bot
                 float d = Vector3.Distance(transform.position, m.transform.position);
                 if (d < bestDist) { bestDist = d; best = m.transform; }
             }
+            // 魔王も、近くにいれば魔物と同じように戦う（魔王が剣で斬ってくるようになったため）。
+            foreach (var dk in GameObject.FindGameObjectsWithTag("DemonKing"))
+            {
+                var dkHp = dk.GetComponent<HealthComponent>();
+                if (dkHp == null || dkHp.IsDead) continue;
+                float d = Vector3.Distance(transform.position, dk.transform.position);
+                if (d < bestDist) { bestDist = d; best = dk.transform; }
+            }
             if (best != null && bestDist <= engageRadius)
             {
                 state = BotState.EngagingMonster;

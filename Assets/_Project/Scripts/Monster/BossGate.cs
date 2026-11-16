@@ -92,6 +92,28 @@ namespace Game.Monster
             return false;
         }
 
+        /// 魔王が閉じた結界を通り抜けるための、壁の反対側の点。from が from と to をへだてる結界の壁ぎわ（margin 以内）にいるときだけ返す。
+        /// 結界は NavMesh を切り抜いているので、NavMesh で歩く BOT 魔王はここで壁の向こうへ移る。
+        public static bool TryCrossing(Vector3 from, Vector3 to, float margin, out Vector3 across)
+        {
+            across = from;
+            foreach (var gate in gates)
+            {
+                if (gate.IsOpen) continue;
+                bool inside = gate.Inside(from);
+                if (inside == gate.Inside(to)) continue;
+                Vector3 d = from - gate.Center;
+                d.y = 0f;
+                float r = d.magnitude;
+                if (r < 0.01f || Mathf.Abs(r - gate.Radius) > margin) continue;
+                float side = inside ? gate.Radius + margin : gate.Radius - margin;
+                across = gate.Center + d / r * side;
+                across.y = from.y;
+                return true;
+            }
+            return false;
+        }
+
         private bool Inside(Vector3 p)
         {
             Vector3 d = p - Center;

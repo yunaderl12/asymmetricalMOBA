@@ -60,6 +60,7 @@ namespace Game.DemonKing
             terrain.SlopePenalty = Game.Core.BalanceConfig.Instance.demonKingSlopePenalty;
             terrain.SplashScale = Game.Core.BalanceConfig.Instance.demonKingModelScale;
             if (GetComponent<Game.Core.FallRespawn>() == null) gameObject.AddComponent<Game.Core.FallRespawn>();
+            DemonKingAttack.Ensure(gameObject);
             if (inputs == null) { inputs = new DemonKingInputActions(); Game.Core.KeyBindings.Track(inputs.asset); }
             var cam = pitchTarget != null ? pitchTarget.GetComponentInChildren<Camera>(true) : null;
             if (cam != null)

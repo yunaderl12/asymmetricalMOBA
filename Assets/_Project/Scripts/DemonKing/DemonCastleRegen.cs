@@ -30,6 +30,21 @@ namespace Game.DemonKing
             return hc != null && !hc.IsDead && heroesInside.Contains(hc);
         }
 
+        /// その位置が城内（このトリガーの中）か。トリガーの出入りが届かないもの（Rigidbody のない BOT など）にも使える。
+        public bool Contains(Vector3 position)
+        {
+            if (areas == null) areas = GetComponents<Collider>();
+            foreach (var area in areas)
+            {
+                if (area == null || !area.enabled) continue;
+                bool closestWorks = area is BoxCollider || area is SphereCollider || area is CapsuleCollider || (area is MeshCollider mc && mc.convex);
+                if (closestWorks ? (area.ClosestPoint(position) - position).sqrMagnitude < 0.0001f : area.bounds.Contains(position)) return true;
+            }
+            return false;
+        }
+
+        private Collider[] areas;
+
         private HealthComponent GetHero(Collider other)
         {
             var hc = other.GetComponentInParent<HealthComponent>();

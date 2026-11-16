@@ -105,6 +105,7 @@ namespace Game.UI
                 y = KeyRow(content, KeyBindings.Get(key), y);
             y = Header(content, "魔王", y);
             y = KeyRow(content, KeyBindings.Get(GameKey.DemonView), y);
+            y = KeyRow(content, KeyBindings.Get(GameKey.DemonAttack), y);
             y = FixedRow(content, "左クリック", "狙ったフィールド魔法を発動する", y);
             y = FixedRow(content, "右クリック", "フィールド魔法の狙いをやめる／塔の視点から俯瞰へ戻る", y);
             y = Header(content, "変えられない操作", y);
